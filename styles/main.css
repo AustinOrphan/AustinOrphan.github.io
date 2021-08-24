@@ -1,0 +1,86 @@
+@import url("https://fonts.googleapis.com/css2?family=Comfortaa:wght@700&family=Source+Sans+Pro:wght@900&display=swap");
+
+* {
+    margin: 0;
+    text-decoration: none;
+}
+
+html,
+body {
+    height: 100vh;
+    width: 100vw;
+    display: grid;
+    background-color: black;
+    place-items: center;
+    position: fixed;
+}
+
+.page-wrapper {
+    display: grid;
+    place-items: center;
+    text-align: center;
+    padding: 0 0 200px 0;
+    width: 100%;
+}
+
+h1 {
+    color: white;
+    font-family: "Roboto", sans-serif;
+    font-size: 14vw;
+    letter-spacing: -0.5vw;
+}
+
+p {
+    color: rgb(100, 230, 230);
+    font-family: "Comfortaa", cursive;
+    font-size: 5vw;
+    margin: 15px 0;
+}
+
+.divider {
+    color: white;
+}
+
+.icon {
+    color: white;
+    padding: 8px;
+    border-radius: 50%;
+}
+
+.icon:hover {
+    cursor: pointer;
+    color: black;
+    background-color: rgb(100, 230, 230);
+}
+
+a {
+    color: inherit;
+    transition: background-color .3s ease,
+        color .3s ease;
+    width: 100%;
+}
+
+@media screen and (min-width: 600px) {
+
+    h1 {
+        font-size: 11vw;
+        letter-spacing: -0.25vw;
+    }
+
+    p {
+        font-size: 3.4vw;
+    }
+
+    .icon {
+        padding: 15px;
+        transition: background-color 1s ease,
+            color .3s ease;
+    }
+
+    .page-wrapper {
+    padding: 0 0 0 0;
+    }
+
+    
+
+}
