@@ -49,16 +49,8 @@ p {
     width: 32px;
 }
 
-.icon:hover {
-    cursor: pointer;
-    color: black;
-    background-color: rgb(100, 230, 230);
-}
-
 a {
     color: inherit;
-    transition: background-color .3s ease,
-        color .3s ease;
     width: 100%;
 }
 
@@ -80,9 +72,19 @@ a {
     }
 
     .page-wrapper {
-    padding: 0 0 0 0;
+        padding: 0 0 0 0;
     }
 
-    
+    .icon:hover {
+        cursor: pointer;
+        color: black;
+        background-color: rgb(100, 230, 230);
+    }
+
+    a {
+        transition: background-color .3s ease,
+        color .3s ease;
+    }
+
 
 }
