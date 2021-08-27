@@ -31,7 +31,7 @@ h1 {
 }
 
 p {
-    color: rgb(100, 230, 230);
+    color: #6ee5e3;
     font-family: "Comfortaa", cursive;
     font-size: 5vw;
     margin: 15px 0;
@@ -78,7 +78,7 @@ a {
     .icon:hover {
         cursor: pointer;
         color: black;
-        background-color: rgb(100, 230, 230);
+        background-color: #6ee5e3;
     }
 
     a {
