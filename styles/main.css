@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Comfortaa:wght@700&family=Source+Sans+Pro:wght@900&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Anta&family=Comfortaa:wght@700&family=Source+Sans+Pro:wght@900&display=swap");
 
 * {
     margin: 0;
@@ -13,24 +13,40 @@ body {
     background-color: black;
     place-items: center;
     position: fixed;
+    overflow-y: scroll;
 }
 
 .page-wrapper {
     display: grid;
     place-items: center;
     text-align: center;
-    padding: 0 0 200px 0;
+/*    padding: 0 0 200px 0;*/
     width: 100%;
 }
 
+.content-wrapper {
+    padding: 100px 15vw 100px 15vw;
+}
+
 h1 {
+    
+  font-family: "Anta", sans-serif;
+  font-weight: 400;
+  font-style: normal;
     color: white;
-    font-family: "Roboto", sans-serif;
+/*    font-family: "Roboto", sans-serif;*/
     font-size: 14vw;
     letter-spacing: -0.5vw;
 }
 
 p {
+    color: #6ee5e3;
+    font-family: "Comfortaa", cursive;
+/*    font-size: 5vw;*/
+    margin: 15px 0;
+}
+
+#cbar {
     color: #6ee5e3;
     font-family: "Comfortaa", cursive;
     font-size: 5vw;
@@ -57,12 +73,18 @@ a {
 @media screen and (min-width: 600px) {
 
     h1 {
-        font-size: 11vw;
+        font-size: 10vw;
         letter-spacing: -0.25vw;
     }
 
     p {
+        font-size: 1.5vw;
+/*        padding: 0px 20vw;*/
+    }
+
+    #cbar {
         font-size: 3.4vw;
+        padding: 0px;
     }
 
     .icon {
