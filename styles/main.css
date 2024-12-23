@@ -10,7 +10,7 @@ body {
     height: 100vh;
     width: 100vw;
     display: grid;
-    background-color: black;
+    background-color: #1D2B35;
     place-items: center;
     position: fixed;
     overflow-y: scroll;
@@ -33,9 +33,15 @@ h1 {
     font-family: "Anta", sans-serif;
     font-weight: 400;
     font-style: normal;
-    color: white;
+    color: #EEE5E9;
     font-size: 14vw;
     letter-spacing: -0.5vw;
+    text-shadow:
+    -2px -2px 1px #D16666, 2px -2px 0 #D16666, -2px 2px 0 #D16666, 2px 2px 0 #D16666,
+    -2px 0px 1px #D16666, 2px 0px 0 #D16666, 0px 2px 0 #D16666, 0px -2px 0 #D16666,
+    -2px 3px 0 #2892D7, -1px 4px 0 #2892D7, 0px 5px 0 #2892D7, 1px 6px 0 #2892D7,
+    3px -2px 0 #2892D7, 4px -1px 0 #2892D7, 5px 0px 0 #2892D7, 6px 1px 0 #2892D7,
+    6px 6px 0 #2892D7;
 }
 
 p {
@@ -46,18 +52,18 @@ p {
 }
 
 #cbar {
-    color: #6ee5e3;
+    color: #D16666;
     font-family: "Comfortaa", cursive;
     font-size: 5vw;
     margin: 15px 0;
 }
 
 .divider {
-    color: white;
+    color: #2892D7;
 }
 
 .icon {
-    color: white;
+    color: #EEE5E9;
     padding: 1.5vw;
     border-radius: 50%;
     height: 32px;
@@ -89,7 +95,14 @@ a {
     .icon {
         padding: 15px;
         transition: background-color 1s ease,
-            color .3s ease;
+            color .3s ease,
+            box-shadow 1s ease;
+    }
+
+    .fa-rotate-180{
+        transition: background-color 1s ease,
+            color .3s ease,
+            box-shadow 1s ease;
     }
 
     .page-wrapper {
@@ -98,13 +111,13 @@ a {
 
     .icon:hover {
         cursor: pointer;
-        color: black;
-        background-color: #6ee5e3;
+        color: #1D2B35;
+        background-color: #D16666;
+        box-shadow: 3px 3px 0 #2892D7;
     }
 
-    a {
-        transition: background-color .3s ease,
-        color .3s ease;
+    .fa-rotate-180:hover {
+        box-shadow: -3px -3px 0 #2892D7;
     }
 
 
