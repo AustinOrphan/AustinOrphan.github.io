@@ -18,9 +18,8 @@ body {
 
 .page-wrapper {
     display: flex;
-    padding: 0 0 200px 0;
     width: 100%;
-    height: 100%;
+    height: calc (100vh - 80px);
     flex-direction: column;
     justify-content: center;
     align-items: center;
@@ -29,10 +28,11 @@ body {
 .content-wrapper {
     display: flex;
     width: 100%;
-    height: 100%;
+    height: calc (100% - 80px);
     flex-direction: column;
     justify-content: center;
     align-items: center;
+    padding: 0 0 80px 0;
 }
 
 h1 {
@@ -133,6 +133,11 @@ a {
 
     .page-wrapper {
         padding: 0 0 0 0;
+        height: 100%;
+    }
+    .content-wrapper {
+        padding: 0 0 0 0;
+        height: 100%;
     }
 
     .icon:hover {
