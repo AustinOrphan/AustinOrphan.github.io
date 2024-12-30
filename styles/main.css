@@ -47,7 +47,7 @@ h1 {
 }
 
 p {
-    color: #6ee5e3;
+    color: #2892D7;
     font-family: "Comfortaa", cursive;
     font-size: 4vw;
     margin: 1.25vw 0;
@@ -67,7 +67,7 @@ p {
     width: 100%;
     justify-self: center;
     position: absolute;
-    bottom: 0;
+    bottom: 50px;
 }
 
 .divider {
@@ -108,7 +108,6 @@ a {
 
     p {
         font-size: 1.5vw;
-/*        padding: 0px 20vw;*/
     }
 
     #cbar {
@@ -120,6 +119,7 @@ a {
         margin: 0;
         width: fit-content;
         position: relative;
+        bottom: 0;
     }
 
     .icon {
