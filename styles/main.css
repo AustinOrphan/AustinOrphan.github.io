@@ -89,6 +89,10 @@ a {
     justify-content: center;
 }
 
+.ph-meteor {
+    rotate: 180deg;
+}
+
 @media screen and (min-width: 600px) {
 
     h1 {
@@ -138,5 +142,8 @@ a {
         box-shadow: .3vw .3vw 0 #2892D7;
     }
 
+    .ph-meteor:hover {
+        box-shadow: -.3vw -.3vw 0 #2892D7;
+    }
 
 }
