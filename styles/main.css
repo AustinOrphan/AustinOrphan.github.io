@@ -17,15 +17,22 @@ body {
 }
 
 .page-wrapper {
-    display: grid;
-    place-items: center;
-    text-align: center;
+    display: flex;
 /*    padding: 0 0 200px 0;*/
     width: 100%;
+    height: 100%;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
 }
 
 .content-wrapper {
-    padding: 100px 5vw 100px 5vw;
+    display: flex;
+    width: 100%;
+    height: 100%;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
 }
 
 h1 {
@@ -36,21 +43,31 @@ h1 {
     font-size: 14vw;
     letter-spacing: -0.5vw;
     text-shadow:
-    1px 1px 0 #D16666, 2px 2px 0 #2892D7;
+    .1vw .1vw 0 #D16666, .2vw .2vw 0 #2892D7;
 }
 
 p {
     color: #6ee5e3;
     font-family: "Comfortaa", cursive;
     font-size: 4vw;
-    margin: 15px 0;
+    margin: 1.25vw 0;
 }
 
 #cbar {
     color: #D16666;
     font-family: "Comfortaa", cursive;
     font-size: 5vw;
-    margin: 15px 0;
+    margin: 1.25vw 0;
+}
+
+#linkBar {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    margin: 3vw;
+    width: 100%;
+    justify-self: center;
+    position: absolute;
+    bottom: 0;
 }
 
 .divider {
@@ -61,13 +78,15 @@ p {
     color: #EEE5E9;
     padding: 1.5vw;
     border-radius: 50%;
-    height: 32px;
-    width: 32px;
+    font-size: 8vw;
 }
 
 a {
+    display: flex;
     color: inherit;
     width: 100%;
+    height: 100%;
+    justify-content: center;
 }
 
 @media screen and (min-width: 600px) {
@@ -76,11 +95,11 @@ a {
         font-size: 10vw;
         letter-spacing: -0.25vw;
         text-shadow:
-        -2px -2px 0 #D16666, 2px -2px 0 #D16666, -2px 2px 0 #D16666, 2px 2px 0 #D16666,
-        -2px 0px 0 #D16666, 2px 0px 0 #D16666, 0px 2px 0 #D16666, 0px -2px 0 #D16666,
-        -2px 3px 0 #2892D7, -1px 4px 0 #2892D7, 0px 5px 0 #2892D7, 1px 6px 0 #2892D7,
-        3px -2px 0 #2892D7, 4px -1px 0 #2892D7, 5px 0px 0 #2892D7, 6px 1px 0 #2892D7,
-        6px 6px 0 #2892D7;
+        -.2vw -.2vw 0 #D16666, .2vw -.2vw 0 #D16666, -.2vw .2vw 0 #D16666, .2vw .2vw 0 #D16666,
+        -.2vw 0 0 #D16666, .2vw 0 0 #D16666, 0 .2vw 0 #D16666, 0 -.2vw 0 #D16666,
+        -.2vw .3vw 0 #2892D7, -.1vw .4vw 0 #2892D7, 0 .5vw 0 #2892D7, .1vw .6vw 0 #2892D7,
+        .3vw -.2vw 0 #2892D7, .4vw -.1vw 0 #2892D7, .5vw 0 0 #2892D7, .6vw .1vw 0 #2892D7,
+        .6vw .6vw 0 #2892D7;
     }
 
     p {
@@ -90,17 +109,19 @@ a {
 
     #cbar {
         font-size: 3.4vw;
-        padding: 0px;
+        padding: 0;
+    }
+
+    #linkBar {
+        margin: 0;
+        width: fit-content;
+        position: relative;
     }
 
     .icon {
-        padding: 15px;
-        transition: background-color 1s ease,
-            color .3s ease,
-            box-shadow 1s ease;
-    }
-
-    .fa-rotate-180{
+        padding: 1vw;
+        margin: .5vw;
+        font-size: 3.5vw;
         transition: background-color 1s ease,
             color .3s ease,
             box-shadow 1s ease;
@@ -114,11 +135,7 @@ a {
         cursor: pointer;
         color: #1D2B35;
         background-color: #D16666;
-        box-shadow: 3px 3px 0 #2892D7;
-    }
-
-    .fa-rotate-180:hover {
-        box-shadow: -3px -3px 0 #2892D7;
+        box-shadow: .3vw .3vw 0 #2892D7;
     }
 
 
