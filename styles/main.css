@@ -99,11 +99,16 @@ a {
         font-size: 10vw;
         letter-spacing: -0.25vw;
         text-shadow:
-        -.2vw -.2vw 0 #D16666, .2vw -.2vw 0 #D16666, -.2vw .2vw 0 #D16666, .2vw .2vw 0 #D16666,
+        .2vw .2vw 0 #2892D7;
+
+        -webkit-text-stroke-width: .2vw;
+        -webkit-text-stroke-color: #D16666;
+
+        /* -.2vw -.2vw 0 #D16666, .2vw -.2vw 0 #D16666, -.2vw .2vw 0 #D16666, .2vw .2vw 0 #D16666,
         -.2vw 0 0 #D16666, .2vw 0 0 #D16666, 0 .2vw 0 #D16666, 0 -.2vw 0 #D16666,
         -.2vw .3vw 0 #2892D7, -.1vw .4vw 0 #2892D7, 0 .5vw 0 #2892D7, .1vw .6vw 0 #2892D7,
         .3vw -.2vw 0 #2892D7, .4vw -.1vw 0 #2892D7, .5vw 0 0 #2892D7, .6vw .1vw 0 #2892D7,
-        .6vw .6vw 0 #2892D7;
+        .6vw .6vw 0 #2892D7; */
     }
 
     p {
