@@ -1,5 +1,13 @@
 @import url("https://fonts.googleapis.com/css2?family=Anta&family=Comfortaa:wght@700&family=Source+Sans+Pro:wght@900&display=swap");
 
+:root {
+    /* Color System */
+    --color-background: #1D2B35;
+    --color-primary: #EEE5E9;
+    --color-accent: #2892D7;
+    --color-secondary: #D16666;
+}
+
 * {
     margin: 0;
     text-decoration: none;
@@ -10,7 +18,7 @@ body {
     height: 100vh;
     width: 100vw;
     display: grid;
-    background-color: #1D2B35;
+    background-color: var(--color-background);
     place-items: center;
     position: fixed;
     overflow-y: scroll;
@@ -39,22 +47,22 @@ h1 {
     font-family: "Anta", sans-serif;
     font-weight: 400;
     font-style: normal;
-    color: #EEE5E9;
+    color: var(--color-primary);
     font-size: 14vw;
     letter-spacing: -0.5vw;
     text-shadow:
-    .1vw .1vw 0 #D16666, .2vw .2vw 0 #2892D7;
+    .1vw .1vw 0 var(--color-secondary), .2vw .2vw 0 var(--color-accent);
 }
 
 p {
-    color: #2892D7;
+    color: var(--color-accent);
     font-family: "Comfortaa", cursive;
     font-size: 4vw;
     margin: 1.25vw 0;
 }
 
 #cbar {
-    color: #D16666;
+    color: var(--color-secondary);
     font-family: "Comfortaa", cursive;
     font-size: 5vw;
     margin: 1.25vw 0;
@@ -71,11 +79,11 @@ p {
 }
 
 .divider {
-    color: #2892D7;
+    color: var(--color-accent);
 }
 
 .icon {
-    color: #EEE5E9;
+    color: var(--color-primary);
     padding: 1.5vw;
     border-radius: 50%;
     font-size: 8vw;
@@ -99,10 +107,10 @@ a {
         font-size: 10vw;
         letter-spacing: -0.25vw;
         text-shadow:
-        .2vw .2vw 0 #2892D7;
+        .2vw .2vw 0 var(--color-accent);
 
         -webkit-text-stroke-width: .2vw;
-        -webkit-text-stroke-color: #D16666;
+        -webkit-text-stroke-color: var(--color-secondary);
 
         /* -.2vw -.2vw 0 #D16666, .2vw -.2vw 0 #D16666, -.2vw .2vw 0 #D16666, .2vw .2vw 0 #D16666,
         -.2vw 0 0 #D16666, .2vw 0 0 #D16666, 0 .2vw 0 #D16666, 0 -.2vw 0 #D16666,
@@ -147,13 +155,13 @@ a {
 
     .icon:hover {
         cursor: pointer;
-        color: #1D2B35;
-        background-color: #D16666;
-        box-shadow: .3vw .3vw 0 #2892D7;
+        color: var(--color-background);
+        background-color: var(--color-secondary);
+        box-shadow: .3vw .3vw 0 var(--color-accent);
     }
 
     .ph-meteor:hover {
-        box-shadow: -.3vw -.3vw 0 #2892D7;
+        box-shadow: -.3vw -.3vw 0 var(--color-accent);
     }
 
 }
