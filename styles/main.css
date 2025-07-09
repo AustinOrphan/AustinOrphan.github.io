@@ -16,12 +16,18 @@
 html,
 body {
     height: 100vh;
+    height: 100dvh; /* Dynamic viewport height for mobile */
     width: 100vw;
     display: grid;
     background-color: var(--color-background);
     place-items: center;
-    position: fixed;
-    overflow-y: scroll;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+    /* Remove position: fixed to fix mobile scrolling */
+    /* Enable smooth scrolling and hardware acceleration */
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
 }
 
 .page-wrapper {
@@ -76,6 +82,8 @@ p {
     justify-self: center;
     position: absolute;
     bottom: 80px;
+    /* Ensure proper spacing between touch targets */
+    gap: 8px;
 }
 
 .divider {
@@ -87,6 +95,15 @@ p {
     padding: 1.5vw;
     border-radius: 50%;
     font-size: 8vw;
+    /* Ensure minimum 44px touch targets for mobile */
+    min-width: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* Hardware acceleration for smooth mobile performance */
+    transform: translateZ(0);
+    will-change: transform, background-color, color;
 }
 
 a {
@@ -160,6 +177,9 @@ a {
         transition: background-color 1s ease,
             color .3s ease,
             box-shadow 1s ease;
+        /* Maintain minimum touch targets on desktop */
+        min-width: 48px;
+        min-height: 48px;
     }
 
     .page-wrapper {
