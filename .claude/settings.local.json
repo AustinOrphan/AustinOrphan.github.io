@@ -18,7 +18,10 @@
       "Bash(git commit:*)",
       "Bash(git checkout:*)",
       "mcp__serena__replace_regex",
-      "Bash(git merge:*)"
+      "Bash(git merge:*)",
+      "Bash(find:*)",
+      "Bash(grep:*)",
+      "Bash(rm:*)"
     ],
     "deny": []
   }
