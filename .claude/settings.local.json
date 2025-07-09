@@ -15,7 +15,10 @@
       "mcp__Context7__resolve-library-id",
       "mcp__Context7__get-library-docs",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(git checkout:*)",
+      "mcp__serena__replace_regex",
+      "Bash(git merge:*)"
     ],
     "deny": []
   }

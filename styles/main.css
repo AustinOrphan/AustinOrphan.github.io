@@ -19,7 +19,7 @@ body {
 .page-wrapper {
     display: flex;
     width: 100%;
-    height: calc (100vh - 80px);
+    height: calc(100vh - 80px);
     flex-direction: column;
     justify-content: center;
     align-items: center;
@@ -28,7 +28,7 @@ body {
 .content-wrapper {
     display: flex;
     width: 100%;
-    height: calc (100% - 80px);
+    height: calc(100% - 80px);
     flex-direction: column;
     justify-content: center;
     align-items: center;
