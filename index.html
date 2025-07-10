@@ -49,31 +49,126 @@
 </head>
 
 <body>
-    <div class="page-wrapper">
-        <div class="content-wrapper">
-            <h1>Austin Orphan</h1>
-            <p id="cbar">
-                Creative <span class="divider"> | </span>Competitive <span class="divider"> | </span> Curious
-            </p>
-            <div id="linkBar">
-                <a href="https://github.com/austinorphan" target="_blank" rel="noopener noreferrer" aria-label="GitHub Profile">
-                    <i class="icon ph-duotone ph-github-logo"></i>
-                </a>
-                <a href="https://www.linkedin.com/in/austinorphan/" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn Profile">
-                    <i class="icon ph-duotone ph-linkedin-logo"></i>
-                </a>
-                <a href="AustinOrphanResume.pdf" download aria-label="Download Resume">
-                    <i class="icon ph-duotone ph-read-cv-logo"></i>
-                </a>
-                <a href="mailto:AustinGOrphan@gmail.com" aria-label="Email Contact">
-                    <i class="icon ph-duotone ph-envelope-simple"></i>
-                </a>
-                <a href="/ProjectileMotionSimulator/src/" aria-label="Projectile Motion Simulator Project">
-                    <i class="icon ph-duotone ph-meteor"></i>
-                </a>
+    <!-- Hero Section -->
+    <section id="hero" class="hero-section">
+        <div class="page-wrapper">
+            <div class="content-wrapper">
+                <h1>Austin Orphan</h1>
+                <p id="cbar">
+                    Creative <span class="divider"> | </span>Competitive <span class="divider"> | </span> Curious
+                </p>
+                <div id="linkBar">
+                    <a href="https://github.com/austinorphan" target="_blank" rel="noopener noreferrer" aria-label="GitHub Profile">
+                        <i class="icon ph-duotone ph-github-logo"></i>
+                    </a>
+                    <a href="https://www.linkedin.com/in/austinorphan/" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn Profile">
+                        <i class="icon ph-duotone ph-linkedin-logo"></i>
+                    </a>
+                    <a href="AustinOrphanResume.pdf" download aria-label="Download Resume">
+                        <i class="icon ph-duotone ph-read-cv-logo"></i>
+                    </a>
+                    <a href="mailto:AustinGOrphan@gmail.com" aria-label="Email Contact">
+                        <i class="icon ph-duotone ph-envelope-simple"></i>
+                    </a>
+                    <a href="#projects" aria-label="View Projects">
+                        <i class="icon ph-duotone ph-meteor"></i>
+                    </a>
+                </div>
+                <div class="scroll-indicator">
+                    <a href="#projects" aria-label="Scroll to Projects">
+                        <i class="ph-duotone ph-arrow-down"></i>
+                    </a>
+                </div>
             </div>
         </div>
-    </div>
+    </section>
+
+    <!-- Projects Section -->
+    <section id="projects" class="projects-section">
+        <div class="section-container">
+            <h2>Projects</h2>
+            <div class="projects-grid">
+                <!-- Projectile Motion Simulator -->
+                <div class="project-card">
+                    <div class="project-header">
+                        <h3>Projectile Motion Simulator</h3>
+                        <div class="project-links">
+                            <a href="/ProjectileMotionSimulator/src/" target="_blank" rel="noopener noreferrer" aria-label="View Live Demo">
+                                <i class="ph-duotone ph-play-circle"></i>
+                            </a>
+                            <a href="https://github.com/austinorphan/ProjectileMotionSimulator" target="_blank" rel="noopener noreferrer" aria-label="View GitHub Repository">
+                                <i class="ph-duotone ph-github-logo"></i>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="project-description">
+                        <p>Interactive physics simulation demonstrating projectile motion principles with real-time visualization and parameter controls.</p>
+                    </div>
+                    <div class="project-tech">
+                        <span class="tech-tag">JavaScript</span>
+                        <span class="tech-tag">HTML5 Canvas</span>
+                        <span class="tech-tag">Physics</span>
+                        <span class="tech-tag">Animation</span>
+                    </div>
+                </div>
+
+                <!-- Portfolio Website -->
+                <div class="project-card">
+                    <div class="project-header">
+                        <h3>Portfolio Website</h3>
+                        <div class="project-links">
+                            <a href="https://austinorphan.github.io/" target="_blank" rel="noopener noreferrer" aria-label="View Live Demo">
+                                <i class="ph-duotone ph-play-circle"></i>
+                            </a>
+                            <a href="https://github.com/austinorphan/austinorphan.github.io" target="_blank" rel="noopener noreferrer" aria-label="View GitHub Repository">
+                                <i class="ph-duotone ph-github-logo"></i>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="project-description">
+                        <p>Responsive personal portfolio website showcasing projects, skills, and professional experience with modern design principles.</p>
+                    </div>
+                    <div class="project-tech">
+                        <span class="tech-tag">HTML5</span>
+                        <span class="tech-tag">CSS3</span>
+                        <span class="tech-tag">Responsive Design</span>
+                        <span class="tech-tag">Accessibility</span>
+                    </div>
+                </div>
+
+                <!-- Placeholder for additional projects -->
+                <div class="project-card placeholder">
+                    <div class="project-header">
+                        <h3>More Projects Coming Soon</h3>
+                        <div class="project-links">
+                            <a href="https://github.com/austinorphan" target="_blank" rel="noopener noreferrer" aria-label="View GitHub Profile">
+                                <i class="ph-duotone ph-github-logo"></i>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="project-description">
+                        <p>Additional projects and creative work will be showcased here. Check back soon or visit my GitHub profile for the latest updates.</p>
+                    </div>
+                    <div class="project-tech">
+                        <span class="tech-tag">React</span>
+                        <span class="tech-tag">Node.js</span>
+                        <span class="tech-tag">Python</span>
+                        <span class="tech-tag">Machine Learning</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Navigation -->
+    <nav class="section-nav">
+        <a href="#hero" aria-label="Go to Hero Section">
+            <i class="ph-duotone ph-house"></i>
+        </a>
+        <a href="#projects" aria-label="Go to Projects Section">
+            <i class="ph-duotone ph-folder-open"></i>
+        </a>
+    </nav>
 </body>
 
 </html>
