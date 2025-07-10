@@ -252,6 +252,81 @@
         </div>
     </section>
 
+    <!-- Contact Section -->
+    <section id="contact" class="contact-section">
+        <div class="section-container">
+            <h2>Get In Touch</h2>
+            <div class="contact-content">
+                <div class="contact-info">
+                    <div class="contact-intro">
+                        <p>I'm always interested in new opportunities, collaborations, and interesting projects. Whether you have a question, want to discuss a project, or just want to say hello, I'd love to hear from you!</p>
+                    </div>
+                    
+                    <div class="contact-methods">
+                        <div class="contact-method">
+                            <i class="ph-duotone ph-envelope"></i>
+                            <div>
+                                <h3>Email</h3>
+                                <a href="mailto:AustinGOrphan@gmail.com">AustinGOrphan@gmail.com</a>
+                            </div>
+                        </div>
+                        
+                        <div class="contact-method">
+                            <i class="ph-duotone ph-linkedin-logo"></i>
+                            <div>
+                                <h3>LinkedIn</h3>
+                                <a href="https://www.linkedin.com/in/austinorphan/" target="_blank" rel="noopener noreferrer">linkedin.com/in/austinorphan</a>
+                            </div>
+                        </div>
+                        
+                        <div class="contact-method">
+                            <i class="ph-duotone ph-github-logo"></i>
+                            <div>
+                                <h3>GitHub</h3>
+                                <a href="https://github.com/austinorphan" target="_blank" rel="noopener noreferrer">github.com/austinorphan</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="contact-form-container">
+                    <form class="contact-form" action="#" method="POST" novalidate>
+                        <div class="form-group">
+                            <label for="name">Name *</label>
+                            <input type="text" id="name" name="name" required aria-describedby="name-error">
+                            <span class="error-message" id="name-error" role="alert"></span>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="email">Email *</label>
+                            <input type="email" id="email" name="email" required aria-describedby="email-error">
+                            <span class="error-message" id="email-error" role="alert"></span>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="subject">Subject</label>
+                            <input type="text" id="subject" name="subject" aria-describedby="subject-error">
+                            <span class="error-message" id="subject-error" role="alert"></span>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="message">Message *</label>
+                            <textarea id="message" name="message" rows="5" required aria-describedby="message-error" placeholder="Tell me about your project or just say hello!"></textarea>
+                            <span class="error-message" id="message-error" role="alert"></span>
+                        </div>
+                        
+                        <button type="submit" class="submit-btn">
+                            <i class="ph-duotone ph-paper-plane-tilt"></i>
+                            Send Message
+                        </button>
+                    </form>
+                    
+                    <div class="form-status" id="form-status" role="alert" aria-live="polite"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <!-- Navigation -->
     <nav class="section-nav">
         <a href="#hero" aria-label="Go to Hero Section">
@@ -263,7 +338,142 @@
         <a href="#projects" aria-label="Go to Projects Section">
             <i class="ph-duotone ph-folder-open"></i>
         </a>
+        <a href="#contact" aria-label="Go to Contact Section">
+            <i class="ph-duotone ph-envelope"></i>
+        </a>
     </nav>
+
+    <!-- Contact Form JavaScript -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.querySelector('.contact-form');
+            const statusDiv = document.getElementById('form-status');
+            
+            function validateName(name) {
+                return name.trim().length >= 2;
+            }
+            
+            function validateEmail(email) {
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                return emailRegex.test(email.trim());
+            }
+            
+            function validateMessage(message) {
+                return message.trim().length >= 10;
+            }
+            
+            function showError(fieldId, message) {
+                const errorElement = document.getElementById(fieldId + '-error');
+                const field = document.getElementById(fieldId);
+                errorElement.textContent = message;
+                field.classList.add('error');
+                errorElement.style.display = 'block';
+            }
+            
+            function clearError(fieldId) {
+                const errorElement = document.getElementById(fieldId + '-error');
+                const field = document.getElementById(fieldId);
+                errorElement.textContent = '';
+                field.classList.remove('error');
+                errorElement.style.display = 'none';
+            }
+            
+            function showStatus(message, type) {
+                statusDiv.textContent = message;
+                statusDiv.className = 'form-status ' + type;
+                statusDiv.style.display = 'block';
+                
+                if (type === 'success') {
+                    setTimeout(() => {
+                        statusDiv.style.display = 'none';
+                    }, 5000);
+                }
+            }
+            
+            document.getElementById('name').addEventListener('blur', function() {
+                if (!validateName(this.value)) {
+                    showError('name', 'Name must be at least 2 characters long');
+                } else {
+                    clearError('name');
+                }
+            });
+            
+            document.getElementById('email').addEventListener('blur', function() {
+                if (!validateEmail(this.value)) {
+                    showError('email', 'Please enter a valid email address');
+                } else {
+                    clearError('email');
+                }
+            });
+            
+            document.getElementById('message').addEventListener('blur', function() {
+                if (!validateMessage(this.value)) {
+                    showError('message', 'Message must be at least 10 characters long');
+                } else {
+                    clearError('message');
+                }
+            });
+            
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                statusDiv.style.display = 'none';
+                
+                const formData = new FormData(form);
+                const name = formData.get('name');
+                const email = formData.get('email');
+                const subject = formData.get('subject');
+                const message = formData.get('message');
+                
+                let isValid = true;
+                
+                if (!validateName(name)) {
+                    showError('name', 'Name must be at least 2 characters long');
+                    isValid = false;
+                } else {
+                    clearError('name');
+                }
+                
+                if (!validateEmail(email)) {
+                    showError('email', 'Please enter a valid email address');
+                    isValid = false;
+                } else {
+                    clearError('email');
+                }
+                
+                if (!validateMessage(message)) {
+                    showError('message', 'Message must be at least 10 characters long');
+                    isValid = false;
+                } else {
+                    clearError('message');
+                }
+                
+                if (!isValid) {
+                    showStatus('Please fix the errors above and try again.', 'error');
+                    return;
+                }
+                
+                const submitBtn = form.querySelector('.submit-btn');
+                const originalText = submitBtn.innerHTML;
+                submitBtn.innerHTML = '<i class="ph-duotone ph-spinner"></i> Sending...';
+                submitBtn.disabled = true;
+                
+                setTimeout(() => {
+                    const mailtoSubject = subject || 'Contact from Portfolio Website';
+                    const mailtoBody = 'Name: ' + name + '%0D%0AEmail: ' + email + '%0D%0A%0D%0AMessage:%0D%0A' + message;
+                    const mailtoLink = 'mailto:AustinGOrphan@gmail.com?subject=' + encodeURIComponent(mailtoSubject) + '&body=' + mailtoBody;
+                    
+                    window.location.href = mailtoLink;
+                    
+                    form.reset();
+                    submitBtn.innerHTML = originalText;
+                    submitBtn.disabled = false;
+                    
+                    showStatus('Your email client should have opened. If not, please email me directly at AustinGOrphan@gmail.com', 'success');
+                }, 1000);
+            });
+        });
+    </script>
 </body>
 
 </html>
