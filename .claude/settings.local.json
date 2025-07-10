@@ -23,7 +23,8 @@
       "Bash(grep:*)",
       "Bash(rm:*)",
       "Bash(ls:*)",
-      "Bash(open:*)"
+      "Bash(open:*)",
+      "WebFetch(domain:github.com)"
     ],
     "deny": []
   }

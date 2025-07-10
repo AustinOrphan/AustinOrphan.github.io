@@ -5,8 +5,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Austin Orphan</title>
-    <script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
-    <link rel="stylesheet" href="styles/main.css" />
+    
+    <!-- Preload critical resources -->
+    <link rel="preload" href="styles/main.css" as="style">
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Anta&family=Comfortaa:wght@700&family=Source+Sans+Pro:wght@900&display=swap" as="style">
+    
+    <!-- Load critical styles -->
+    <link rel="stylesheet" href="styles/main.css">
+    
+    <!-- Load icons with defer for better performance -->
+    <script src="https://unpkg.com/@phosphor-icons/web@2.1.1" defer></script>
     <!-- favicon -->
     
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
@@ -46,6 +54,18 @@
     <link rel="canonical" href="https://austinorphan.github.io/">
     <meta name="application-name" content="Austin Orphan Portfolio">
     
+    <!-- Google Analytics (replace YOUR_GA_ID with your actual GA4 measurement ID) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=YOUR_GA_ID"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'YOUR_GA_ID', {
+            page_title: 'Austin Orphan Portfolio',
+            page_location: window.location.href
+        });
+    </script>
+    
 </head>
 
 <body>
@@ -74,11 +94,11 @@
                         <i class="icon ph-duotone ph-meteor"></i>
                     </a>
                 </div>
-                <div class="scroll-indicator">
-                    <a href="#about" aria-label="Scroll to About">
-                        <i class="ph-duotone ph-arrow-down"></i>
-                    </a>
-                </div>
+            </div>
+            <div class="scroll-indicator">
+                <a href="#about" aria-label="Scroll to About">
+                    <i class="ph-duotone ph-arrow-down"></i>
+                </a>
             </div>
         </div>
     </section>
@@ -90,23 +110,24 @@
             <div class="about-content">
                 <div class="about-text">
                     <div class="about-intro">
-                        <p>I'm Austin Orphan, a passionate developer and designer who embodies the philosophy of being <strong>Creative</strong>, <strong>Competitive</strong>, and <strong>Curious</strong>. I believe in pushing the boundaries of what's possible through code and design.</p>
+                        <p>I'm Austin Orphan, a passionate software developer who embodies the philosophy of being <strong>Creative</strong>, <strong>Competitive</strong>, and <strong>Curious</strong>. With a background in computer science and expertise in technologies like C#, .NET, and AWS, I love building solutions that make a real difference—whether that's crafting intuitive user interfaces or architecting scalable backend systems.</p>
+                        <p>When I'm not coding, you might find me playing drums, guitar, or shooting hoops on the basketball court. I believe the best solutions come from diverse experiences and perspectives.</p>
                     </div>
                     
                     <div class="about-details">
                         <div class="detail-section">
                             <h3><i class="ph-duotone ph-lightbulb"></i> Creative</h3>
-                            <p>I approach every project with a creative mindset, finding innovative solutions to complex problems. Whether it's building interactive simulations or crafting user experiences, I strive to create something unique and meaningful.</p>
+                            <p>I approach every project with a creative mindset, finding innovative solutions to complex problems. Whether it's designing efficient workflows, building interactive applications, or optimizing existing systems, I strive to create something both functional and elegant.</p>
                         </div>
                         
                         <div class="detail-section">
                             <h3><i class="ph-duotone ph-trophy"></i> Competitive</h3>
-                            <p>I thrive in competitive environments and constantly challenge myself to improve. I believe that healthy competition drives innovation and excellence in every aspect of development.</p>
+                            <p>I thrive in challenging environments and constantly push myself to improve. This competitive spirit drives me to write cleaner code, learn new technologies, and deliver solutions that exceed expectations. I believe healthy competition brings out the best in everyone.</p>
                         </div>
                         
                         <div class="detail-section">
                             <h3><i class="ph-duotone ph-question"></i> Curious</h3>
-                            <p>My curiosity drives me to explore new technologies, frameworks, and methodologies. I'm always learning, always questioning, and always looking for better ways to solve problems.</p>
+                            <p>My curiosity is what led me from computer science into exploring management principles, from traditional databases to cloud architectures, and from solo projects to collaborative team environments. I'm always asking "what if?" and "how can we do this better?"</p>
                         </div>
                     </div>
                 </div>
@@ -116,51 +137,71 @@
                         <h3>Technical Skills</h3>
                         <div class="skills-grid">
                             <div class="skill-category">
-                                <h4>Languages</h4>
+                                <h4>Core Languages</h4>
                                 <div class="skill-tags">
-                                    <span class="skill-tag">JavaScript</span>
+                                    <span class="skill-tag">C#</span>
                                     <span class="skill-tag">Python</span>
+                                    <span class="skill-tag">SQL</span>
+                                    <span class="skill-tag">JavaScript</span>
+                                    <span class="skill-tag">Java</span>
+                                    <span class="skill-tag">C++</span>
+                                </div>
+                            </div>
+                            
+                            <div class="skill-category">
+                                <h4>Frameworks & Technologies</h4>
+                                <div class="skill-tags">
+                                    <span class="skill-tag">.NET</span>
+                                    <span class="skill-tag">ASP.NET</span>
+                                    <span class="skill-tag">AWS</span>
+                                    <span class="skill-tag">SQL Server</span>
+                                    <span class="skill-tag">Snowflake</span>
+                                    <span class="skill-tag">MySQL</span>
+                                </div>
+                            </div>
+                            
+                            <div class="skill-category">
+                                <h4>Tools & Platforms</h4>
+                                <div class="skill-tags">
+                                    <span class="skill-tag">Looker</span>
+                                    <span class="skill-tag">LookML</span>
+                                    <span class="skill-tag">AWS Athena</span>
+                                    <span class="skill-tag">Git</span>
                                     <span class="skill-tag">HTML5</span>
                                     <span class="skill-tag">CSS3</span>
-                                    <span class="skill-tag">Java</span>
                                 </div>
                             </div>
                             
                             <div class="skill-category">
-                                <h4>Frameworks</h4>
+                                <h4>Creative Skills</h4>
                                 <div class="skill-tags">
-                                    <span class="skill-tag">React</span>
-                                    <span class="skill-tag">Node.js</span>
-                                    <span class="skill-tag">Express</span>
-                                    <span class="skill-tag">Flask</span>
-                                </div>
-                            </div>
-                            
-                            <div class="skill-category">
-                                <h4>Tools & Technologies</h4>
-                                <div class="skill-tags">
-                                    <span class="skill-tag">Git</span>
-                                    <span class="skill-tag">GitHub</span>
-                                    <span class="skill-tag">VS Code</span>
-                                    <span class="skill-tag">Figma</span>
-                                    <span class="skill-tag">Docker</span>
+                                    <span class="skill-tag">CAD</span>
+                                    <span class="skill-tag">Photoshop</span>
+                                    <span class="skill-tag">Illustrator</span>
+                                    <span class="skill-tag">UI/UX Design</span>
                                 </div>
                             </div>
                         </div>
                     </div>
                     
                     <div class="experience-section">
-                        <h3>Experience</h3>
+                        <h3>Professional Journey</h3>
                         <div class="experience-item">
-                            <h4>Full-Stack Developer</h4>
-                            <p class="experience-period">2022 - Present</p>
-                            <p class="experience-description">Building interactive web applications and exploring emerging technologies in web development and design.</p>
+                            <h4>Software Developer</h4>
+                            <p class="experience-period">OSM Worldwide • Nov 2023 - Present</p>
+                            <p class="experience-description">Building scalable .NET applications and diving deep into AWS cloud architecture. I love the fast-paced environment where I can quickly iterate on solutions based on real user feedback.</p>
                         </div>
                         
                         <div class="experience-item">
-                            <h4>Physics Simulation Developer</h4>
-                            <p class="experience-period">2023</p>
-                            <p class="experience-description">Created educational physics simulations using JavaScript and HTML5 Canvas, including the Projectile Motion Simulator.</p>
+                            <h4>Customer Excellence Engineer</h4>
+                            <p class="experience-period">Integral Ad Science • 2020 - 2023</p>
+                            <p class="experience-description">Became the go-to person for complex data challenges, working with everything from SQL optimization to mentoring team members. This role taught me how technology impacts real business outcomes.</p>
+                        </div>
+                        
+                        <div class="experience-item">
+                            <h4>Continuous Learning</h4>
+                            <p class="experience-period">Currently pursuing M.S. in Management</p>
+                            <p class="experience-description">Bridging the gap between technical expertise and business strategy at University of Illinois, while building on my Computer Science foundation from Aurora University.</p>
                         </div>
                     </div>
                     
@@ -180,6 +221,48 @@
         <div class="section-container">
             <h2>Projects</h2>
             <div class="projects-grid">
+                <!-- Running App MVP -->
+                <div class="project-card">
+                    <div class="project-header">
+                        <h3>Running App MVP</h3>
+                        <div class="project-links">
+                            <a href="https://github.com/austinorphan/running-app-mvp" target="_blank" rel="noopener noreferrer" aria-label="View GitHub Repository">
+                                <i class="ph-duotone ph-github-logo"></i>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="project-description">
+                        <p>A TypeScript-based running application MVP designed to track and analyze running performance with modern web technologies.</p>
+                    </div>
+                    <div class="project-tech">
+                        <span class="tech-tag">TypeScript</span>
+                        <span class="tech-tag">Web Development</span>
+                        <span class="tech-tag">Fitness Tracking</span>
+                        <span class="tech-tag">MVP</span>
+                    </div>
+                </div>
+
+                <!-- MazeBot -->
+                <div class="project-card">
+                    <div class="project-header">
+                        <h3>MazeBot</h3>
+                        <div class="project-links">
+                            <a href="https://github.com/austinorphan/MazeBot" target="_blank" rel="noopener noreferrer" aria-label="View GitHub Repository">
+                                <i class="ph-duotone ph-github-logo"></i>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="project-description">
+                        <p>Maze navigating robot initially designed for my college robotics class. Implements pathfinding algorithms and sensor integration for autonomous navigation.</p>
+                    </div>
+                    <div class="project-tech">
+                        <span class="tech-tag">Python</span>
+                        <span class="tech-tag">Robotics</span>
+                        <span class="tech-tag">Pathfinding</span>
+                        <span class="tech-tag">Algorithms</span>
+                    </div>
+                </div>
+
                 <!-- Projectile Motion Simulator -->
                 <div class="project-card">
                     <div class="project-header">
@@ -194,44 +277,41 @@
                         </div>
                     </div>
                     <div class="project-description">
-                        <p>Interactive physics simulation demonstrating projectile motion principles with real-time visualization and parameter controls.</p>
+                        <p>Interactive physics simulation demonstrating projectile motion principles with real-time visualization and parameter controls for educational purposes.</p>
                     </div>
                     <div class="project-tech">
                         <span class="tech-tag">JavaScript</span>
                         <span class="tech-tag">HTML5 Canvas</span>
                         <span class="tech-tag">Physics</span>
-                        <span class="tech-tag">Animation</span>
+                        <span class="tech-tag">Education</span>
                     </div>
                 </div>
 
-                <!-- Portfolio Website -->
+                <!-- PyFun -->
                 <div class="project-card">
                     <div class="project-header">
-                        <h3>Portfolio Website</h3>
+                        <h3>PyFun Games</h3>
                         <div class="project-links">
-                            <a href="https://austinorphan.github.io/" target="_blank" rel="noopener noreferrer" aria-label="View Live Demo">
-                                <i class="ph-duotone ph-play-circle"></i>
-                            </a>
-                            <a href="https://github.com/austinorphan/austinorphan.github.io" target="_blank" rel="noopener noreferrer" aria-label="View GitHub Repository">
+                            <a href="https://github.com/austinorphan/PyFun" target="_blank" rel="noopener noreferrer" aria-label="View GitHub Repository">
                                 <i class="ph-duotone ph-github-logo"></i>
                             </a>
                         </div>
                     </div>
                     <div class="project-description">
-                        <p>Responsive personal portfolio website showcasing projects, skills, and professional experience with modern design principles.</p>
+                        <p>Simple collection of games built in Python showcasing fundamental programming concepts and game development principles through interactive entertainment.</p>
                     </div>
                     <div class="project-tech">
-                        <span class="tech-tag">HTML5</span>
-                        <span class="tech-tag">CSS3</span>
-                        <span class="tech-tag">Responsive Design</span>
-                        <span class="tech-tag">Accessibility</span>
+                        <span class="tech-tag">Python</span>
+                        <span class="tech-tag">Game Development</span>
+                        <span class="tech-tag">Object-Oriented</span>
+                        <span class="tech-tag">Interactive</span>
                     </div>
                 </div>
 
-                <!-- Placeholder for additional projects -->
+                <!-- GitHub Profile Link -->
                 <div class="project-card placeholder">
                     <div class="project-header">
-                        <h3>More Projects Coming Soon</h3>
+                        <h3>Explore More Projects</h3>
                         <div class="project-links">
                             <a href="https://github.com/austinorphan" target="_blank" rel="noopener noreferrer" aria-label="View GitHub Profile">
                                 <i class="ph-duotone ph-github-logo"></i>
@@ -239,13 +319,13 @@
                         </div>
                     </div>
                     <div class="project-description">
-                        <p>Additional projects and creative work will be showcased here. Check back soon or visit my GitHub profile for the latest updates.</p>
+                        <p>Check out my GitHub profile for additional projects, contributions, and experimental work. Always building something new!</p>
                     </div>
                     <div class="project-tech">
-                        <span class="tech-tag">React</span>
-                        <span class="tech-tag">Node.js</span>
-                        <span class="tech-tag">Python</span>
-                        <span class="tech-tag">Machine Learning</span>
+                        <span class="tech-tag">C#</span>
+                        <span class="tech-tag">.NET</span>
+                        <span class="tech-tag">AWS</span>
+                        <span class="tech-tag">Innovation</span>
                     </div>
                 </div>
             </div>
@@ -290,7 +370,7 @@
                 </div>
                 
                 <div class="contact-form-container">
-                    <form class="contact-form" action="#" method="POST" novalidate>
+                    <form class="contact-form" action="https://formspree.io/f/YOUR_FORM_ID" method="POST" novalidate>
                         <div class="form-group">
                             <label for="name">Name *</label>
                             <input type="text" id="name" name="name" required aria-describedby="name-error">
@@ -343,6 +423,125 @@
         </a>
     </nav>
 
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(function(registration) {
+                        console.log('ServiceWorker registration successful');
+                    })
+                    .catch(function(err) {
+                        console.log('ServiceWorker registration failed: ', err);
+                    });
+            });
+        }
+    </script>
+    
+    <!-- Professional Scroll Animations -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add scroll reveal classes to elements with staggered delays
+            const revealElements = document.querySelectorAll('.project-card, .detail-section, .contact-method, .experience-item, .skill-category');
+            revealElements.forEach((el, index) => {
+                el.classList.add('scroll-reveal');
+                // Add staggered delay based on element position
+                el.style.transitionDelay = `${(index % 6) * 0.1}s`;
+            });
+            
+            // Enhanced Intersection Observer with better threshold
+            const observerOptions = {
+                threshold: 0.15,
+                rootMargin: '0px 0px -80px 0px'
+            };
+            
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach((entry, index) => {
+                    if (entry.isIntersecting) {
+                        // Add slight delay for grouped animations
+                        setTimeout(() => {
+                            entry.target.classList.add('revealed');
+                        }, index * 50);
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, observerOptions);
+            
+            revealElements.forEach(el => observer.observe(el));
+            
+            // Enhanced parallax effect with proper layering
+            const heroContent = document.querySelector('.content-wrapper');
+            const linkBar = document.querySelector('#linkBar');
+            
+            window.addEventListener('scroll', () => {
+                const scrolled = window.pageYOffset;
+                const heroHeight = window.innerHeight;
+                
+                // Only apply parallax while in hero section
+                if (scrolled < heroHeight) {
+                    const parallaxMain = scrolled * 0.25; // Main content parallax
+                    const parallaxLinkBar = scrolled * 0.1; // Slower parallax for linkBar
+                    
+                    // Apply different parallax speeds for layered effect
+                    if (heroContent) {
+                        heroContent.style.transform = `translateY(${parallaxMain}px)`;
+                    }
+                    
+                    // LinkBar moves slower to stay more visible
+                    if (linkBar) {
+                        linkBar.style.transform = `translateY(${parallaxLinkBar}px)`;
+                    }
+                } else {
+                    // Reset transforms when past hero section
+                    if (heroContent) heroContent.style.transform = '';
+                    if (linkBar) linkBar.style.transform = '';
+                }
+            });
+            
+            // Add smooth entrance animation for hero elements
+            setTimeout(() => {
+                document.querySelector('h1').style.animation = 'slideInScale 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards';
+                document.querySelector('#cbar').style.animation = 'slideInScale 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.2s forwards';
+                document.querySelector('#linkBar').style.animation = 'slideInScale 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.4s forwards';
+            }, 300);
+        });
+    </script>
+    
+    <!-- Section Navigation Active State -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const sections = document.querySelectorAll('section[id]');
+            const navLinks = document.querySelectorAll('.section-nav a');
+            
+            function updateActiveSection() {
+                const scrollPosition = window.scrollY + window.innerHeight / 2;
+                
+                sections.forEach((section, index) => {
+                    const top = section.offsetTop;
+                    const height = section.offsetHeight;
+                    
+                    if (scrollPosition >= top && scrollPosition < top + height) {
+                        navLinks.forEach(link => link.classList.remove('active'));
+                        navLinks[index].classList.add('active');
+                    }
+                });
+            }
+            
+            // Update on scroll
+            window.addEventListener('scroll', updateActiveSection);
+            
+            // Update on load
+            updateActiveSection();
+            
+            // Update when clicking nav links (with delay for smooth scroll)
+            navLinks.forEach(link => {
+                link.addEventListener('click', function() {
+                    setTimeout(updateActiveSection, 100);
+                });
+            });
+        });
+    </script>
+    
     <!-- Contact Form JavaScript -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -458,19 +657,27 @@
                 submitBtn.innerHTML = '<i class="ph-duotone ph-spinner"></i> Sending...';
                 submitBtn.disabled = true;
                 
-                setTimeout(() => {
-                    const mailtoSubject = subject || 'Contact from Portfolio Website';
-                    const mailtoBody = 'Name: ' + name + '%0D%0AEmail: ' + email + '%0D%0A%0D%0AMessage:%0D%0A' + message;
-                    const mailtoLink = 'mailto:AustinGOrphan@gmail.com?subject=' + encodeURIComponent(mailtoSubject) + '&body=' + mailtoBody;
-                    
-                    window.location.href = mailtoLink;
-                    
-                    form.reset();
+                // Submit to Formspree (replace with your actual form ID)
+                fetch(form.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                }).then(response => {
+                    if (response.ok) {
+                        form.reset();
+                        showStatus('Thank you! Your message has been sent successfully. I\'ll get back to you soon!', 'success');
+                    } else {
+                        throw new Error('Network response was not ok');
+                    }
+                }).catch(error => {
+                    console.error('Error:', error);
+                    showStatus('Sorry, there was an issue sending your message. Please try emailing me directly at AustinGOrphan@gmail.com', 'error');
+                }).finally(() => {
                     submitBtn.innerHTML = originalText;
                     submitBtn.disabled = false;
-                    
-                    showStatus('Your email client should have opened. If not, please email me directly at AustinGOrphan@gmail.com', 'success');
-                }, 1000);
+                });
             });
         });
     </script>
