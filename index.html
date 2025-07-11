@@ -441,41 +441,89 @@
     <!-- Professional Scroll Animations -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Add scroll reveal classes to elements with staggered delays
-            const revealElements = document.querySelectorAll('.project-card, .detail-section, .contact-method, .experience-item, .skill-category');
-            revealElements.forEach((el, index) => {
+            // Add scroll reveal classes to elements with logical grouping
+            const projectCards = document.querySelectorAll('.project-card');
+            const aboutElements = document.querySelectorAll('.detail-section, .skill-category');
+            const contactElements = document.querySelectorAll('.contact-method, .experience-item');
+            
+            // Apply reveal classes with proper delays per section
+            projectCards.forEach((el, index) => {
                 el.classList.add('scroll-reveal');
-                // Add staggered delay based on element position
-                el.style.transitionDelay = `${(index % 6) * 0.1}s`;
+                // Projects appear in order from left to right, top to bottom
+                el.style.transitionDelay = `${index * 0.1}s`;
             });
             
-            // Enhanced Intersection Observer with better threshold
+            aboutElements.forEach((el, index) => {
+                el.classList.add('scroll-reveal');
+                el.style.transitionDelay = `${index * 0.08}s`;
+            });
+            
+            contactElements.forEach((el, index) => {
+                el.classList.add('scroll-reveal');
+                el.style.transitionDelay = `${index * 0.08}s`;
+            });
+            
+            // Track scroll speed for responsive animations
+            let lastScrollY = window.pageYOffset;
+            let scrollSpeed = 0;
+            let scrollTimeout;
+            
+            function calculateScrollSpeed() {
+                const currentScrollY = window.pageYOffset;
+                scrollSpeed = Math.abs(currentScrollY - lastScrollY);
+                lastScrollY = currentScrollY;
+                
+                // Clear speed after scroll stops
+                clearTimeout(scrollTimeout);
+                scrollTimeout = setTimeout(() => {
+                    scrollSpeed = 0;
+                }, 150);
+            }
+            
+            // Enhanced Intersection Observer with scroll-speed awareness
             const observerOptions = {
-                threshold: 0.15,
-                rootMargin: '0px 0px -80px 0px'
+                threshold: 0.1,
+                rootMargin: '0px 0px -50px 0px'
             };
             
             const observer = new IntersectionObserver((entries) => {
-                entries.forEach((entry, index) => {
+                entries.forEach((entry) => {
                     if (entry.isIntersecting) {
-                        // Add slight delay for grouped animations
-                        setTimeout(() => {
+                        // Add fast-reveal class for high scroll speeds
+                        if (scrollSpeed > 30) {
+                            entry.target.classList.add('fast-reveal');
+                        }
+                        
+                        // Reveal immediately for fast scrolling, otherwise use CSS delay
+                        if (scrollSpeed > 30) {
                             entry.target.classList.add('revealed');
-                        }, index * 50);
+                        } else {
+                            // Let CSS transition-delay handle the timing
+                            requestAnimationFrame(() => {
+                                entry.target.classList.add('revealed');
+                            });
+                        }
+                        
                         observer.unobserve(entry.target);
                     }
                 });
             }, observerOptions);
             
-            revealElements.forEach(el => observer.observe(el));
+            // Observe all reveal elements
+            [...projectCards, ...aboutElements, ...contactElements].forEach(el => observer.observe(el));
             
             // Enhanced parallax effect with proper layering
             const heroContent = document.querySelector('.content-wrapper');
             const linkBar = document.querySelector('#linkBar');
             
-            window.addEventListener('scroll', () => {
+            // Throttled scroll handler for better performance
+            let ticking = false;
+            function updateOnScroll() {
                 const scrolled = window.pageYOffset;
                 const heroHeight = window.innerHeight;
+                
+                // Calculate scroll speed
+                calculateScrollSpeed();
                 
                 // Only apply parallax while in hero section
                 if (scrolled < heroHeight) {
@@ -496,7 +544,16 @@
                     if (heroContent) heroContent.style.transform = '';
                     if (linkBar) linkBar.style.transform = '';
                 }
-            });
+                
+                ticking = false;
+            }
+            
+            window.addEventListener('scroll', () => {
+                if (!ticking) {
+                    requestAnimationFrame(updateOnScroll);
+                    ticking = true;
+                }
+            }, { passive: true });
             
             // Add smooth entrance animation for hero elements
             setTimeout(() => {
