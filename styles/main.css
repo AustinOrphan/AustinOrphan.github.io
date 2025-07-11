@@ -545,9 +545,9 @@ h1, #cbar, #linkBar {
     pointer-events: none;
 }
 
-/* Activate flash animation */
-.project-links a[style*="redFlash"]::before {
-    animation: redFlash 2s ease-in-out !important;
+/* Activate flash animation on the pseudo-element only */
+.project-links a.flashing::before {
+    animation: redFlash 2s ease-in-out;
 }
 
 .project-links a:hover {
