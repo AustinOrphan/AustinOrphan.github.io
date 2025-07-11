@@ -96,6 +96,25 @@ body {
     }
 }
 
+/* Button flash animation */
+@keyframes redFlash {
+    0% {
+        left: -100%;
+        opacity: 0;
+    }
+    20% {
+        opacity: 1;
+    }
+    50% {
+        left: 100%;
+        opacity: 1;
+    }
+    100% {
+        left: 100%;
+        opacity: 0;
+    }
+}
+
 /* Professional scroll reveal classes */
 .scroll-reveal {
     opacity: 0;
@@ -501,6 +520,34 @@ h1, #cbar, #linkBar {
     padding: 8px;
     border-radius: 50%;
     background: rgba(40, 146, 215, 0.1);
+    position: relative;
+    overflow: hidden;
+}
+
+/* Red flash effect */
+.project-links a::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -100%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(90deg, 
+        transparent 0%, 
+        transparent 30%,
+        rgba(214, 102, 102, 0.4) 45%, 
+        rgba(214, 102, 102, 0.8) 50%, 
+        rgba(214, 102, 102, 0.4) 55%, 
+        transparent 70%,
+        transparent 100%);
+    transform: rotate(45deg);
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* Activate flash animation */
+.project-links a[style*="redFlash"]::before {
+    animation: redFlash 2s ease-in-out !important;
 }
 
 .project-links a:hover {
