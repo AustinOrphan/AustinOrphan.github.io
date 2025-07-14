@@ -36,7 +36,11 @@
       "Bash(python3:*)",
       "Bash(node:*)",
       "Bash(cp:*)",
-      "Bash(git restore:*)"
+      "Bash(git restore:*)",
+      "WebFetch(domain:icons8.com)",
+      "WebFetch(domain:www.flaticon.com)",
+      "WebFetch(domain:thenounproject.com)",
+      "WebFetch(domain:nostalgic-css.github.io)"
     ],
     "deny": []
   }
