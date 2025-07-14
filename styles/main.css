@@ -447,6 +447,7 @@ a {
     min-height: 100vh;
     min-height: 100dvh;
     display: flex;
+    animation: breathe 12s ease-in-out infinite;
     align-items: center;
     justify-content: center;
     position: relative;
@@ -546,6 +547,12 @@ h1, #cbar, #linkBar {
     color: var(--color-primary);
     margin: 0;
     line-height: 1.3;
+    transition: text-shadow 0.3s ease, color 0.3s ease;
+}
+
+.project-card:hover .project-header h3 {
+    text-shadow: 0 0 10px rgba(40, 146, 215, 0.3);
+    color: var(--color-accent);
 }
 
 .project-links {
@@ -791,6 +798,22 @@ h1, #cbar, #linkBar {
         transform: scale(1.1);
         opacity: 1;
     }
+}
+
+@keyframes breathe {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.008); }
+}
+
+/* Additional subtle animations */
+@keyframes gentleGlow {
+    0%, 100% { text-shadow: 0 0 5px rgba(40, 146, 215, 0.2); }
+    50% { text-shadow: 0 0 15px rgba(40, 146, 215, 0.4); }
+}
+
+@keyframes subtleFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-3px); }
 }
 
 /* 8-Bit Mode Easter Egg */
@@ -1663,6 +1686,11 @@ h1, #cbar, #linkBar {
     min-height: 100vh;
     padding: 80px 0;
     position: relative;
+    transition: transform 0.4s ease-out;
+}
+
+.about-section:hover {
+    transform: translateY(-2px);
 }
 
 .about-section::before {
@@ -1689,6 +1717,12 @@ h1, #cbar, #linkBar {
     margin-bottom: 60px;
     letter-spacing: -0.3vw;
     text-shadow: 0.1vw 0.1vw 0 var(--color-secondary);
+    transition: text-shadow 0.3s ease, transform 0.3s ease;
+}
+
+.about-section h2:hover {
+    text-shadow: 0.1vw 0.1vw 0 var(--color-secondary), 0 0 20px rgba(40, 146, 215, 0.3);
+    transform: translateY(-3px);
 }
 
 .about-content {
@@ -1858,6 +1892,11 @@ h1, #cbar, #linkBar {
     min-height: 100vh;
     padding: 80px 0;
     background: linear-gradient(135deg, rgba(29, 43, 53, 0.95) 0%, var(--color-background) 100%);
+    transition: transform 0.4s ease-out;
+}
+
+.contact-section:hover {
+    transform: translateY(-2px);
 }
 
 .contact-section h2 {
@@ -1989,14 +2028,22 @@ h1, #cbar, #linkBar {
     color: var(--color-primary);
     font-size: 16px;
     font-family: inherit;
-    transition: border-color 0.3s ease;
+    transition: border-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
     box-sizing: border-box;
+}
+
+.form-group input:hover,
+.form-group textarea:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(40, 146, 215, 0.1);
 }
 
 .form-group input:focus,
 .form-group textarea:focus {
     outline: none;
     border-bottom: 2px solid var(--color-accent);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(40, 146, 215, 0.2);
 }
 
 .form-group input.error,
