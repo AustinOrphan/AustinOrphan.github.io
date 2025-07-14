@@ -802,7 +802,7 @@ h1, #cbar, #linkBar {
 
 @keyframes breathe {
     0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.008); }
+    50% { transform: scale(1.025); }
 }
 
 /* Additional subtle animations */
