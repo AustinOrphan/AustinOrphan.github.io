@@ -1266,6 +1266,98 @@
             document.head.appendChild(style);
         })();
     </script>
+
+    <!-- Footer parallax reveal effect -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const footer = document.querySelector('.site-footer');
+            const contactSection = document.querySelector('.contact-section');
+            
+            if (footer && contactSection) {
+                // Get footer height for calculations
+                const footerHeight = footer.offsetHeight;
+                footer.style.height = footerHeight + 'px';
+                
+                function updateFooterParallax() {
+                    const scrollPosition = window.pageYOffset + window.innerHeight;
+                    const contactBottom = contactSection.offsetTop + contactSection.offsetHeight;
+                    
+                    // Only start revealing when scroll reaches the bottom of contact section
+                    if (scrollPosition < contactBottom) {
+                        // Keep footer hidden
+                        footer.style.transform = `translateY(100px)`;
+                        footer.style.opacity = 0;
+                        footer.style.zIndex = '-1';
+                        return;
+                    }
+                    
+                    // Calculate reveal progress after passing contact section
+                    const revealDistance = 150; // Complete reveal over 150px of scroll
+                    const scrollPastContact = scrollPosition - contactBottom;
+                    const revealProgress = Math.max(0, Math.min(1, scrollPastContact / revealDistance));
+                    
+                    // Apply parallax transform
+                    const translateY = (1 - revealProgress) * 100;
+                    footer.style.transform = `translateY(${translateY}px)`;
+                    footer.style.opacity = revealProgress;
+                    
+                    // Update z-index when footer starts to reveal
+                    footer.style.zIndex = revealProgress > 0 ? '10' : '-1';
+                }
+                
+                // Direct scroll listener without throttling for maximum responsiveness
+                window.addEventListener('scroll', updateFooterParallax, { passive: true });
+                updateFooterParallax(); // Initial call
+            }
+        });
+    </script>
+
+    <!-- Progressive darkening on scroll -->
+    <!-- Commented out darkening effect
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const darkeningOverlay = document.styleSheets[0];
+            
+            function updateDarkening() {
+                const scrollPosition = window.pageYOffset;
+                const windowHeight = window.innerHeight;
+                const documentHeight = document.documentElement.scrollHeight - windowHeight;
+                
+                // Calculate scroll progress (0 to 1)
+                const scrollProgress = Math.min(scrollPosition / documentHeight, 1);
+                
+                // Apply darkening effect progressively
+                // Starts subtle, gets stronger as you scroll down
+                const darkeningIntensity = scrollProgress * 0.6; // Max 60% darkening
+                
+                // Update the ::after pseudo-element opacity
+                document.body.style.setProperty('--darkening-opacity', darkeningIntensity);
+                
+                // Also adjust the gradient darkness
+                const gradientDarkness = scrollProgress * 0.4; // Max 40% black
+                document.body.style.setProperty('--gradient-darkness', gradientDarkness);
+            }
+            
+            // Add CSS custom properties
+            const style = document.createElement('style');
+            style.textContent = `
+                body::after {
+                    opacity: var(--darkening-opacity, 0) !important;
+                    background: linear-gradient(to bottom, 
+                                transparent 0%, 
+                                transparent 30%, 
+                                rgba(0, 0, 0, var(--gradient-darkness, 0.3)) 100%) !important;
+                }
+            `;
+            document.head.appendChild(style);
+            
+            // Update on scroll
+            window.addEventListener('scroll', updateDarkening, { passive: true });
+            updateDarkening(); // Initial call
+        });
+    </script>
+    -->
+
 </body>
 
 </html>

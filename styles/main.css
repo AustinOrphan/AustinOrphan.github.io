@@ -29,8 +29,7 @@
     text-decoration: none;
 }
 
-html,
-body {
+html {
     margin: 0;
     padding: 0;
     background-color: var(--color-background);
@@ -41,6 +40,106 @@ body {
     scroll-behavior: smooth;
     -webkit-overflow-scrolling: touch;
 }
+
+body {
+    margin: 0;
+    padding: 0;
+    color: var(--color-primary);
+    font-family: "Source Sans Pro", sans-serif;
+    line-height: 1.6;
+    overflow-x: hidden;
+    background-color: transparent;
+}
+
+body {
+    padding-bottom: 150px; /* Space for footer reveal */
+    position: relative;
+}
+
+/* Hero Patterns Texture - Authentic Texture Pattern via ::before */
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' viewBox='0 0 4 4'%3E%3Cpath fill='%23EEE5E9' d='M1 3h1v1H1V3zm2-2h1v1H3V1z'/%3E%3C/svg%3E");
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, transparent 40%, rgba(0,0,0,0.1) 100%);
+    mask-image: linear-gradient(to bottom, transparent 0%, transparent 40%, rgba(0,0,0,0.1) 100%);
+    animation: textureColorShift 20s ease-in-out infinite;
+}
+
+@keyframes textureColorShift {
+    0% { 
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' viewBox='0 0 4 4'%3E%3Cpath fill='%23EEE5E9' d='M1 3h1v1H1V3zm2-2h1v1H3V1z'/%3E%3C/svg%3E");
+    }
+    25% { 
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' viewBox='0 0 4 4'%3E%3Cpath fill='%23D16666' d='M1 3h1v1H1V3zm2-2h1v1H3V1z'/%3E%3C/svg%3E");
+    }
+    50% { 
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' viewBox='0 0 4 4'%3E%3Cpath fill='%232892D7' d='M1 3h1v1H1V3zm2-2h1v1H3V1z'/%3E%3C/svg%3E");
+    }
+    75% { 
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' viewBox='0 0 4 4'%3E%3Cpath fill='%23EEE5E9' d='M1 3h1v1H1V3zm2-2h1v1H3V1z'/%3E%3C/svg%3E");
+    }
+    100% { 
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' viewBox='0 0 4 4'%3E%3Cpath fill='%23EEE5E9' d='M1 3h1v1H1V3zm2-2h1v1H3V1z'/%3E%3C/svg%3E");
+    }
+}
+
+
+/* Very subtle edge glow - white to coral gradient */
+/* Commented out vignette effect
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+    z-index: 9999;
+    background: radial-gradient(ellipse at center, 
+                transparent 50%, 
+                rgba(238, 229, 233, 0.05) 70%, 
+                rgba(209, 102, 102, 0.08) 100%);
+    animation: subtleGlowPulse 10s ease-in-out infinite;
+}
+*/
+
+/* Progressive darkening overlay based on scroll */
+/* Commented out darkening effect
+body::after {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+    z-index: 9998;
+    background: linear-gradient(to bottom, 
+                transparent 0%, 
+                transparent 40%, 
+                rgba(0, 0, 0, 0.3) 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease-out;
+}
+*/
+
+/* Animation for vignette - commented out
+@keyframes subtleGlowPulse {
+    0%, 100% {
+        opacity: 0.4;
+    }
+    50% {
+        opacity: 0.7;
+    }
+}
+*/
 
 /* Professional animations with easing curves */
 @keyframes fadeInUp {
@@ -482,6 +581,14 @@ h1, #cbar, #linkBar {
     margin-bottom: 60px;
     letter-spacing: -0.3vw;
     text-shadow: 0.1vw 0.1vw 0 var(--color-secondary);
+    transition: text-shadow 0.3s ease, transform 0.3s ease;
+}
+
+.projects-section h2:hover,
+.about-section h2:hover,
+.contact-section h2:hover {
+    text-shadow: 0.1vw 0.1vw 0 var(--color-secondary), 0 0 20px rgba(40, 146, 215, 0.3);
+    transform: translateY(-3px);
 }
 
 .projects-grid {
@@ -624,10 +731,18 @@ h1, #cbar, #linkBar {
 
 /* Footer Styles */
 .site-footer {
-    margin-top: 80px;
+    margin-top: 0;
     padding: 25px 0 15px;
-    background: linear-gradient(135deg, rgba(29, 43, 53, 0.95) 0%, var(--color-background) 100%);
-    position: relative;
+    background: transparent;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: -1;
+    transform: translateY(100px);
+    opacity: 0;
+    transition: none; /* Remove transition for direct scroll control */
+    will-change: transform, opacity; /* Optimize for animations */
 }
 
 /* Footer Top */
@@ -1590,7 +1705,9 @@ h1, #cbar, #linkBar {
 
 /* Responsive Design */
 @media screen and (min-width: 768px) {
-    .projects-section h2 {
+    .projects-section h2,
+    .about-section h2,
+    .contact-section h2 {
         font-size: 4vw;
     }
     
@@ -1614,7 +1731,9 @@ h1, #cbar, #linkBar {
 }
 
 @media screen and (min-width: 1024px) {
-    .projects-section h2 {
+    .projects-section h2,
+    .about-section h2,
+    .contact-section h2 {
         font-size: 3vw;
     }
     
@@ -1651,9 +1770,6 @@ h1, #cbar, #linkBar {
     }
 
     /* About Section Responsive */
-    .about-section h2 {
-        font-size: 4vw;
-    }
     
     .about-content {
         grid-template-columns: 2fr 1fr;
@@ -1718,11 +1834,6 @@ h1, #cbar, #linkBar {
     letter-spacing: -0.3vw;
     text-shadow: 0.1vw 0.1vw 0 var(--color-secondary);
     transition: text-shadow 0.3s ease, transform 0.3s ease;
-}
-
-.about-section h2:hover {
-    text-shadow: 0.1vw 0.1vw 0 var(--color-secondary), 0 0 20px rgba(40, 146, 215, 0.3);
-    transform: translateY(-3px);
 }
 
 .about-content {
@@ -1890,7 +2001,7 @@ h1, #cbar, #linkBar {
 /* Contact Section */
 .contact-section {
     min-height: 100vh;
-    padding: 80px 0;
+    padding: 80px 0 80px;
     background: linear-gradient(135deg, rgba(29, 43, 53, 0.95) 0%, var(--color-background) 100%);
     transition: transform 0.4s ease-out;
 }
@@ -1907,6 +2018,7 @@ h1, #cbar, #linkBar {
     margin-bottom: 60px;
     letter-spacing: -0.3vw;
     text-shadow: 0.1vw 0.1vw 0 var(--color-secondary);
+    transition: text-shadow 0.3s ease, transform 0.3s ease;
 }
 
 .contact-content {
@@ -2118,10 +2230,6 @@ h1, #cbar, #linkBar {
 
 /* Responsive Design for Contact Section */
 @media screen and (min-width: 768px) {
-    .contact-section h2 {
-        font-size: 4vw;
-    }
-    
     .contact-content {
         grid-template-columns: 1fr 1fr;
         gap: 60px;
