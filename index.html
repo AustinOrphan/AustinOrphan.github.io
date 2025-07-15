@@ -25,9 +25,9 @@
     <script src="js/component-loader.js" defer></script>
     <!-- favicon -->
     
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
     <link rel="manifest" href="/site.webmanifest">
     <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#6ee5e3">
     <meta name="msapplication-TileColor" content="#00aba9">
@@ -115,6 +115,7 @@
     <div id="about-container"></div>
     <div id="projects-container"></div>
     <div id="contact-container"></div>
+    <div id="footer-container"></div>
 
     <!-- Navigation -->
     <nav class="section-nav">
@@ -372,11 +373,11 @@
             });
         }
         
-        window.updateActiveNavigation = updateActiveSection;
+        window.updateActiveNavigation = updateActiveNavigation;
         
         // Listen for components loaded event
         window.addEventListener('allComponentsLoaded', function() {
-            updateActiveSection();
+            updateActiveNavigation();
         });
     </script>
     
@@ -525,57 +526,73 @@
         window.addEventListener('allComponentsLoaded', initializeContactForm);
     </script>
     
-    <!-- Footer -->
-    <footer class="site-footer">
-        <div class="footer-top">
-            <button class="back-to-top" aria-label="Back to top">
-                <i class="ph-duotone ph-arrow-up"></i>
-                <span>Top</span>
-            </button>
-        </div>
-        
-        <!-- Full width decorative line -->
-        <div class="footer-decoration">
-            <div class="decoration-line-full"></div>
-        </div>
-        
-        <div class="footer-content">
-            <div class="footer-left">
-                <p class="copyright">© 2024 Austin Orphan</p>
-            </div>
-            
-            <div class="footer-center">
-                <div class="footer-social">
-                    <a href="https://github.com/austinorphan" target="_blank" rel="noopener noreferrer" aria-label="GitHub" class="footer-social-link">
-                        <i class="ph-duotone ph-github-logo"></i>
-                    </a>
-                    <a href="https://www.linkedin.com/in/austinorphan/" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn" class="footer-social-link">
-                        <i class="ph-duotone ph-linkedin-logo"></i>
-                    </a>
-                    <a href="mailto:AustinGOrphan@gmail.com" aria-label="Email" class="footer-social-link">
-                        <i class="ph-duotone ph-envelope-simple"></i>
-                    </a>
-                </div>
-            </div>
-            
-            <div class="footer-right">
-            </div>
-        </div>
-    </footer>
-    
     <!-- Footer JavaScript for interactive elements -->
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
+        window.initializeFooter = function() {
             // Back to top button functionality
             const backToTopBtn = document.querySelector('.back-to-top');
             
-            backToTopBtn.addEventListener('click', function() {
-                window.scrollTo({
-                    top: 0,
-                    behavior: 'smooth'
+            if (backToTopBtn) {
+                backToTopBtn.addEventListener('click', function() {
+                    window.scrollTo({
+                        top: 0,
+                        behavior: 'smooth'
+                    });
                 });
-            });
-        });
+            }
+
+            // Footer parallax reveal effect with better performance
+            const footer = document.querySelector('.site-footer');
+            const contactSection = document.querySelector('#contact');
+            
+            if (footer && contactSection) {
+                // Add CSS transition for smoother animation
+                footer.style.transition = 'transform 0.1s ease-out, opacity 0.1s ease-out';
+                footer.style.willChange = 'transform, opacity';
+                
+                let ticking = false;
+                
+                function updateFooterParallax() {
+                    const scrollPosition = window.pageYOffset + window.innerHeight;
+                    const contactBottom = contactSection.offsetTop + contactSection.offsetHeight;
+                    
+                    // Start revealing when we reach the bottom of contact section
+                    if (scrollPosition > contactBottom) {
+                        // Calculate reveal progress starting from contact bottom
+                        const revealDistance = 120; // Distance over which to reveal
+                        const scrollPastContact = scrollPosition - contactBottom;
+                        const revealProgress = Math.min(1, scrollPastContact / revealDistance);
+                        
+                        // Apply smooth transform and opacity starting from 0
+                        const translateY = (1 - revealProgress) * 30;
+                        footer.style.transform = `translateY(${translateY}px)`;
+                        footer.style.opacity = revealProgress; // Starts at 0, goes to 1
+                        footer.style.zIndex = '10000';
+                    } else {
+                        // Keep footer hidden
+                        footer.style.transform = `translateY(50px)`;
+                        footer.style.opacity = 0;
+                        footer.style.zIndex = '-1';
+                    }
+                    
+                    ticking = false;
+                }
+                
+                // Throttled scroll listener for better performance
+                function requestTick() {
+                    if (!ticking) {
+                        requestAnimationFrame(updateFooterParallax);
+                        ticking = true;
+                    }
+                }
+                
+                window.addEventListener('scroll', requestTick, { passive: true });
+                updateFooterParallax(); // Initial call
+            }
+        }
+        
+        // Listen for components loaded event to initialize footer
+        window.addEventListener('allComponentsLoaded', initializeFooter);
     </script>
     
     <!-- Konami Code Easter Egg -->
@@ -989,50 +1006,6 @@
         })();
     </script>
 
-    <!-- Footer parallax reveal effect -->
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const footer = document.querySelector('.site-footer');
-            const contactSection = document.querySelector('.contact-section');
-            
-            if (footer && contactSection) {
-                // Get footer height for calculations
-                const footerHeight = footer.offsetHeight;
-                footer.style.height = footerHeight + 'px';
-                
-                function updateFooterParallax() {
-                    const scrollPosition = window.pageYOffset + window.innerHeight;
-                    const contactBottom = contactSection.offsetTop + contactSection.offsetHeight;
-                    
-                    // Only start revealing when scroll reaches the bottom of contact section
-                    if (scrollPosition < contactBottom) {
-                        // Keep footer hidden
-                        footer.style.transform = `translateY(100px)`;
-                        footer.style.opacity = 0;
-                        footer.style.zIndex = '-1';
-                        return;
-                    }
-                    
-                    // Calculate reveal progress after passing contact section
-                    const revealDistance = 150; // Complete reveal over 150px of scroll
-                    const scrollPastContact = scrollPosition - contactBottom;
-                    const revealProgress = Math.max(0, Math.min(1, scrollPastContact / revealDistance));
-                    
-                    // Apply parallax transform
-                    const translateY = (1 - revealProgress) * 100;
-                    footer.style.transform = `translateY(${translateY}px)`;
-                    footer.style.opacity = revealProgress;
-                    
-                    // Update z-index when footer starts to reveal
-                    footer.style.zIndex = revealProgress > 0 ? '10' : '-1';
-                }
-                
-                // Direct scroll listener without throttling for maximum responsiveness
-                window.addEventListener('scroll', updateFooterParallax, { passive: true });
-                updateFooterParallax(); // Initial call
-            }
-        });
-    </script>
 
     <!-- Progressive darkening on scroll -->
     <!-- Commented out darkening effect

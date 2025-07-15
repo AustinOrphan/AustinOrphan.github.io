@@ -8,7 +8,8 @@ class ComponentLoader {
         this.components = [
             { name: 'about', target: 'about-container', path: 'components/about.html' },
             { name: 'projects', target: 'projects-container', path: 'components/projects.html' },
-            { name: 'contact', target: 'contact-container', path: 'components/contact.html' }
+            { name: 'contact', target: 'contact-container', path: 'components/contact.html' },
+            { name: 'footer', target: 'footer-container', path: 'components/footer.html' }
         ];
         this.loadedComponents = new Set();
     }
@@ -20,6 +21,11 @@ class ComponentLoader {
      */
     async loadComponent(component) {
         try {
+            // Check if we're in a file:// context
+            if (window.location.protocol === 'file:') {
+                throw new Error('CORS restriction: Components require HTTP server');
+            }
+            
             const response = await fetch(component.path);
             if (!response.ok) {
                 throw new Error(`Failed to load ${component.name}: ${response.statusText}`);
@@ -48,7 +54,8 @@ class ComponentLoader {
             if (container) {
                 container.innerHTML = `
                     <div class="component-error">
-                        <p>Failed to load ${component.name} section. Please refresh the page.</p>
+                        <p>⚠️ ${component.name} section unavailable</p>
+                        <p style="font-size: 0.9em; opacity: 0.8;">Use local server for full functionality</p>
                     </div>
                 `;
             }
@@ -78,6 +85,13 @@ class ComponentLoader {
         if (this.loadedComponents.has('contact')) {
             if (typeof initializeContactForm === 'function') {
                 initializeContactForm();
+            }
+        }
+
+        // Re-initialize footer functionality if footer is loaded
+        if (this.loadedComponents.has('footer')) {
+            if (typeof initializeFooter === 'function') {
+                initializeFooter();
             }
         }
 

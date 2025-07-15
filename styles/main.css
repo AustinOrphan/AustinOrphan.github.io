@@ -732,7 +732,7 @@ h1, #cbar, #linkBar {
 /* Footer Styles */
 .site-footer {
     margin-top: 0;
-    padding: 25px 0 15px;
+    padding: 15px 0 10px;
     background: transparent;
     position: fixed;
     bottom: 0;
@@ -750,7 +750,7 @@ h1, #cbar, #linkBar {
     display: flex;
     justify-content: center;
     padding: 0 20px;
-    margin-bottom: 15px;
+    margin-bottom: 10px;
 }
 
 .footer-content {
