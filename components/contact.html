@@ -1,0 +1,74 @@
+<!-- Contact Section -->
+<section id="contact" class="contact-section">
+    <div class="section-container">
+        <h2>Get In Touch</h2>
+        <div class="contact-content">
+            <div class="contact-info">
+                <div class="contact-intro">
+                    <p>I'm always interested in new opportunities, collaborations, and interesting projects. Whether you have a question, want to discuss a project, or just want to say hello, I'd love to hear from you!</p>
+                </div>
+                
+                <div class="contact-methods">
+                    <div class="contact-method">
+                        <i class="ph-duotone ph-envelope"></i>
+                        <div>
+                            <h3>Email</h3>
+                            <a href="mailto:AustinGOrphan@gmail.com">AustinGOrphan@gmail.com</a>
+                        </div>
+                    </div>
+                    
+                    <div class="contact-method">
+                        <i class="ph-duotone ph-linkedin-logo"></i>
+                        <div>
+                            <h3>LinkedIn</h3>
+                            <a href="https://www.linkedin.com/in/austinorphan/" target="_blank" rel="noopener noreferrer">linkedin.com/in/austinorphan</a>
+                        </div>
+                    </div>
+                    
+                    <div class="contact-method">
+                        <i class="ph-duotone ph-github-logo"></i>
+                        <div>
+                            <h3>GitHub</h3>
+                            <a href="https://github.com/austinorphan" target="_blank" rel="noopener noreferrer">github.com/austinorphan</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="contact-form-container">
+                <form class="contact-form" action="https://formspree.io/f/YOUR_FORM_ID" method="POST" novalidate>
+                    <div class="form-group">
+                        <label for="name">Name *</label>
+                        <input type="text" id="name" name="name" required aria-describedby="name-error">
+                        <span class="error-message" id="name-error" role="alert"></span>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="email">Email *</label>
+                        <input type="email" id="email" name="email" required aria-describedby="email-error">
+                        <span class="error-message" id="email-error" role="alert"></span>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="subject">Subject</label>
+                        <input type="text" id="subject" name="subject" aria-describedby="subject-error">
+                        <span class="error-message" id="subject-error" role="alert"></span>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="message">Message *</label>
+                        <textarea id="message" name="message" rows="5" required aria-describedby="message-error" placeholder="Tell me about your project or just say hello!"></textarea>
+                        <span class="error-message" id="message-error" role="alert"></span>
+                    </div>
+                    
+                    <button type="submit" class="submit-btn">
+                        <i class="ph-duotone ph-paper-plane-tilt"></i>
+                        Send Message
+                    </button>
+                </form>
+                
+                <div class="form-status" id="form-status" role="alert" aria-live="polite"></div>
+            </div>
+        </div>
+    </div>
+</section>
