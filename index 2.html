@@ -1,0 +1,1463 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Austin Orphan</title>
+    
+    <!-- Preload critical resources -->
+    <link rel="preload" href="styles/main.css" as="style">
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Anta&family=Comfortaa:wght@700&family=Source+Sans+Pro:wght@900&display=swap" as="style">
+    
+    <!-- Load critical styles -->
+    <link rel="stylesheet" href="styles/main.css">
+    
+    <!-- Load icons with defer for better performance -->
+    <script src="https://unpkg.com/@phosphor-icons/web@2.1.1" defer></script>
+    <!-- favicon -->
+    
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="manifest" href="/site.webmanifest">
+    <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#6ee5e3">
+    <meta name="msapplication-TileColor" content="#00aba9">
+    <meta name="theme-color" content="#000000">
+    
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="Austin Orphan - Creative, Competitive, and Curious developer and designer. Explore my portfolio featuring innovative projects and professional work.">
+    <meta name="keywords" content="Austin Orphan, developer, designer, portfolio, creative, competitive, curious, web development, programming, projects">
+    <meta name="author" content="Austin Orphan">
+    <meta name="robots" content="index,follow">
+    <meta name="googlebot" content="index,follow">
+    
+    <!-- Open Graph Meta Tags -->
+    <meta property="og:url" content="https://austinorphan.github.io/">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Austin Orphan - Creative, Competitive, Curious">
+    <meta property="og:description" content="Austin Orphan - Creative, Competitive, and Curious developer and designer. Explore my portfolio featuring innovative projects and professional work.">
+    <meta property="og:image" content="https://austinorphan.github.io/apple-touch-icon.png">
+    <meta property="og:image:alt" content="Austin Orphan Portfolio">
+    <meta property="og:site_name" content="Austin Orphan Portfolio">
+    <meta property="og:locale" content="en_US">
+    
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:url" content="https://austinorphan.github.io/">
+    <meta name="twitter:title" content="Austin Orphan - Creative, Competitive, Curious">
+    <meta name="twitter:description" content="Austin Orphan - Creative, Competitive, and Curious developer and designer. Explore my portfolio featuring innovative projects and professional work.">
+    <meta name="twitter:image" content="https://austinorphan.github.io/apple-touch-icon.png">
+    <meta name="twitter:image:alt" content="Austin Orphan Portfolio">
+    
+    <!-- Additional SEO Tags -->
+    <link rel="canonical" href="https://austinorphan.github.io/">
+    <meta name="application-name" content="Austin Orphan Portfolio">
+    
+    <!-- Google Analytics (replace YOUR_GA_ID with your actual GA4 measurement ID) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=YOUR_GA_ID"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'YOUR_GA_ID', {
+            page_title: 'Austin Orphan Portfolio',
+            page_location: window.location.href
+        });
+    </script>
+    
+</head>
+
+<body>
+    <!-- Parallax Background -->
+    <div class="parallax-bg">
+        <div class="parallax-element parallax-1"></div>
+        <div class="parallax-element parallax-2"></div>
+        <div class="parallax-element parallax-3"></div>
+    </div>
+    
+    <!-- Loading Animation -->
+    <div id="loader" class="loader-overlay">
+        <div class="loader-content">
+            <!-- Primary: Video Loading Animation -->
+            <div class="loader-video-container" id="videoLoader">
+                <video class="loader-video" autoplay muted loop playsinline preload="auto" id="loaderVideo">
+                    <source src="AOAnimation.mp4" type="video/mp4">
+                </video>
+            </div>
+            
+            <!-- Fallback: CSS Animation -->
+            <div class="loader-css-animation" id="cssLoader">
+                <div class="css-letter-a">A</div>
+                <div class="css-orbit-ring"></div>
+                <div class="css-orbital-ring"></div>
+            </div>
+            
+            <!-- SVG Vector Animation -->
+            <div class="loader-svg-container" id="svgLoader" style="display: none;">
+                <svg class="loader-svg" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <!-- Mask for progressive reveal -->
+                        <mask id="drawMask">
+                            <rect class="mask-rect" x="0" y="0" width="0" height="200" fill="white"/>
+                        </mask>
+                    </defs>
+                    
+                    <!-- A Letter - exact match to video frame -->
+                    <g mask="url(#drawMask)">
+                        <path class="a-exact-shape" d="
+                            M 50 190
+                            L 70 180
+                            L 88 160
+                            L 100 130
+                            L 108 100
+                            L 112 70
+                            L 114 40
+                            L 115 20
+                            L 116 40
+                            L 118 70
+                            L 122 100
+                            L 130 130
+                            L 142 160
+                            L 158 180
+                            L 178 190
+                            L 198 195
+                            L 210 198
+                            L 218 202
+                            L 222 208
+                            L 222 214
+                            L 218 220
+                            L 210 224
+                            L 198 226
+                            L 185 225
+                            L 172 222
+                            L 160 218
+                            L 150 212
+                            L 142 205
+                            L 136 197
+                            L 132 188
+                            L 130 178
+                            L 129 168
+                            L 128 158
+                            L 126 148
+                            L 124 138
+                            L 122 128
+                            L 120 118
+                            L 118 108
+                            L 116 98
+                            L 115 88
+                            L 114 78
+                            L 113 68
+                            L 112 58
+                            L 111 48
+                            L 110 38
+                            L 109 28
+                            L 108 38
+                            L 107 48
+                            L 106 58
+                            L 104 68
+                            L 102 78
+                            L 100 88
+                            L 97 98
+                            L 94 108
+                            L 90 118
+                            L 86 128
+                            L 81 138
+                            L 76 148
+                            L 70 158
+                            L 63 168
+                            L 55 178
+                            L 46 188
+                            L 36 197
+                            L 25 205
+                            L 13 212
+                            L 1 218
+                            L -8 222
+                            L -15 225
+                            L -20 226
+                            L -22 224
+                            L -22 220
+                            L -20 214
+                            L -15 208
+                            L -8 202
+                            L 1 198
+                            L 13 195
+                            L 25 192
+                            L 36 189
+                            L 46 186
+                            L 50 190
+                            Z" 
+                            fill="#000000"/></g>
+                    
+                    <!-- Small center dot -->
+                    <circle class="center-dot" cx="100" cy="105" r="2" fill="#000000" opacity="0"/>
+                    
+                    <!-- Circular Ring (perfect circle) -->
+                    <circle class="orbit-ring" cx="100" cy="105" r="75" stroke="#000000" stroke-width="15" fill="none" 
+                            stroke-dasharray="471" stroke-dashoffset="471" transform="rotate(135 100 105)" opacity="0"/>
+                    
+                    <!-- Elliptical Orbital Ring -->
+                    <ellipse class="orbital-ring" cx="100" cy="105" rx="85" ry="28" stroke="#000000" stroke-width="12" fill="none"
+                             stroke-dasharray="534" stroke-dashoffset="534" transform="rotate(-10 100 105)" opacity="0"/>
+                </svg>
+            </div>
+            
+            <!-- Final Fallback: Text -->
+            <div class="loader-text" id="textLoader" style="display: none;">Loading...</div>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="main-nav" aria-label="Main navigation">
+        <div class="nav-container">
+            <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">
+                <span class="nav-toggle-bar"></span>
+                <span class="nav-toggle-bar"></span>
+                <span class="nav-toggle-bar"></span>
+            </button>
+            <ul class="nav-menu">
+                <li><a href="#hero" class="nav-link">Home</a></li>
+                <li><a href="#about" class="nav-link">About</a></li>
+                <li><a href="#projects" class="nav-link">Projects</a></li>
+                <li><a href="#contact" class="nav-link">Contact</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section id="hero" class="hero-section">
+        <div class="page-wrapper">
+            <div class="content-wrapper">
+                <h1>Austin Orphan</h1>
+                <p id="cbar">
+                    Creative <span class="divider"> | </span>Competitive <span class="divider"> | </span> Curious
+                </p>
+                <div id="linkBar">
+                    <a href="https://github.com/austinorphan" target="_blank" rel="noopener noreferrer" aria-label="GitHub Profile">
+                        <i class="icon ph-duotone ph-github-logo"></i>
+                    </a>
+                    <a href="https://www.linkedin.com/in/austinorphan/" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn Profile">
+                        <i class="icon ph-duotone ph-linkedin-logo"></i>
+                    </a>
+                    <a href="AustinOrphanResume.pdf" download aria-label="Download Resume">
+                        <i class="icon ph-duotone ph-read-cv-logo"></i>
+                    </a>
+                    <a href="mailto:AustinGOrphan@gmail.com" aria-label="Email Contact">
+                        <i class="icon ph-duotone ph-envelope-simple"></i>
+                    </a>
+                    <a href="#projects" aria-label="View Projects">
+                        <i class="icon ph-duotone ph-meteor"></i>
+                    </a>
+                </div>
+            </div>
+            <div class="scroll-indicator">
+                <a href="#about" aria-label="Scroll to About">
+                    <i class="ph-duotone ph-arrow-down"></i>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section id="about" class="about-section">
+        <div class="section-container">
+            <h2>About Me</h2>
+            <div class="about-content">
+                <div class="about-profile">
+                    <div class="profile-avatar">
+                        <div class="avatar-placeholder">
+                            <i class="ph-duotone ph-user-circle"></i>
+                        </div>
+                        <div class="profile-stats">
+                            <div class="stat-item">
+                                <span class="stat-number" data-target="5">0</span>
+                                <span class="stat-label">Years Experience</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-number" data-target="25">0</span>
+                                <span class="stat-label">Projects</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-number" data-target="10">0</span>
+                                <span class="stat-label">Technologies</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="about-text">
+                    <div class="about-intro">
+                        <p>I'm Austin Orphan, a passionate software developer who embodies the philosophy of being <strong>Creative</strong>, <strong>Competitive</strong>, and <strong>Curious</strong>. With a background in computer science and expertise in technologies like C#, .NET, and AWS, I love building solutions that make a real difference—whether that's crafting intuitive user interfaces or architecting scalable backend systems.</p>
+                        <p>When I'm not coding, you might find me playing drums, guitar, or shooting hoops on the basketball court. I believe the best solutions come from diverse experiences and perspectives.</p>
+                    </div>
+                    
+                    <div class="about-details">
+                        <div class="detail-section">
+                            <h3><i class="ph-duotone ph-lightbulb"></i> Creative</h3>
+                            <p>I approach every project with a creative mindset, finding innovative solutions to complex problems. Whether it's designing efficient workflows, building interactive applications, or optimizing existing systems, I strive to create something both functional and elegant.</p>
+                        </div>
+                        
+                        <div class="detail-section">
+                            <h3><i class="ph-duotone ph-trophy"></i> Competitive</h3>
+                            <p>I thrive in challenging environments and constantly push myself to improve. This competitive spirit drives me to write cleaner code, learn new technologies, and deliver solutions that exceed expectations. I believe healthy competition brings out the best in everyone.</p>
+                        </div>
+                        
+                        <div class="detail-section">
+                            <h3><i class="ph-duotone ph-question"></i> Curious</h3>
+                            <p>My curiosity is what led me from computer science into exploring management principles, from traditional databases to cloud architectures, and from solo projects to collaborative team environments. I'm always asking "what if?" and "how can we do this better?"</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="about-sidebar">
+                    <div class="skills-section">
+                        <h3>Technical Skills</h3>
+                        <div class="skills-grid">
+                            <div class="skill-category">
+                                <h4>Core Languages</h4>
+                                <div class="skill-tags">
+                                    <span class="skill-tag">C#</span>
+                                    <span class="skill-tag">Python</span>
+                                    <span class="skill-tag">SQL</span>
+                                    <span class="skill-tag">JavaScript</span>
+                                    <span class="skill-tag">Java</span>
+                                    <span class="skill-tag">C++</span>
+                                </div>
+                            </div>
+                            
+                            <div class="skill-category">
+                                <h4>Frameworks & Technologies</h4>
+                                <div class="skill-tags">
+                                    <span class="skill-tag">.NET</span>
+                                    <span class="skill-tag">ASP.NET</span>
+                                    <span class="skill-tag">AWS</span>
+                                    <span class="skill-tag">SQL Server</span>
+                                    <span class="skill-tag">Snowflake</span>
+                                    <span class="skill-tag">MySQL</span>
+                                </div>
+                            </div>
+                            
+                            <div class="skill-category">
+                                <h4>Tools & Platforms</h4>
+                                <div class="skill-tags">
+                                    <span class="skill-tag">Looker</span>
+                                    <span class="skill-tag">LookML</span>
+                                    <span class="skill-tag">AWS Athena</span>
+                                    <span class="skill-tag">Git</span>
+                                    <span class="skill-tag">HTML5</span>
+                                    <span class="skill-tag">CSS3</span>
+                                </div>
+                            </div>
+                            
+                            <div class="skill-category">
+                                <h4>Creative Skills</h4>
+                                <div class="skill-tags">
+                                    <span class="skill-tag">CAD</span>
+                                    <span class="skill-tag">Photoshop</span>
+                                    <span class="skill-tag">Illustrator</span>
+                                    <span class="skill-tag">UI/UX Design</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="experience-section">
+                        <h3>Professional Journey</h3>
+                        <div class="experience-item">
+                            <h4>Software Developer</h4>
+                            <p class="experience-period">OSM Worldwide • Nov 2023 - Present</p>
+                            <p class="experience-description">Building scalable .NET applications and diving deep into AWS cloud architecture. I love the fast-paced environment where I can quickly iterate on solutions based on real user feedback.</p>
+                        </div>
+                        
+                        <div class="experience-item">
+                            <h4>Customer Excellence Engineer</h4>
+                            <p class="experience-period">Integral Ad Science • 2020 - 2023</p>
+                            <p class="experience-description">Became the go-to person for complex data challenges, working with everything from SQL optimization to mentoring team members. This role taught me how technology impacts real business outcomes.</p>
+                        </div>
+                        
+                        <div class="experience-item">
+                            <h4>Continuous Learning</h4>
+                            <p class="experience-period">Currently pursuing M.S. in Management</p>
+                            <p class="experience-description">Bridging the gap between technical expertise and business strategy at University of Illinois, while building on my Computer Science foundation from Aurora University.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="download-section">
+                        <a href="AustinOrphanResume.pdf" download class="download-resume">
+                            <i class="ph-duotone ph-download"></i>
+                            Download Resume
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Projects Section -->
+    <section id="projects" class="projects-section">
+        <div class="section-container">
+            <h2>Projects</h2>
+            <div class="projects-grid">
+                <!-- Featured Project: Portfolio Website -->
+                <div class="project-card featured">
+                    <span class="live-badge">LIVE</span>
+                    <div class="project-header">
+                        <h3>Austin Orphan Portfolio</h3>
+                        <div class="project-links">
+                            <a href="https://austinorphan.com" target="_blank" rel="noopener noreferrer" aria-label="View Live Site">
+                                <i class="ph-duotone ph-globe"></i>
+                            </a>
+                            <a href="https://github.com/AustinOrphan/AustinOrphan.github.io" target="_blank" rel="noopener noreferrer" aria-label="View GitHub Repository">
+                                <i class="ph-duotone ph-github-logo"></i>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="project-description">
+                        <p>Modern, responsive portfolio website built with vanilla JavaScript and CSS. Features advanced animations, smooth scrolling, parallax effects, and a custom loading animation crafted frame-by-frame. Demonstrates proficiency in front-end development without relying on frameworks.</p>
+                    </div>
+                    <div class="project-tech">
+                        <span class="tech-tag">JavaScript</span>
+                        <span class="tech-tag">CSS3</span>
+                        <span class="tech-tag">HTML5</span>
+                        <span class="tech-tag">Animation</span>
+                        <span class="tech-tag">Responsive Design</span>
+                        <span class="tech-tag">Performance</span>
+                    </div>
+                </div>
+
+                <!-- Running App MVP -->
+                <div class="project-card">
+                    <div class="project-header">
+                        <h3>Running App MVP</h3>
+                        <div class="project-links">
+                            <a href="https://github.com/austinorphan/running-app-mvp" target="_blank" rel="noopener noreferrer" aria-label="View GitHub Repository">
+                                <i class="ph-duotone ph-github-logo"></i>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="project-description">
+                        <p>A TypeScript-based running application MVP designed to track and analyze running performance with modern web technologies.</p>
+                    </div>
+                    <div class="project-tech">
+                        <span class="tech-tag">TypeScript</span>
+                        <span class="tech-tag">Web Development</span>
+                        <span class="tech-tag">Fitness Tracking</span>
+                        <span class="tech-tag">MVP</span>
+                    </div>
+                </div>
+
+                <!-- MazeBot -->
+                <div class="project-card">
+                    <div class="project-header">
+                        <h3>MazeBot</h3>
+                        <div class="project-links">
+                            <a href="https://github.com/austinorphan/MazeBot" target="_blank" rel="noopener noreferrer" aria-label="View GitHub Repository">
+                                <i class="ph-duotone ph-github-logo"></i>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="project-description">
+                        <p>Maze navigating robot initially designed for my college robotics class. Implements pathfinding algorithms and sensor integration for autonomous navigation.</p>
+                    </div>
+                    <div class="project-tech">
+                        <span class="tech-tag">Python</span>
+                        <span class="tech-tag">Robotics</span>
+                        <span class="tech-tag">Pathfinding</span>
+                        <span class="tech-tag">Algorithms</span>
+                    </div>
+                </div>
+
+                <!-- Projectile Motion Simulator -->
+                <div class="project-card">
+                    <span class="live-badge">DEMO</span>
+                    <div class="project-header">
+                        <h3>Projectile Motion Simulator</h3>
+                        <div class="project-links">
+                            <a href="https://austinorphan.com/ProjectileMotionSimulator/src/index.html" target="_blank" rel="noopener noreferrer" aria-label="View Live Demo">
+                                <i class="ph-duotone ph-play-circle"></i>
+                            </a>
+                            <a href="https://github.com/austinorphan/ProjectileMotionSimulator" target="_blank" rel="noopener noreferrer" aria-label="View GitHub Repository">
+                                <i class="ph-duotone ph-github-logo"></i>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="project-description">
+                        <p>Interactive physics simulation demonstrating projectile motion principles with real-time visualization and parameter controls for educational purposes.</p>
+                    </div>
+                    <div class="project-tech">
+                        <span class="tech-tag">JavaScript</span>
+                        <span class="tech-tag">HTML5 Canvas</span>
+                        <span class="tech-tag">Physics</span>
+                        <span class="tech-tag">Education</span>
+                    </div>
+                </div>
+
+                <!-- PyFun -->
+                <div class="project-card">
+                    <div class="project-header">
+                        <h3>PyFun Games</h3>
+                        <div class="project-links">
+                            <a href="https://github.com/austinorphan/PyFun" target="_blank" rel="noopener noreferrer" aria-label="View GitHub Repository">
+                                <i class="ph-duotone ph-github-logo"></i>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="project-description">
+                        <p>Simple collection of games built in Python showcasing fundamental programming concepts and game development principles through interactive entertainment.</p>
+                    </div>
+                    <div class="project-tech">
+                        <span class="tech-tag">Python</span>
+                        <span class="tech-tag">Game Development</span>
+                        <span class="tech-tag">Object-Oriented</span>
+                        <span class="tech-tag">Interactive</span>
+                    </div>
+                </div>
+
+                <!-- GitHub Profile Link -->
+                <div class="project-card placeholder">
+                    <div class="project-header">
+                        <h3>Explore More Projects</h3>
+                        <div class="project-links">
+                            <a href="https://github.com/austinorphan" target="_blank" rel="noopener noreferrer" aria-label="View GitHub Profile">
+                                <i class="ph-duotone ph-github-logo"></i>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="project-description">
+                        <p>Check out my GitHub profile for additional projects, contributions, and experimental work. Always building something new!</p>
+                    </div>
+                    <div class="project-tech">
+                        <span class="tech-tag">C#</span>
+                        <span class="tech-tag">.NET</span>
+                        <span class="tech-tag">AWS</span>
+                        <span class="tech-tag">Innovation</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section id="contact" class="contact-section">
+        <div class="section-container">
+            <h2>Get In Touch</h2>
+            <div class="contact-content">
+                <div class="contact-info">
+                    <div class="contact-intro">
+                        <p>I'm always interested in new opportunities, collaborations, and interesting projects. Whether you have a question, want to discuss a project, or just want to say hello, I'd love to hear from you!</p>
+                    </div>
+                    
+                    <div class="contact-methods">
+                        <div class="contact-method resume-download">
+                            <i class="ph-duotone ph-file-pdf"></i>
+                            <div>
+                                <h3>Resume</h3>
+                                <a href="AustinOrphanResume.pdf" target="_blank" rel="noopener noreferrer" class="resume-link">
+                                    Download Resume
+                                    <span class="download-indicator">
+                                        <i class="ph-duotone ph-download"></i>
+                                    </span>
+                                </a>
+                            </div>
+                        </div>
+                        
+                        <div class="contact-method">
+                            <i class="ph-duotone ph-envelope"></i>
+                            <div>
+                                <h3>Email</h3>
+                                <a href="mailto:AustinGOrphan@gmail.com">AustinGOrphan@gmail.com</a>
+                            </div>
+                        </div>
+                        
+                        <div class="contact-method">
+                            <i class="ph-duotone ph-linkedin-logo"></i>
+                            <div>
+                                <h3>LinkedIn</h3>
+                                <a href="https://www.linkedin.com/in/austinorphan/" target="_blank" rel="noopener noreferrer">linkedin.com/in/austinorphan</a>
+                            </div>
+                        </div>
+                        
+                        <div class="contact-method">
+                            <i class="ph-duotone ph-github-logo"></i>
+                            <div>
+                                <h3>GitHub</h3>
+                                <a href="https://github.com/austinorphan" target="_blank" rel="noopener noreferrer">github.com/austinorphan</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="contact-form-container">
+                    <form class="contact-form" action="https://formspree.io/f/YOUR_FORM_ID" method="POST" novalidate>
+                        <div class="form-group">
+                            <label for="name">Name *</label>
+                            <input type="text" id="name" name="name" required aria-describedby="name-error">
+                            <span class="error-message" id="name-error" role="alert"></span>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="email">Email *</label>
+                            <input type="email" id="email" name="email" required aria-describedby="email-error">
+                            <span class="error-message" id="email-error" role="alert"></span>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="subject">Subject</label>
+                            <input type="text" id="subject" name="subject" aria-describedby="subject-error">
+                            <span class="error-message" id="subject-error" role="alert"></span>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="message">Message *</label>
+                            <textarea id="message" name="message" rows="5" required aria-describedby="message-error" placeholder="Tell me about your project or just say hello!"></textarea>
+                            <span class="error-message" id="message-error" role="alert"></span>
+                        </div>
+                        
+                        <button type="submit" class="submit-btn">
+                            <i class="ph-duotone ph-paper-plane-tilt"></i>
+                            Send Message
+                        </button>
+                    </form>
+                    
+                    <div class="form-status" id="form-status" role="alert" aria-live="polite"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Navigation -->
+    <nav class="section-nav">
+        <a href="#hero" aria-label="Go to Hero Section">
+            <i class="ph-duotone ph-house"></i>
+        </a>
+        <a href="#about" aria-label="Go to About Section">
+            <i class="ph-duotone ph-user"></i>
+        </a>
+        <a href="#projects" aria-label="Go to Projects Section">
+            <i class="ph-duotone ph-folder-open"></i>
+        </a>
+        <a href="#contact" aria-label="Go to Contact Section">
+            <i class="ph-duotone ph-envelope"></i>
+        </a>
+    </nav>
+
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(function(registration) {
+                        console.log('ServiceWorker registration successful');
+                    })
+                    .catch(function(err) {
+                        console.log('ServiceWorker registration failed: ', err);
+                    });
+            });
+        }
+    </script>
+    
+    <!-- Professional Scroll Animations -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add scroll reveal classes to elements with staggered delays
+            const revealElements = document.querySelectorAll('.project-card, .detail-section, .contact-method, .experience-item, .skill-category');
+            revealElements.forEach((el, index) => {
+                el.classList.add('scroll-reveal');
+                // Add staggered delay based on element position
+                el.style.transitionDelay = `${(index % 6) * 0.1}s`;
+            });
+            
+            // Enhanced Intersection Observer with better threshold
+            const observerOptions = {
+                threshold: 0.15,
+                rootMargin: '0px 0px -80px 0px'
+            };
+            
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach((entry, index) => {
+                    if (entry.isIntersecting) {
+                        // Add slight delay for grouped animations
+                        setTimeout(() => {
+                            entry.target.classList.add('revealed');
+                        }, index * 50);
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, observerOptions);
+            
+            revealElements.forEach(el => observer.observe(el));
+            
+            // Enhanced parallax effect with proper layering
+            const heroContent = document.querySelector('.content-wrapper');
+            const linkBar = document.querySelector('#linkBar');
+            
+            window.addEventListener('scroll', () => {
+                const scrolled = window.pageYOffset;
+                const heroHeight = window.innerHeight;
+                
+                // Only apply parallax while in hero section
+                if (scrolled < heroHeight) {
+                    const parallaxMain = scrolled * 0.25; // Main content parallax
+                    const parallaxLinkBar = scrolled * 0.1; // Slower parallax for linkBar
+                    
+                    // Apply different parallax speeds for layered effect
+                    if (heroContent) {
+                        heroContent.style.transform = `translateY(${parallaxMain}px)`;
+                    }
+                    
+                    // LinkBar moves slower to stay more visible
+                    if (linkBar) {
+                        linkBar.style.transform = `translateY(${parallaxLinkBar}px)`;
+                    }
+                } else {
+                    // Reset transforms when past hero section
+                    if (heroContent) heroContent.style.transform = '';
+                    if (linkBar) linkBar.style.transform = '';
+                }
+            });
+            
+            // Add smooth entrance animation for hero elements
+            setTimeout(() => {
+                document.querySelector('h1').style.animation = 'slideInScale 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards';
+                document.querySelector('#cbar').style.animation = 'slideInScale 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.2s forwards';
+                document.querySelector('#linkBar').style.animation = 'slideInScale 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.4s forwards';
+            }, 300);
+        });
+    </script>
+    
+    <!-- Section Navigation Active State -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const sections = document.querySelectorAll('section[id]');
+            const navLinks = document.querySelectorAll('.section-nav a');
+            
+            function updateActiveSection() {
+                const scrollPosition = window.scrollY + window.innerHeight / 2;
+                
+                sections.forEach((section, index) => {
+                    const top = section.offsetTop;
+                    const height = section.offsetHeight;
+                    
+                    if (scrollPosition >= top && scrollPosition < top + height) {
+                        navLinks.forEach(link => link.classList.remove('active'));
+                        navLinks[index].classList.add('active');
+                    }
+                });
+            }
+            
+            // Update on scroll
+            window.addEventListener('scroll', updateActiveSection);
+            
+            // Update on load
+            updateActiveSection();
+            
+            // Update when clicking nav links (with delay for smooth scroll)
+            navLinks.forEach(link => {
+                link.addEventListener('click', function() {
+                    setTimeout(updateActiveSection, 100);
+                });
+            });
+        });
+    </script>
+    
+    <!-- Contact Form JavaScript -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.querySelector('.contact-form');
+            const statusDiv = document.getElementById('form-status');
+            
+            function validateName(name) {
+                return name.trim().length >= 2;
+            }
+            
+            function validateEmail(email) {
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                return emailRegex.test(email.trim());
+            }
+            
+            function validateMessage(message) {
+                return message.trim().length >= 10;
+            }
+            
+            function showError(fieldId, message) {
+                const errorElement = document.getElementById(fieldId + '-error');
+                const field = document.getElementById(fieldId);
+                errorElement.textContent = message;
+                field.classList.add('error');
+                errorElement.style.display = 'block';
+            }
+            
+            function clearError(fieldId) {
+                const errorElement = document.getElementById(fieldId + '-error');
+                const field = document.getElementById(fieldId);
+                errorElement.textContent = '';
+                field.classList.remove('error');
+                errorElement.style.display = 'none';
+            }
+            
+            function showStatus(message, type) {
+                statusDiv.textContent = message;
+                statusDiv.className = 'form-status ' + type;
+                statusDiv.style.display = 'block';
+                
+                if (type === 'success') {
+                    setTimeout(() => {
+                        statusDiv.style.display = 'none';
+                    }, 5000);
+                }
+            }
+            
+            document.getElementById('name').addEventListener('blur', function() {
+                if (!validateName(this.value)) {
+                    showError('name', 'Name must be at least 2 characters long');
+                } else {
+                    clearError('name');
+                }
+            });
+            
+            document.getElementById('email').addEventListener('blur', function() {
+                if (!validateEmail(this.value)) {
+                    showError('email', 'Please enter a valid email address');
+                } else {
+                    clearError('email');
+                }
+            });
+            
+            document.getElementById('message').addEventListener('blur', function() {
+                if (!validateMessage(this.value)) {
+                    showError('message', 'Message must be at least 10 characters long');
+                } else {
+                    clearError('message');
+                }
+            });
+            
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                statusDiv.style.display = 'none';
+                
+                const formData = new FormData(form);
+                const name = formData.get('name');
+                const email = formData.get('email');
+                const subject = formData.get('subject');
+                const message = formData.get('message');
+                
+                let isValid = true;
+                
+                if (!validateName(name)) {
+                    showError('name', 'Name must be at least 2 characters long');
+                    isValid = false;
+                } else {
+                    clearError('name');
+                }
+                
+                if (!validateEmail(email)) {
+                    showError('email', 'Please enter a valid email address');
+                    isValid = false;
+                } else {
+                    clearError('email');
+                }
+                
+                if (!validateMessage(message)) {
+                    showError('message', 'Message must be at least 10 characters long');
+                    isValid = false;
+                } else {
+                    clearError('message');
+                }
+                
+                if (!isValid) {
+                    showStatus('Please fix the errors above and try again.', 'error');
+                    return;
+                }
+                
+                const submitBtn = form.querySelector('.submit-btn');
+                const originalText = submitBtn.innerHTML;
+                submitBtn.innerHTML = '<i class="ph-duotone ph-spinner"></i> Sending...';
+                submitBtn.disabled = true;
+                
+                // Submit to Formspree (replace with your actual form ID)
+                fetch(form.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                }).then(response => {
+                    if (response.ok) {
+                        form.reset();
+                        showStatus('Thank you! Your message has been sent successfully. I\'ll get back to you soon!', 'success');
+                    } else {
+                        throw new Error('Network response was not ok');
+                    }
+                }).catch(error => {
+                    console.error('Error:', error);
+                    showStatus('Sorry, there was an issue sending your message. Please try emailing me directly at AustinGOrphan@gmail.com', 'error');
+                }).finally(() => {
+                    submitBtn.innerHTML = originalText;
+                    submitBtn.disabled = false;
+                });
+            });
+        });
+    </script>
+
+    <!-- Navigation and Smooth Scroll Script -->
+    <script>
+        // Navigation menu functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const navToggle = document.querySelector('.nav-toggle');
+            const navMenu = document.querySelector('.nav-menu');
+            const navLinks = document.querySelectorAll('.nav-link');
+            
+            // Toggle mobile menu
+            navToggle.addEventListener('click', function() {
+                const isExpanded = this.getAttribute('aria-expanded') === 'true';
+                this.setAttribute('aria-expanded', !isExpanded);
+                navMenu.classList.toggle('active');
+            });
+            
+            // Close menu when clicking a link
+            navLinks.forEach(link => {
+                link.addEventListener('click', function() {
+                    navToggle.setAttribute('aria-expanded', 'false');
+                    navMenu.classList.remove('active');
+                });
+            });
+            
+            // Add scroll effect to navigation
+            let lastScroll = 0;
+            window.addEventListener('scroll', function() {
+                const currentScroll = window.pageYOffset;
+                const nav = document.querySelector('.main-nav');
+                
+                if (currentScroll <= 0) {
+                    nav.style.transform = 'translateY(0)';
+                    return;
+                }
+                
+                if (currentScroll > lastScroll && currentScroll > 100) {
+                    // Scrolling down
+                    nav.style.transform = 'translateY(-100%)';
+                } else {
+                    // Scrolling up
+                    nav.style.transform = 'translateY(0)';
+                }
+                
+                lastScroll = currentScroll;
+            });
+            
+            // Smooth scroll for anchor links
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const target = document.querySelector(this.getAttribute('href'));
+                    if (target) {
+                        const navHeight = document.querySelector('.main-nav').offsetHeight;
+                        const targetPosition = target.offsetTop - navHeight;
+                        window.scrollTo({
+                            top: targetPosition,
+                            behavior: 'smooth'
+                        });
+                    }
+                });
+            });
+            
+            // Active section highlighting
+            const sections = document.querySelectorAll('section[id]');
+            const highlightNav = () => {
+                const scrollY = window.pageYOffset;
+                
+                sections.forEach(section => {
+                    const sectionHeight = section.offsetHeight;
+                    const sectionTop = section.offsetTop - 100;
+                    const sectionId = section.getAttribute('id');
+                    
+                    if (scrollY > sectionTop && scrollY <= sectionTop + sectionHeight) {
+                        document.querySelectorAll('.nav-link').forEach(link => {
+                            link.classList.remove('active');
+                        });
+                        document.querySelector(`.nav-link[href="#${sectionId}"]`)?.classList.add('active');
+                    }
+                });
+            };
+            
+            window.addEventListener('scroll', highlightNav);
+        });
+    </script>
+
+    <!-- Loading Animation Script -->
+    <script>
+        // Advanced loading animation management with fallbacks
+        document.addEventListener('DOMContentLoaded', function() {
+            const loader = document.getElementById('loader');
+            const video = document.getElementById('loaderVideo');
+            const videoContainer = document.getElementById('videoLoader');
+            const cssLoader = document.getElementById('cssLoader');
+            const svgLoader = document.getElementById('svgLoader');
+            const textLoader = document.getElementById('textLoader');
+            
+            // Fallback hierarchy: Video -> SVG -> CSS -> Text
+            let animationMethod = 'video';
+            
+            // Check video support and loading
+            video.addEventListener('error', function() {
+                console.log('Video failed, falling back to SVG animation');
+                videoContainer.style.display = 'none';
+                svgLoader.style.display = 'block';
+                animationMethod = 'svg';
+            });
+            
+            video.addEventListener('canplay', function() {
+                console.log('Video loaded successfully');
+                animationMethod = 'video';
+            });
+            
+            // If video doesn't load within 2 seconds, use SVG fallback
+            setTimeout(() => {
+                if (video.readyState < 3) { // Not enough data loaded
+                    console.log('Video loading timeout, using SVG animation');
+                    videoContainer.style.display = 'none';
+                    svgLoader.style.display = 'block';
+                    animationMethod = 'svg';
+                }
+            }, 2000);
+            
+            // Add option to manually switch to SVG (for testing)
+            if (window.location.hash === '#svg') {
+                console.log('Manual SVG mode enabled');
+                videoContainer.style.display = 'none';
+                svgLoader.style.display = 'block';
+                animationMethod = 'svg';
+            }
+            
+            // For demo - automatically show SVG version for now
+            setTimeout(() => {
+                if (window.location.hash !== '#css') {
+                    console.log('Demo mode: Showing SVG animation');
+                    videoContainer.style.display = 'none';
+                    svgLoader.style.display = 'block';
+                    animationMethod = 'svg';
+                }
+            }, 100);
+            
+            // CSS orb fallback (if SVG fails)
+            if (window.location.hash === '#css') {
+                console.log('Manual CSS mode enabled');
+                videoContainer.style.display = 'none';
+                svgLoader.style.display = 'none';
+                cssLoader.style.display = 'block';
+                animationMethod = 'css';
+            }
+        });
+        
+        // Hide loader after page loads
+        window.addEventListener('load', function() {
+            const loader = document.getElementById('loader');
+            
+            setTimeout(() => {
+                loader.classList.add('fade-out');
+                
+                setTimeout(() => {
+                    loader.style.display = 'none';
+                }, 600);
+            }, 1200); // Slightly longer to enjoy the animation
+        });
+        
+        // Prevent other animations during loading
+        document.documentElement.classList.add('loading');
+        window.addEventListener('load', () => {
+            document.documentElement.classList.remove('loading');
+        });
+    </script>
+    
+    <!-- Enhanced Interactions Script -->
+    <script>
+        // Parallax effect for background elements
+        document.addEventListener('DOMContentLoaded', function() {
+            const parallaxElements = document.querySelectorAll('.parallax-element');
+            let ticking = false;
+            
+            function updateParallax() {
+                const scrolled = window.pageYOffset;
+                
+                parallaxElements.forEach((element, index) => {
+                    const speed = 0.5 + (index * 0.2); // Different speeds for each element
+                    const yPos = -(scrolled * speed);
+                    element.style.transform = `translateY(${yPos}px)`;
+                });
+                
+                ticking = false;
+            }
+            
+            function requestTick() {
+                if (!ticking) {
+                    requestAnimationFrame(updateParallax);
+                    ticking = true;
+                }
+            }
+            
+            window.addEventListener('scroll', requestTick);
+            
+            // Mouse parallax effect
+            document.addEventListener('mousemove', function(e) {
+                const mouseX = e.clientX / window.innerWidth;
+                const mouseY = e.clientY / window.innerHeight;
+                
+                parallaxElements.forEach((element, index) => {
+                    const moveX = (mouseX - 0.5) * 20 * (index + 1);
+                    const moveY = (mouseY - 0.5) * 20 * (index + 1);
+                    const currentTransform = element.style.transform || '';
+                    const yMatch = currentTransform.match(/translateY\(([^)]+)\)/);
+                    const currentY = yMatch ? yMatch[1] : '0px';
+                    element.style.transform = `translateY(${currentY}) translateX(${moveX}px) translateY(${moveY}px)`;
+                });
+            });
+        });
+        
+        // Scroll reveal animations
+        document.addEventListener('DOMContentLoaded', function() {
+            const observerOptions = {
+                threshold: 0.1,
+                rootMargin: '0px 0px -50px 0px'
+            };
+            
+            const observer = new IntersectionObserver(function(entries) {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('revealed');
+                        // Optional: stop observing after reveal
+                        // observer.unobserve(entry.target);
+                    }
+                });
+            }, observerOptions);
+            
+            // Add scroll reveal classes to sections
+            const sections = document.querySelectorAll('section');
+            sections.forEach((section, index) => {
+                section.classList.add('scroll-reveal', `delay-${(index % 4) + 1}`);
+                observer.observe(section);
+            });
+            
+            // Add scroll reveal to other elements
+            const revealElements = document.querySelectorAll('.project-card, .skill-item, form');
+            revealElements.forEach((element, index) => {
+                const direction = index % 2 === 0 ? 'scroll-reveal-left' : 'scroll-reveal-right';
+                element.classList.add(direction, `delay-${(index % 4) + 1}`);
+                observer.observe(element);
+            });
+        });
+        
+        // Enhanced icon interactions
+        document.addEventListener('DOMContentLoaded', function() {
+            const icons = document.querySelectorAll('.icon');
+            
+            icons.forEach(icon => {
+                // Add magnetic effect on hover
+                icon.addEventListener('mousemove', function(e) {
+                    const rect = this.getBoundingClientRect();
+                    const x = e.clientX - rect.left - rect.width / 2;
+                    const y = e.clientY - rect.top - rect.height / 2;
+                    const distance = Math.sqrt(x * x + y * y);
+                    const maxDistance = Math.max(rect.width, rect.height) / 2;
+                    
+                    if (distance < maxDistance * 1.5) {
+                        const pullX = x * 0.1;
+                        const pullY = y * 0.1;
+                        this.style.transform = `translateY(${pullY - 3}px) translateX(${pullX}px) scale(1.1)`;
+                    }
+                });
+                
+                icon.addEventListener('mouseleave', function() {
+                    this.style.transform = '';
+                });
+                
+                // Add ripple effect on click
+                icon.addEventListener('click', function(e) {
+                    const ripple = document.createElement('span');
+                    ripple.className = 'ripple';
+                    this.appendChild(ripple);
+                    
+                    const rect = this.getBoundingClientRect();
+                    const size = Math.max(rect.width, rect.height);
+                    const x = e.clientX - rect.left - size / 2;
+                    const y = e.clientY - rect.top - size / 2;
+                    
+                    ripple.style.width = ripple.style.height = size + 'px';
+                    ripple.style.left = x + 'px';
+                    ripple.style.top = y + 'px';
+                    
+                    setTimeout(() => ripple.remove(), 600);
+                });
+            });
+        });
+        
+        // Page transition effects
+        document.addEventListener('DOMContentLoaded', function() {
+            // Create transition overlay
+            const transitionOverlay = document.createElement('div');
+            transitionOverlay.className = 'page-transition';
+            document.body.appendChild(transitionOverlay);
+            
+            // Add transition on internal links
+            document.querySelectorAll('a[href^="#"]').forEach(link => {
+                link.addEventListener('click', function(e) {
+                    const href = this.getAttribute('href');
+                    if (href !== '#') {
+                        transitionOverlay.classList.add('active');
+                        setTimeout(() => {
+                            transitionOverlay.classList.remove('active');
+                        }, 500);
+                    }
+                });
+            });
+        });
+        
+        // Enhanced project card interactions
+        document.addEventListener('DOMContentLoaded', function() {
+            const projectCards = document.querySelectorAll('.project-card');
+            
+            projectCards.forEach(card => {
+                // Add tilt effect on mouse move
+                card.addEventListener('mousemove', function(e) {
+                    const rect = this.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    const centerX = rect.width / 2;
+                    const centerY = rect.height / 2;
+                    const deltaX = (x - centerX) / centerX;
+                    const deltaY = (y - centerY) / centerY;
+                    
+                    const tiltX = deltaY * 10; // Tilt based on Y movement
+                    const tiltY = deltaX * -10; // Tilt based on X movement
+                    
+                    this.style.transform = `perspective(1000px) rotateX(${tiltX}deg) rotateY(${tiltY}deg) translateY(-8px) scale(1.02)`;
+                });
+                
+                card.addEventListener('mouseleave', function() {
+                    this.style.transform = '';
+                });
+                
+                // Add click tracking for analytics (placeholder)
+                card.addEventListener('click', function(e) {
+                    // Don't trigger if clicking on links
+                    if (e.target.closest('a')) return;
+                    
+                    const projectTitle = this.querySelector('h3').textContent;
+                    console.log(`Project card clicked: ${projectTitle}`);
+                    
+                    // Optional: Auto-click the first link if available
+                    const firstLink = this.querySelector('.project-links a');
+                    if (firstLink) {
+                        firstLink.click();
+                    }
+                });
+                
+                // Add keyboard navigation
+                card.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        const firstLink = this.querySelector('.project-links a');
+                        if (firstLink) {
+                            firstLink.click();
+                        }
+                    }
+                });
+                
+                // Make cards focusable
+                card.setAttribute('tabindex', '0');
+                card.setAttribute('role', 'button');
+                card.setAttribute('aria-label', `View project: ${card.querySelector('h3').textContent}`);
+            });
+            
+            // Tech tag interactions
+            const techTags = document.querySelectorAll('.tech-tag');
+            techTags.forEach(tag => {
+                tag.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const techName = this.textContent;
+                    console.log(`Tech tag clicked: ${techName}`);
+                    
+                    // Highlight other cards with the same tech
+                    techTags.forEach(otherTag => {
+                        if (otherTag.textContent === techName) {
+                            otherTag.style.background = 'var(--color-secondary)';
+                            otherTag.style.color = 'var(--color-background)';
+                            setTimeout(() => {
+                                otherTag.style.background = '';
+                                otherTag.style.color = '';
+                            }, 2000);
+                        }
+                    });
+                });
+            });
+        });
+        
+        // Animated counters for about section
+        document.addEventListener('DOMContentLoaded', function() {
+            const observerOptions = {
+                threshold: 0.5,
+                rootMargin: '0px'
+            };
+            
+            const observer = new IntersectionObserver(function(entries) {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        animateCounters();
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, observerOptions);
+            
+            const aboutSection = document.querySelector('.about-section');
+            if (aboutSection) {
+                observer.observe(aboutSection);
+            }
+            
+            function animateCounters() {
+                const counters = document.querySelectorAll('.stat-number');
+                
+                counters.forEach(counter => {
+                    const target = parseInt(counter.getAttribute('data-target'));
+                    const duration = 2000; // 2 seconds
+                    const increment = target / (duration / 16); // 60fps
+                    let current = 0;
+                    
+                    const updateCounter = () => {
+                        if (current < target) {
+                            current += increment;
+                            counter.textContent = Math.floor(current);
+                            requestAnimationFrame(updateCounter);
+                        } else {
+                            counter.textContent = target;
+                            // Add final bounce effect
+                            counter.style.transform = 'scale(1.2)';
+                            setTimeout(() => {
+                                counter.style.transform = 'scale(1)';
+                            }, 200);
+                        }
+                    };
+                    
+                    updateCounter();
+                });
+            }
+        });
+        
+        // Enhanced contact form interactions
+        document.addEventListener('DOMContentLoaded', function() {
+            const formGroups = document.querySelectorAll('.form-group');
+            const contactForm = document.querySelector('.contact-form');
+            
+            // Add floating label behavior
+            formGroups.forEach(group => {
+                const input = group.querySelector('input, textarea');
+                const label = group.querySelector('label');
+                
+                if (input && label) {
+                    // Add floating label class
+                    group.classList.add('floating-label');
+                    
+                    // Add placeholder for proper floating behavior
+                    input.setAttribute('placeholder', ' ');
+                    
+                    // Move label after input for CSS sibling selector
+                    input.parentNode.insertBefore(label, input.nextSibling);
+                }
+            });
+            
+            // Resume download tracking
+            const resumeLink = document.querySelector('.resume-link');
+            if (resumeLink) {
+                resumeLink.addEventListener('click', function(e) {
+                    console.log('Resume download initiated');
+                    
+                    // Add download animation
+                    const downloadIndicator = this.querySelector('.download-indicator');
+                    downloadIndicator.style.animation = 'none';
+                    downloadIndicator.style.transform = 'scale(1.3)';
+                    
+                    setTimeout(() => {
+                        downloadIndicator.style.animation = 'bounce 2s infinite';
+                        downloadIndicator.style.transform = '';
+                    }, 300);
+                    
+                    // Optional: Show success message
+                    setTimeout(() => {
+                        const successMsg = document.createElement('div');
+                        successMsg.style.cssText = `
+                            position: fixed;
+                            top: 20px;
+                            right: 20px;
+                            background: var(--color-accent);
+                            color: var(--color-background);
+                            padding: 10px 20px;
+                            border-radius: 8px;
+                            font-weight: 600;
+                            z-index: 10000;
+                            animation: slideIn 0.3s ease;
+                        `;
+                        successMsg.textContent = 'Resume download started!';
+                        document.body.appendChild(successMsg);
+                        
+                        setTimeout(() => {
+                            successMsg.remove();
+                        }, 3000);
+                    }, 500);
+                });
+            }
+            
+            // Enhanced form validation with animations
+            if (contactForm) {
+                const inputs = contactForm.querySelectorAll('input, textarea');
+                
+                inputs.forEach(input => {
+                    // Add focus ripple effect
+                    input.addEventListener('focus', function() {
+                        this.closest('.form-group').classList.add('focused');
+                    });
+                    
+                    input.addEventListener('blur', function() {
+                        this.closest('.form-group').classList.remove('focused');
+                    });
+                    
+                    // Real-time validation
+                    input.addEventListener('input', function() {
+                        validateField(this);
+                    });
+                });
+                
+                function validateField(field) {
+                    const value = field.value.trim();
+                    const fieldName = field.name;
+                    const errorElement = document.getElementById(`${fieldName}-error`);
+                    
+                    let isValid = true;
+                    let errorMessage = '';
+                    
+                    if (field.required && !value) {
+                        isValid = false;
+                        errorMessage = 'This field is required';
+                    } else if (fieldName === 'email' && value) {
+                        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                        if (!emailRegex.test(value)) {
+                            isValid = false;
+                            errorMessage = 'Please enter a valid email address';
+                        }
+                    }
+                    
+                    if (isValid) {
+                        field.classList.remove('error');
+                        field.classList.add('valid');
+                        errorElement.style.display = 'none';
+                    } else {
+                        field.classList.remove('valid');
+                        field.classList.add('error');
+                        errorElement.textContent = errorMessage;
+                        errorElement.style.display = 'block';
+                    }
+                    
+                    return isValid;
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>

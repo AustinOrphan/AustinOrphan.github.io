@@ -66,7 +66,7 @@ High-priority fixes that address immediate functionality and accessibility issue
     <a href="mailto:AustinGOrphan@gmail.com" aria-label="Email Contact">
         <i class="icon ph-duotone ph-envelope-simple"></i>
     </a>
-    <a href="/ProjectileMotionSimulator/src/" aria-label="Projectile Motion Simulator Project">
+    <a href="https://austinorphan.com/ProjectileMotionSimulator/src/index.html" aria-label="Projectile Motion Simulator Project">
         <i class="icon ph-duotone ph-meteor"></i>
     </a>
 </div>
