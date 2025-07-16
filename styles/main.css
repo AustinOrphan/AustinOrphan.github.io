@@ -65,13 +65,7 @@ html {
 }
 
 body {
-  margin: 0;
-  padding: 0;
   padding-bottom: 120px; /* Space for footer reveal */
-  color: var(--color-primary);
-  font-family: "Source Sans Pro", sans-serif;
-  line-height: 1.6;
-  overflow-x: hidden;
   background-color: transparent;
   position: relative;
 }
