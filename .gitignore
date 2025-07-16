@@ -24,3 +24,14 @@ Icon
 Network Trash Folder
 Temporary Items
 .apdisk
+
+# Claude local settings
+.claude/
+
+# Serena local settings
+.serena/
+
+# macOS duplicate files
+* 2.*
+* 3.*
+* 4.*
