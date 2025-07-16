@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Animation Test - All Versions</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #1D2B35;
+            color: #EEE5E9;
+            font-family: sans-serif;
+        }
+        
+        .container {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            align-items: center;
+            min-height: 80vh;
+        }
+        
+        .animation-box {
+            width: 250px;
+            height: 250px;
+            background: #EEE5E9;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        
+        .label {
+            position: absolute;
+            top: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-weight: bold;
+            color: #EEE5E9;
+        }
+        
+        /* Video Version */
+        .video-container {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            overflow: hidden;
+            background: rgba(40, 146, 215, 0.1);
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(40, 146, 215, 0.2);
+        }
+        
+        .video-container video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
+        }
+        
+        /* CSS Version */
+        .css-animation {
+            width: 200px;
+            height: 200px;
+            position: relative;
+        }
+        
+        .css-letter-a {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: "Anta", sans-serif;
+            font-size: 60px;
+            font-weight: 900;
+            color: #000000;
+            animation: cssLetterAppear 5.4s ease-in-out infinite;
+        }
+        
+        .css-orbit-ring {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 170px;
+            height: 170px;
+            transform: translate(-50%, -50%);
+            border: 6px solid #000000;
+            border-radius: 50%;
+            opacity: 0;
+            animation: cssOrbitRing 5.4s ease-in-out infinite;
+        }
+        
+        .css-orbital-ring {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 180px;
+            height: 60px;
+            transform: translate(-50%, -50%);
+            border: 5px solid #000000;
+            border-radius: 50%;
+            opacity: 0;
+            animation: cssOrbitalRing 5.4s ease-in-out infinite;
+        }
+        
+        /* SVG Version */
+        .svg-container {
+            width: 200px;
+            height: 200px;
+        }
+        
+        .svg-animation {
+            width: 100%;
+            height: 100%;
+        }
+        
+        /* Animations */
+        @keyframes cssLetterAppear {
+            0%, 15% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+            20%, 85% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+        }
+        
+        @keyframes cssOrbitRing {
+            0%, 25% { opacity: 0; transform: translate(-50%, -50%) scale(0.3) rotate(45deg); }
+            45%, 70% { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(0deg); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(1.3) rotate(-45deg); }
+        }
+        
+        @keyframes cssOrbitalRing {
+            0%, 35% { opacity: 0; transform: translate(-50%, -50%) scale(0.3) rotate(0deg); }
+            55%, 70% { opacity: 0.9; transform: translate(-50%, -50%) scale(1) rotate(180deg); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(1.3) rotate(360deg); }
+        }
+        
+        /* Pixel-Perfect SVG Animations */
+        .mask-rect {
+            animation: revealMask 5.4s ease-in-out infinite;
+        }
+        
+        .a-exact-shape {
+            opacity: 1;
+        }
+        
+        .center-dot {
+            animation: perfectDotAppear 5.4s ease-in-out infinite;
+        }
+        
+        .orbit-ring {
+            animation: perfectCircleDraw 5.4s ease-in-out infinite;
+        }
+        
+        .orbital-ring {
+            animation: perfectEllipseDraw 5.4s ease-in-out infinite;
+        }
+        
+        @keyframes revealMask {
+            0%, 9.25% { width: 0; }
+            14.8% { width: 100px; }
+            18.5% { width: 200px; }
+            74% { width: 200px; opacity: 1; }
+            85.2% { width: 200px; opacity: 0.5; }
+            100% { width: 200px; opacity: 0; }
+        }
+        
+        @keyframes perfectDotAppear {
+            0%, 27.8% { opacity: 0; }
+            29.6% { opacity: 1; }
+            37% { opacity: 1; }
+            55.5% { opacity: 0.5; }
+            74% { opacity: 0; }
+            100% { opacity: 0; }
+        }
+        
+        @keyframes perfectCircleDraw {
+            0%, 27.8% { stroke-dashoffset: 471; opacity: 0; }
+            29.6% { stroke-dashoffset: 400; opacity: 1; }
+            33.3% { stroke-dashoffset: 200; opacity: 1; }
+            37% { stroke-dashoffset: 0; opacity: 1; }
+            55.5% { stroke-dashoffset: 0; opacity: 0.7; }
+            74% { stroke-dashoffset: -200; opacity: 0; }
+            100% { stroke-dashoffset: -471; opacity: 0; }
+        }
+        
+        @keyframes perfectEllipseDraw {
+            0%, 27.8% { stroke-dashoffset: 534; opacity: 0; }
+            31.5% { stroke-dashoffset: 400; opacity: 0.8; }
+            35.2% { stroke-dashoffset: 200; opacity: 1; }
+            37% { stroke-dashoffset: 0; opacity: 1; }
+            55.5% { stroke-dashoffset: 0; opacity: 0.6; }
+            74% { stroke-dashoffset: -200; opacity: 0; }
+            100% { stroke-dashoffset: -534; opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <h1 style="text-align: center;">Animation Test - All Three Versions</h1>
+    
+    <div class="container">
+        <!-- Original Video -->
+        <div class="animation-box">
+            <div class="label">Original Video</div>
+            <div class="video-container">
+                <video autoplay muted loop playsinline>
+                    <source src="AOAnimation.mp4" type="video/mp4">
+                </video>
+            </div>
+        </div>
+        
+        <!-- CSS Animation -->
+        <div class="animation-box">
+            <div class="label">CSS Version</div>
+            <div class="css-animation">
+                <div class="css-letter-a">A</div>
+                <div class="css-orbit-ring"></div>
+                <div class="css-orbital-ring"></div>
+            </div>
+        </div>
+        
+        <!-- SVG Animation -->
+        <div class="animation-box">
+            <div class="label">SVG Version</div>
+            <div class="svg-container">
+                <svg class="svg-animation" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <!-- Mask for progressive reveal -->
+                        <mask id="drawMaskTest">
+                            <rect class="mask-rect" x="0" y="0" width="0" height="200" fill="white"/>
+                        </mask>
+                    </defs>
+                    
+                    <!-- A Letter - exact match to video frame -->
+                    <g mask="url(#drawMaskTest)">
+                        <path class="a-exact-shape" d="
+                            M 50 190
+                            L 70 180
+                            L 88 160
+                            L 100 130
+                            L 108 100
+                            L 112 70
+                            L 114 40
+                            L 115 20
+                            L 116 40
+                            L 118 70
+                            L 122 100
+                            L 130 130
+                            L 142 160
+                            L 158 180
+                            L 178 190
+                            L 198 195
+                            L 210 198
+                            L 218 202
+                            L 222 208
+                            L 222 214
+                            L 218 220
+                            L 210 224
+                            L 198 226
+                            L 185 225
+                            L 172 222
+                            L 160 218
+                            L 150 212
+                            L 142 205
+                            L 136 197
+                            L 132 188
+                            L 130 178
+                            L 129 168
+                            L 128 158
+                            L 126 148
+                            L 124 138
+                            L 122 128
+                            L 120 118
+                            L 118 108
+                            L 116 98
+                            L 115 88
+                            L 114 78
+                            L 113 68
+                            L 112 58
+                            L 111 48
+                            L 110 38
+                            L 109 28
+                            L 108 38
+                            L 107 48
+                            L 106 58
+                            L 104 68
+                            L 102 78
+                            L 100 88
+                            L 97 98
+                            L 94 108
+                            L 90 118
+                            L 86 128
+                            L 81 138
+                            L 76 148
+                            L 70 158
+                            L 63 168
+                            L 55 178
+                            L 46 188
+                            L 36 197
+                            L 25 205
+                            L 13 212
+                            L 1 218
+                            L -8 222
+                            L -15 225
+                            L -20 226
+                            L -22 224
+                            L -22 220
+                            L -20 214
+                            L -15 208
+                            L -8 202
+                            L 1 198
+                            L 13 195
+                            L 25 192
+                            L 36 189
+                            L 46 186
+                            L 50 190
+                            Z" 
+                            fill="#000000"/></g>
+                    
+                    <!-- Small center dot -->
+                    <circle class="center-dot" cx="100" cy="105" r="2" fill="#000000" opacity="0"/>
+                    
+                    <!-- Circular Ring (perfect circle) -->
+                    <circle class="orbit-ring" cx="100" cy="105" r="75" stroke="#000000" stroke-width="15" fill="none" 
+                            stroke-dasharray="471" stroke-dashoffset="471" transform="rotate(135 100 105)" opacity="0"/>
+                    
+                    <!-- Elliptical Orbital Ring -->
+                    <ellipse class="orbital-ring" cx="100" cy="105" rx="85" ry="28" stroke="#000000" stroke-width="12" fill="none"
+                             stroke-dasharray="534" stroke-dashoffset="534" transform="rotate(-10 100 105)" opacity="0"/>
+                </svg>
+            </div>
+        </div>
+    </div>
+    
+    <p style="text-align: center; margin-top: 40px;">
+        Compare the animations to see which version matches the original video best.
+    </p>
+</body>
+</html>

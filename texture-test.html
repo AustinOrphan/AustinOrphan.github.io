@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Texture Test - Austin Orphan</title>
+    <style>
+        :root {
+            --color-background: #1D2B35;
+            --color-primary: #EEE5E9;
+            --color-accent: #2892D7;
+            --color-secondary: #D16666;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Source Sans Pro", sans-serif;
+            background-color: var(--color-background);
+            color: var(--color-primary);
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        .controls {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            background: rgba(29, 43, 53, 0.95);
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid var(--color-accent);
+            backdrop-filter: blur(10px);
+            width: 280px;
+        }
+
+        .controls h2 {
+            color: var(--color-accent);
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+
+        .control-group {
+            margin-bottom: 15px;
+        }
+
+        .control-group label {
+            display: block;
+            color: var(--color-primary);
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+
+        .controls select {
+            width: 100%;
+            padding: 8px;
+            background: var(--color-background);
+            color: var(--color-primary);
+            border: 1px solid var(--color-accent);
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .controls select:focus {
+            outline: none;
+            border-color: var(--color-secondary);
+        }
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .controls input[type="range"] {
+            flex: 1;
+            -webkit-appearance: none;
+            height: 6px;
+            border-radius: 3px;
+            background: var(--color-background);
+            outline: none;
+        }
+
+        .controls input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--color-accent);
+            cursor: pointer;
+        }
+
+        .controls input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--color-accent);
+            cursor: pointer;
+            border: none;
+        }
+
+        .controls input[type="color"] {
+            width: 100%;
+            height: 40px;
+            border: 1px solid var(--color-accent);
+            border-radius: 4px;
+            background: var(--color-background);
+            cursor: pointer;
+            padding: 0;
+        }
+
+        .controls input[type="color"]:focus {
+            outline: none;
+            border-color: var(--color-secondary);
+            box-shadow: 0 0 5px rgba(209, 102, 102, 0.3);
+        }
+
+        .slider-value {
+            color: var(--color-secondary);
+            font-size: 12px;
+            min-width: 30px;
+            text-align: right;
+        }
+
+        .content {
+            padding: 100px 40px 40px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .sample-section {
+            margin-bottom: 60px;
+        }
+
+        .sample-section h1 {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            color: var(--color-primary);
+        }
+
+        .sample-section h2 {
+            font-size: 2rem;
+            margin-bottom: 15px;
+            color: var(--color-accent);
+        }
+
+        .sample-section p {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            margin-bottom: 15px;
+            color: var(--color-primary);
+        }
+
+        .sample-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 40px;
+        }
+
+        .card {
+            background: rgba(238, 229, 233, 0.1);
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid rgba(238, 229, 233, 0.2);
+        }
+
+        .card h3 {
+            color: var(--color-secondary);
+            margin-bottom: 10px;
+        }
+
+        /* Texture overlay container */
+        .texture-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+            z-index: -1;
+            opacity: 1;
+            transition: all 0.3s ease;
+            -webkit-mask-image: linear-gradient(to bottom, transparent 0%, rgba(0,0,0,1) 50%);
+            mask-image: linear-gradient(to bottom, transparent 0%, rgba(0,0,0,1) 50%);
+        }
+
+        /* Texture definitions */
+        .texture-none { background: none; }
+        
+        .texture-noise {
+            background-image: radial-gradient(circle at 25% 25%, rgba(238, 229, 233, 0.1) 1px, transparent 1px),
+                              radial-gradient(circle at 75% 75%, rgba(209, 102, 102, 0.08) 1px, transparent 1px);
+            background-size: 8px 8px;
+        }
+
+        .texture-grain {
+            background-image: radial-gradient(circle at 20% 50%, rgba(238, 229, 233, 0.12) 1px, transparent 1px),
+                              radial-gradient(circle at 80% 50%, rgba(209, 102, 102, 0.1) 1px, transparent 1px),
+                              radial-gradient(circle at 40% 40%, rgba(238, 229, 233, 0.08) 1px, transparent 1px);
+            background-size: 12px 12px, 16px 16px, 20px 20px;
+        }
+
+        .texture-dots {
+            background-image: radial-gradient(circle at 50% 50%, rgba(238, 229, 233, 0.15) 2px, transparent 2px);
+            background-size: 25px 25px;
+        }
+
+        .texture-crosshatch {
+            background-image: 
+                repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(238, 229, 233, 0.1) 10px, rgba(238, 229, 233, 0.1) 20px),
+                repeating-linear-gradient(-45deg, transparent, transparent 10px, rgba(209, 102, 102, 0.08) 10px, rgba(209, 102, 102, 0.08) 20px);
+        }
+
+        .texture-lines-h {
+            background-image: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(238, 229, 233, 0.12) 3px, rgba(238, 229, 233, 0.12) 6px);
+        }
+
+        .texture-lines-v {
+            background-image: repeating-linear-gradient(90deg, transparent, transparent 3px, rgba(238, 229, 233, 0.12) 3px, rgba(238, 229, 233, 0.12) 6px);
+        }
+
+        .texture-grid {
+            background-image: 
+                repeating-linear-gradient(0deg, transparent, transparent 19px, rgba(238, 229, 233, 0.1) 19px, rgba(238, 229, 233, 0.1) 20px),
+                repeating-linear-gradient(90deg, transparent, transparent 19px, rgba(238, 229, 233, 0.1) 19px, rgba(238, 229, 233, 0.1) 20px);
+        }
+
+        .texture-diagonal {
+            background-image: repeating-linear-gradient(45deg, transparent, transparent 8px, rgba(238, 229, 233, 0.12) 8px, rgba(238, 229, 233, 0.12) 16px);
+        }
+
+        .texture-waves {
+            background-image: 
+                radial-gradient(ellipse 80px 20px at 20% 30%, rgba(238, 229, 233, 0.08), transparent),
+                radial-gradient(ellipse 120px 25px at 80% 70%, rgba(209, 102, 102, 0.06), transparent),
+                radial-gradient(ellipse 60px 15px at 60% 90%, rgba(238, 229, 233, 0.04), transparent);
+            background-size: 180px 120px, 240px 150px, 140px 90px;
+        }
+
+        .texture-hexagon {
+            background-image: 
+                /* True honeycomb pattern */
+                radial-gradient(circle at 50% 0%, transparent 5px, rgba(238, 229, 233, 0.08) 5px, rgba(238, 229, 233, 0.08) 6px, transparent 7px),
+                radial-gradient(circle at 25% 43%, transparent 5px, rgba(209, 102, 102, 0.06) 5px, rgba(209, 102, 102, 0.06) 6px, transparent 7px),
+                radial-gradient(circle at 75% 43%, transparent 5px, rgba(238, 229, 233, 0.05) 5px, rgba(238, 229, 233, 0.05) 6px, transparent 7px);
+            background-size: 52px 90px;
+            background-position: 0 0, 0 0, 0 0;
+        }
+
+        .texture-paper {
+            background-image: 
+                /* Random paper grain with multiple noise layers */
+                radial-gradient(circle at 23% 15%, rgba(238, 229, 233, 0.04) 0.5px, transparent 0.5px),
+                radial-gradient(circle at 67% 83%, rgba(209, 102, 102, 0.03) 0.5px, transparent 0.5px),
+                radial-gradient(circle at 91% 34%, rgba(238, 229, 233, 0.025) 0.5px, transparent 0.5px),
+                radial-gradient(circle at 14% 71%, rgba(209, 102, 102, 0.02) 0.5px, transparent 0.5px),
+                radial-gradient(circle at 45% 92%, rgba(238, 229, 233, 0.02) 0.5px, transparent 0.5px),
+                radial-gradient(circle at 78% 28%, rgba(209, 102, 102, 0.015) 0.5px, transparent 0.5px);
+            background-size: 13px 17px, 19px 11px, 7px 23px, 29px 8px, 16px 31px, 11px 14px;
+        }
+
+        .texture-fabric {
+            background-image: 
+                /* Linen weave pattern - over/under alternating */
+                repeating-linear-gradient(0deg, 
+                    rgba(238, 229, 233, 0.06) 0px, rgba(238, 229, 233, 0.06) 2px,
+                    transparent 2px, transparent 4px,
+                    rgba(238, 229, 233, 0.06) 4px, rgba(238, 229, 233, 0.06) 6px,
+                    transparent 6px, transparent 8px
+                ),
+                repeating-linear-gradient(90deg, 
+                    rgba(209, 102, 102, 0.04) 0px, rgba(209, 102, 102, 0.04) 2px,
+                    transparent 2px, transparent 4px,
+                    rgba(209, 102, 102, 0.04) 4px, rgba(209, 102, 102, 0.04) 6px,
+                    transparent 6px, transparent 8px
+                );
+            background-size: 8px 8px;
+            background-position: 0 0, 4px 4px;
+        }
+
+        .texture-scales {
+            background-image: 
+                radial-gradient(ellipse 15px 8px at 0% 100%, rgba(238, 229, 233, 0.08), transparent 70%),
+                radial-gradient(ellipse 15px 8px at 100% 0%, rgba(209, 102, 102, 0.06), transparent 70%);
+            background-size: 30px 16px;
+            background-position: 0 0, 15px 8px;
+        }
+
+        .texture-circuit {
+            background-image: 
+                repeating-linear-gradient(90deg, transparent, transparent 15px, rgba(238, 229, 233, 0.12) 15px, rgba(238, 229, 233, 0.12) 17px),
+                repeating-linear-gradient(0deg, transparent, transparent 15px, rgba(209, 102, 102, 0.1) 15px, rgba(209, 102, 102, 0.1) 17px),
+                radial-gradient(circle at 16px 16px, rgba(238, 229, 233, 0.15) 2px, transparent 2px);
+            background-size: 32px 32px;
+        }
+
+        .texture-organic {
+            background-image: 
+                radial-gradient(ellipse 35px 20px at 15% 25%, rgba(238, 229, 233, 0.06), transparent 60%),
+                radial-gradient(ellipse 25px 40px at 85% 75%, rgba(209, 102, 102, 0.04), transparent 60%),
+                radial-gradient(ellipse 45px 25px at 65% 45%, rgba(238, 229, 233, 0.03), transparent 60%),
+                radial-gradient(ellipse 30px 35px at 35% 80%, rgba(209, 102, 102, 0.025), transparent 60%);
+            background-size: 120px 100px, 140px 120px, 160px 130px, 110px 90px;
+        }
+
+        .texture-carbon {
+            background-image: 
+                /* Dark woven fiber effect */
+                repeating-linear-gradient(0deg, transparent, transparent 6px, rgba(238, 229, 233, 0.06) 6px, rgba(238, 229, 233, 0.06) 12px),
+                repeating-linear-gradient(90deg, transparent, transparent 6px, rgba(209, 102, 102, 0.04) 6px, rgba(209, 102, 102, 0.04) 12px),
+                /* Diagonal weave overlay */
+                repeating-linear-gradient(45deg, transparent, transparent 1px, rgba(238, 229, 233, 0.03) 1px, rgba(238, 229, 233, 0.03) 2px),
+                repeating-linear-gradient(-45deg, transparent, transparent 1px, rgba(209, 102, 102, 0.02) 1px, rgba(209, 102, 102, 0.02) 2px);
+            background-size: 12px 12px, 12px 12px, 6px 6px, 6px 6px;
+        }
+
+        .texture-perforated {
+            background-image: 
+                radial-gradient(circle at 25% 25%, rgba(238, 229, 233, 0.08) 2px, transparent 3px),
+                radial-gradient(circle at 75% 75%, rgba(209, 102, 102, 0.06) 2px, transparent 3px);
+            background-size: 20px 20px;
+            background-position: 0 0, 10px 10px;
+        }
+
+        .texture-brushed {
+            background-image: 
+                repeating-linear-gradient(90deg, 
+                    transparent, transparent 2px,
+                    rgba(238, 229, 233, 0.06) 2px, rgba(238, 229, 233, 0.06) 3px,
+                    transparent 3px, transparent 5px,
+                    rgba(209, 102, 102, 0.04) 5px, rgba(209, 102, 102, 0.04) 6px,
+                    transparent 6px, transparent 12px
+                );
+        }
+
+        .texture-mesh {
+            background-image: 
+                repeating-linear-gradient(30deg, transparent, transparent 8px, rgba(238, 229, 233, 0.06) 8px, rgba(238, 229, 233, 0.06) 9px, transparent 9px, transparent 16px),
+                repeating-linear-gradient(-30deg, transparent, transparent 8px, rgba(209, 102, 102, 0.04) 8px, rgba(209, 102, 102, 0.04) 9px, transparent 9px, transparent 16px);
+        }
+
+        .texture-marble {
+            background-image: 
+                radial-gradient(ellipse 300px 150px at 20% 30%, rgba(238, 229, 233, 0.04), transparent 70%),
+                radial-gradient(ellipse 200px 300px at 80% 70%, rgba(209, 102, 102, 0.03), transparent 70%),
+                radial-gradient(ellipse 250px 200px at 60% 90%, rgba(238, 229, 233, 0.025), transparent 70%),
+                radial-gradient(ellipse 180px 250px at 40% 10%, rgba(209, 102, 102, 0.02), transparent 70%);
+            background-size: 500px 400px, 400px 500px, 600px 450px, 350px 400px;
+        }
+
+        /* SVG-based textures */
+        .texture-svg-carbon {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' fill='none'/%3E%3Crect x='0' y='0' width='12' height='4' fill='%23EEE5E9' fill-opacity='0.06'/%3E%3Crect x='12' y='4' width='12' height='4' fill='%23D16666' fill-opacity='0.04'/%3E%3Crect x='0' y='8' width='12' height='4' fill='%23EEE5E9' fill-opacity='0.06'/%3E%3Crect x='12' y='12' width='12' height='4' fill='%23D16666' fill-opacity='0.04'/%3E%3Crect x='0' y='16' width='12' height='4' fill='%23EEE5E9' fill-opacity='0.06'/%3E%3Crect x='12' y='20' width='12' height='4' fill='%23D16666' fill-opacity='0.04'/%3E%3C/svg%3E");
+        }
+
+        .texture-svg-hexagon {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='100' viewBox='0 0 56 100'%3E%3Crect width='56' height='100' fill='none'/%3E%3Cpolygon points='28,15 42,23 42,39 28,47 14,39 14,23' fill='none' stroke='%23EEE5E9' stroke-width='0.5' stroke-opacity='0.08'/%3E%3Cpolygon points='28,62 42,70 42,86 28,94 14,86 14,70' fill='none' stroke='%23D16666' stroke-width='0.5' stroke-opacity='0.06'/%3E%3Cpolygon points='0,39 14,47 14,63 0,71 -14,63 -14,47' fill='none' stroke='%23EEE5E9' stroke-width='0.5' stroke-opacity='0.05'/%3E%3Cpolygon points='56,39 70,47 70,63 56,71 42,63 42,47' fill='none' stroke='%23EEE5E9' stroke-width='0.5' stroke-opacity='0.05'/%3E%3C/svg%3E");
+        }
+
+        .texture-svg-paper {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='50' height='50' viewBox='0 0 50 50'%3E%3Crect width='50' height='50' fill='none'/%3E%3Ccircle cx='12' cy='8' r='0.5' fill='%23EEE5E9' fill-opacity='0.04'/%3E%3Ccircle cx='34' cy='42' r='0.5' fill='%23D16666' fill-opacity='0.03'/%3E%3Ccircle cx='45' cy='17' r='0.5' fill='%23EEE5E9' fill-opacity='0.025'/%3E%3Ccircle cx='7' cy='36' r='0.5' fill='%23D16666' fill-opacity='0.02'/%3E%3Ccircle cx='23' cy='46' r='0.5' fill='%23EEE5E9' fill-opacity='0.02'/%3E%3Ccircle cx='39' cy='14' r='0.5' fill='%23D16666' fill-opacity='0.015'/%3E%3Ccircle cx='18' cy='28' r='0.5' fill='%23EEE5E9' fill-opacity='0.03'/%3E%3Ccircle cx='41' cy='35' r='0.5' fill='%23D16666' fill-opacity='0.025'/%3E%3Ccircle cx='6' cy='22' r='0.5' fill='%23EEE5E9' fill-opacity='0.02'/%3E%3Ccircle cx='32' cy='6' r='0.5' fill='%23D16666' fill-opacity='0.02'/%3E%3C/svg%3E");
+        }
+
+        .texture-svg-fabric {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='none'/%3E%3Crect x='0' y='0' width='4' height='2' fill='%23EEE5E9' fill-opacity='0.06'/%3E%3Crect x='8' y='0' width='4' height='2' fill='%23EEE5E9' fill-opacity='0.06'/%3E%3Crect x='4' y='2' width='4' height='2' fill='%23D16666' fill-opacity='0.04'/%3E%3Crect x='12' y='2' width='4' height='2' fill='%23D16666' fill-opacity='0.04'/%3E%3Crect x='0' y='4' width='4' height='2' fill='%23EEE5E9' fill-opacity='0.06'/%3E%3Crect x='8' y='4' width='4' height='2' fill='%23EEE5E9' fill-opacity='0.06'/%3E%3Crect x='4' y='6' width='4' height='2' fill='%23D16666' fill-opacity='0.04'/%3E%3Crect x='12' y='6' width='4' height='2' fill='%23D16666' fill-opacity='0.04'/%3E%3Crect x='0' y='0' width='2' height='4' fill='%23D16666' fill-opacity='0.04'/%3E%3Crect x='4' y='4' width='2' height='4' fill='%23EEE5E9' fill-opacity='0.06'/%3E%3Crect x='8' y='0' width='2' height='4' fill='%23D16666' fill-opacity='0.04'/%3E%3Crect x='12' y='4' width='2' height='4' fill='%23EEE5E9' fill-opacity='0.06'/%3E%3C/svg%3E");
+        }
+
+        /* Geometric Patterns */
+        .texture-geo-plus {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cg fill='%23EEE5E9' fill-opacity='0.06'%3E%3Cpath d='M0 20h20v20H0V20zm20-20h20v20H20V0z'/%3E%3C/g%3E%3C/svg%3E");
+        }
+
+        .texture-geo-triangles {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cg fill='%23D16666' fill-opacity='0.05'%3E%3Cpolygon points='20 0 40 40 0 40'/%3E%3C/g%3E%3C/svg%3E");
+        }
+
+        .texture-geo-diamonds {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cg fill='%23EEE5E9' fill-opacity='0.06'%3E%3Cpath d='M20 0l20 20-20 20L0 20z'/%3E%3C/g%3E%3C/svg%3E");
+        }
+
+        .texture-geo-chevron {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cg fill='%23D16666' fill-opacity='0.04'%3E%3Cpath d='M0 0h20l20 20-20 20L0 20z'/%3E%3C/g%3E%3C/svg%3E");
+        }
+
+        .texture-geo-isometric {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'%3E%3Cg fill='%23EEE5E9' fill-opacity='0.05'%3E%3Cpath d='M0 0l30 30v30L0 30zm30 0l30 30v30L30 30z'/%3E%3C/g%3E%3C/svg%3E");
+        }
+
+        /* Organic/Nature Patterns */
+        .texture-org-topography {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 400 400'%3E%3Cg fill='%23EEE5E9' fill-opacity='0.04'%3E%3Cpath d='M0 0L50 0Q100 0 100 50L100 100Q100 150 50 150L0 150Q-50 150 -50 100L-50 50Q-50 0 0 0z'/%3E%3Cpath d='M150 150L200 150Q250 150 250 200L250 250Q250 300 200 300L150 300Q100 300 100 250L100 200Q100 150 150 150z'/%3E%3C/g%3E%3C/svg%3E");
+        }
+
+        .texture-org-bubbles {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'%3E%3Cg fill='none' stroke='%23D16666' stroke-width='0.5' stroke-opacity='0.05'%3E%3Ccircle cx='15' cy='15' r='10'/%3E%3Ccircle cx='45' cy='45' r='8'/%3E%3Ccircle cx='45' cy='15' r='6'/%3E%3Ccircle cx='15' cy='45' r='12'/%3E%3C/g%3E%3C/svg%3E");
+        }
+
+        .texture-org-leaves {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Cg fill='%23EEE5E9' fill-opacity='0.05'%3E%3Cpath d='M0 0Q10 10 10 20T0 40Q10 30 20 30T40 40Q30 30 30 20T40 0Q30 10 20 10T0 0z'/%3E%3C/g%3E%3C/svg%3E");
+        }
+
+        .texture-org-rain {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cg fill='%23D16666' fill-opacity='0.04'%3E%3Cpath d='M20 0Q20 10 15 15T0 20Q10 20 15 15T20 0z'/%3E%3C/g%3E%3C/svg%3E");
+        }
+
+        /* Abstract Patterns */
+        .texture-abs-noise {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Cdefs%3E%3Cfilter id='noise'%3E%3CfeTurbulence baseFrequency='0.9' numOctaves='4' /%3E%3C/filter%3E%3C/defs%3E%3Crect width='200' height='200' filter='url(%23noise)' opacity='0.02'/%3E%3C/svg%3E");
+        }
+
+        .texture-abs-gradient-waves {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 400 400'%3E%3Cdefs%3E%3ClinearGradient id='grad' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%23EEE5E9;stop-opacity:0.05' /%3E%3Cstop offset='100%25' style='stop-color:%23D16666;stop-opacity:0.03' /%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M0 100Q100 50 200 100T400 100L400 200Q300 250 200 200T0 200z' fill='url(%23grad)'/%3E%3C/svg%3E");
+        }
+
+        /* Technical/Grid Patterns */
+        .texture-tech-circuit {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Cg fill='none' stroke='%23EEE5E9' stroke-width='1' stroke-opacity='0.06'%3E%3Cpath d='M0 20h80M20 0v80M0 40h40M40 0v40'/%3E%3Ccircle cx='20' cy='20' r='3' fill='%23D16666' fill-opacity='0.05'/%3E%3Ccircle cx='40' cy='40' r='3' fill='%23EEE5E9' fill-opacity='0.05'/%3E%3C/g%3E%3C/svg%3E");
+        }
+
+        .texture-tech-dots-grid {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'%3E%3Cg fill='%23EEE5E9' fill-opacity='0.06'%3E%3Ccircle cx='1' cy='1' r='1'/%3E%3C/g%3E%3C/svg%3E");
+        }
+
+        /* Decorative Patterns */
+        .texture-deco-moroccan {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Cg fill='none' stroke='%23D16666' stroke-width='0.5' stroke-opacity='0.05'%3E%3Cpath d='M24 0Q36 12 36 24T24 48Q12 36 12 24T24 0z'/%3E%3C/g%3E%3C/svg%3E");
+        }
+
+        .texture-deco-japanese {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'%3E%3Cg fill='none' stroke='%23EEE5E9' stroke-width='1' stroke-opacity='0.05'%3E%3Cpath d='M0 30Q15 15 30 30T60 30'/%3E%3Cpath d='M0 0Q15 15 30 0T60 0M0 60Q15 45 30 60T60 60'/%3E%3C/g%3E%3C/svg%3E");
+        }
+
+        /* Hero Patterns Collection - Authentic SVGs with 100% internal opacity */
+        .texture-hero-jigsaw {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='192' height='192' viewBox='0 0 192 192'%3E%3Cpath fill='%23EEE5E9' d='M192 15v2a11 11 0 0 0-11 11c0 1.94 1.16 4.75 2.53 6.11l2.36 2.36a6.93 6.93 0 0 1 1.22 7.56l-.43.84a8.08 8.08 0 0 1-6.66 4.13H145v35.02a6.1 6.1 0 0 0 3.03 4.87l.84.43c1.58.79 4 .4 5.24-.85l2.36-2.36a12.04 12.04 0 0 1 7.51-3.11 13 13 0 1 1 .02 26 12 12 0 0 1-7.53-3.11l-2.36-2.36a4.93 4.93 0 0 0-5.24-.85l-.84.43a6.1 6.1 0 0 0-3.03 4.87V143h35.02a8.08 8.08 0 0 1 6.66 4.13l.43.84a6.91 6.91 0 0 1-1.22 7.56l-2.36 2.36A10.06 10.06 0 0 0 181 164a11 11 0 0 0 11 11v2a13 13 0 0 1-13-13 12 12 0 0 1 3.11-7.53l2.36-2.36a4.93 4.93 0 0 0 .85-5.24l-.43-.84a6.1 6.1 0 0 0-4.87-3.03H145v-35.02a8.08 8.08 0 0 1 4.13-6.66l.84-.43a6.91 6.91 0 0 1 7.56 1.22l2.36 2.36A10.06 10.06 0 0 0 167 107a11 11 0 0 0 11-11h2a13 13 0 0 1-13 13 12 12 0 0 1-7.53-3.11l-2.36-2.36a4.93 4.93 0 0 0-5.24-.85l-.84.43a6.1 6.1 0 0 0-3.03 4.87V143h-35.02a10.1 10.1 0 0 1-8.07-4.09l-.4-.72a4.92 4.92 0 0 1 .85-5.24l2.36-2.36A12 12 0 0 0 145 123a13 13 0 1 0-.02-26 12.04 12.04 0 0 0-7.51 3.11l-2.36 2.36a6.93 6.93 0 0 1-1.22-7.56l.43-.84a8.08 8.08 0 0 1 6.66-4.13H176V49.98a6.1 6.1 0 0 0-3.03-4.87l-.84-.43c-1.58-.79-4-.4-5.24.85l-2.36 2.36a12.04 12.04 0 0 1-7.51 3.11A13 13 0 1 1 164 26a12 12 0 0 1 7.53 3.11l2.36 2.36a4.93 4.93 0 0 0 5.24.85l.84-.43a6.1 6.1 0 0 0 3.03-4.87V49h-35.02a8.08 8.08 0 0 1-6.66-4.13l-.43-.84a6.91 6.91 0 0 1 1.22-7.56l2.36-2.36A10.06 10.06 0 0 0 147 28a11 11 0 0 0-11-11v-2a13 13 0 0 1 13 13 12 12 0 0 1-3.11 7.53l-2.36 2.36a4.93 4.93 0 0 0-.85 5.24l.43.84a6.1 6.1 0 0 0 4.87 3.03H183v35.02a8.08 8.08 0 0 1-4.13 6.66l-.84.43a6.91 6.91 0 0 1-7.56-1.22l-2.36-2.36A10.06 10.06 0 0 0 161 85a11 11 0 0 0-11 11h-2a13 13 0 0 1 13-13 12 12 0 0 1 7.53 3.11l2.36 2.36a4.93 4.93 0 0 0 5.24.85l.84-.43a6.1 6.1 0 0 0 3.03-4.87V49h35.02a10.1 10.1 0 0 1 8.07 4.09l.4.72a4.92 4.92 0 0 1-.85 5.24l-2.36 2.36A12 12 0 0 0 183 69a13 13 0 1 0 .02 26 12.04 12.04 0 0 0 7.51-3.11l2.36-2.36a6.93 6.93 0 0 1 1.22 7.56l-.43.84a8.08 8.08 0 0 1-6.66 4.13H152v35.02a6.1 6.1 0 0 0 3.03 4.87l.84.43c1.58.79 4 .4 5.24-.85l2.36-2.36a12.04 12.04 0 0 1 7.51-3.11A13 13 0 1 1 164 166a12 12 0 0 1 7.53 3.11l2.36 2.36a4.93 4.93 0 0 0 5.24.85l.84-.43a6.1 6.1 0 0 0 3.03-4.87V132h-35.02a8.08 8.08 0 0 1-6.66-4.13l-.43-.84a6.91 6.91 0 0 1 1.22-7.56l2.36-2.36A10.06 10.06 0 0 0 147 111a11 11 0 0 0-11-11v-2a13 13 0 0 1 13 13 12 12 0 0 1-3.11 7.53l-2.36 2.36a4.93 4.93 0 0 0-.85 5.24l.43.84a6.1 6.1 0 0 0 4.87 3.03H183v35.02a8.08 8.08 0 0 1-4.13 6.66l-.84.43a6.91 6.91 0 0 1-7.56-1.22l-2.36-2.36A10.06 10.06 0 0 0 161 168a11 11 0 0 0-11 11h-2a13 13 0 0 1 13-13 12 12 0 0 1 7.53 3.11l2.36 2.36a4.93 4.93 0 0 0 5.24.85l.84-.43a6.1 6.1 0 0 0 3.03-4.87V132h35.02a10.1 10.1 0 0 1 8.07 4.09l.4.72a4.92 4.92 0 0 1-.85 5.24l-2.36 2.36A12 12 0 0 0 183 152a13 13 0 1 0 .02 26 12.04 12.04 0 0 0 7.51-3.11l2.36-2.36a6.93 6.93 0 0 1 1.22 7.56l-.43.84a8.08 8.08 0 0 1-6.66 4.13H152v35.02a6.1 6.1 0 0 0 3.03 4.87l.84.43c1.58.79 4 .4 5.24-.85l2.36-2.36a12.04 12.04 0 0 1 7.51-3.11A13 13 0 1 1 164 192z'/%3E%3C/svg%3E");
+            opacity: 0.06;
+        }
+
+        .texture-hero-overlapping-circles {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Cg fill='none' stroke='%23D16666' stroke-width='1' stroke-opacity='0.05'%3E%3Ccircle cx='40' cy='40' r='20'/%3E%3Ccircle cx='20' cy='20' r='20'/%3E%3Ccircle cx='60' cy='20' r='20'/%3E%3Ccircle cx='20' cy='60' r='20'/%3E%3Ccircle cx='60' cy='60' r='20'/%3E%3C/g%3E%3C/svg%3E");
+        }
+
+        .texture-hero-brick-wall {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='30' viewBox='0 0 60 30'%3E%3Cg fill='none' stroke='%23EEE5E9' stroke-width='1' stroke-opacity='0.06'%3E%3Crect x='0' y='0' width='30' height='15'/%3E%3Crect x='30' y='0' width='30' height='15'/%3E%3Crect x='15' y='15' width='30' height='15'/%3E%3Crect x='-15' y='15' width='30' height='15'/%3E%3C/g%3E%3C/svg%3E");
+        }
+
+        .texture-hero-hexagons {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='100' viewBox='0 0 56 100'%3E%3Cg fill='none' stroke='%23D16666' stroke-width='1' stroke-opacity='0.05'%3E%3Cpath d='M28,74 L0,50 L0,26 L28,2 L56,26 L56,50 L28,74 z'/%3E%3Cpath d='M28,100 L0,76 L0,52 L28,28 L56,52 L56,76 L28,100 z'/%3E%3C/g%3E%3C/svg%3E");
+        }
+
+        .texture-hero-diagonal-stripes {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cg fill='%23EEE5E9' fill-opacity='0.05'%3E%3Cpath d='M0 0l40 40v-40z'/%3E%3C/g%3E%3C/svg%3E");
+        }
+
+        .texture-hero-graph-paper {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Cg fill='none' stroke='%23D16666' stroke-width='1' stroke-opacity='0.04'%3E%3Cpath d='M0 0h100M0 20h100M0 40h100M0 60h100M0 80h100M0 100h100'/%3E%3Cpath d='M0 0v100M20 0v100M40 0v100M60 0v100M80 0v100M100 0v100'/%3E%3C/g%3E%3C/svg%3E");
+        }
+
+        .texture-hero-polka-dots {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'%3E%3Cg fill='%23EEE5E9' fill-opacity='0.06'%3E%3Ccircle cx='10' cy='10' r='3'/%3E%3C/g%3E%3C/svg%3E");
+        }
+
+        .texture-hero-zig-zag {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cg fill='none' stroke='%23D16666' stroke-width='2' stroke-opacity='0.05'%3E%3Cpath d='M0 20l10-10 10 10 10-10 10 10'/%3E%3C/g%3E%3C/svg%3E");
+        }
+
+        .texture-hero-bamboo {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='100' viewBox='0 0 56 100'%3E%3Cg fill='none' stroke='%23EEE5E9' stroke-width='1' stroke-opacity='0.05'%3E%3Cpath d='M28 0v100M0 20h56M0 40h56M0 60h56M0 80h56'/%3E%3Ccircle cx='28' cy='20' r='8'/%3E%3Ccircle cx='28' cy='60' r='8'/%3E%3C/g%3E%3C/svg%3E");
+        }
+
+        /* SVG Backgrounds Collection */
+        .texture-svg-liquid-cheese {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 400 400'%3E%3Cpath fill='%23EEE5E9' fill-opacity='0.04' d='M0 200Q100 150 200 200T400 200L400 400L0 400z'/%3E%3C/svg%3E");
+        }
+
+        .texture-svg-protruding-squares {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cg fill='%23D16666' fill-opacity='0.05'%3E%3Crect x='5' y='5' width='10' height='10' transform='rotate(45 10 10)'/%3E%3Crect x='25' y='25' width='10' height='10' transform='rotate(45 30 30)'/%3E%3C/g%3E%3C/svg%3E");
+        }
+
+        .texture-svg-subtle-prism {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'%3E%3Cg fill='%23EEE5E9' fill-opacity='0.04'%3E%3Cpolygon points='30,0 60,30 30,60 0,30'/%3E%3C/g%3E%3C/svg%3E");
+        }
+
+        /* Additional Hero Patterns */
+        .texture-hero-anchors {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 80' width='80' height='80'%3E%3Cpath fill='%23EEE5E9' d='M14 16H9v-2h5V9.87a4 4 0 1 1 2 0V14h5v2h-5v15.95A10 10 0 0 0 23.66 27l-3.46-2 8.2-2.2-2.9 5a12 12 0 0 1-21 0l-2.89-5 8.2 2.2-3.47 2A10 10 0 0 0 14 31.95V16zm40 40h-5v-2h5v-4.13a4 4 0 1 1 2 0V54h5v2h-5v15.95A10 10 0 0 0 63.66 67l-3.47-2 8.2-2.2-2.88 5a12 12 0 0 1-21.02 0l-2.88-5 8.2 2.2-3.47 2A10 10 0 0 0 54 71.95V56zm-39 6a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm40-40a2 2 0 1 1 0-4 2 2 0 0 1 0 4zM15 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm40 40a2 2 0 1 0 0-4 2 2 0 0 0 0 4z'/%3E%3C/svg%3E");
+            opacity: 0.05;
+        }
+
+        .texture-hero-aztec {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Cg fill='%23D16666' fill-opacity='0.04'%3E%3Cpath d='M0 0h20v20H0zm20 20h20v20H20zm40 0h20v20H40zm0-20h20v20H40zM20 40h20v20H20zm40 20h20v20H40z'/%3E%3C/g%3E%3C/svg%3E");
+        }
+
+        .texture-hero-boxes {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cg fill='none' stroke='%23EEE5E9' stroke-width='1' stroke-opacity='0.06'%3E%3Crect x='5' y='5' width='10' height='10'/%3E%3Crect x='25' y='25' width='10' height='10'/%3E%3Crect x='25' y='5' width='10' height='10'/%3E%3Crect x='5' y='25' width='10' height='10'/%3E%3C/g%3E%3C/svg%3E");
+        }
+
+        .texture-hero-dominos {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cg fill='%23D16666' fill-opacity='0.05'%3E%3Crect x='0' y='0' width='20' height='40'/%3E%3Cline x1='20' y1='0' x2='20' y2='40' stroke='%23EEE5E9' stroke-width='2'/%3E%3Ccircle cx='10' cy='10' r='3'/%3E%3Ccircle cx='30' cy='30' r='3'/%3E%3C/g%3E%3C/svg%3E");
+        }
+
+        /* Freepik-inspired Patterns */
+        .texture-freepik-waves {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Cpath fill='%23EEE5E9' fill-opacity='0.04' d='M0 50Q25 25 50 50T100 50L100 100L0 100z'/%3E%3C/svg%3E");
+        }
+
+        .texture-freepik-geometric-mosaic {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'%3E%3Cg fill='%23D16666' fill-opacity='0.04'%3E%3Cpolygon points='30,0 45,15 30,30 15,15'/%3E%3Cpolygon points='0,30 15,45 0,60 -15,45'/%3E%3Cpolygon points='60,30 75,45 60,60 45,45'/%3E%3C/g%3E%3C/svg%3E");
+        }
+
+        .texture-freepik-organic-cells {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Cg fill='none' stroke='%23EEE5E9' stroke-width='1' stroke-opacity='0.05'%3E%3Cpath d='M20 20Q30 10 40 20T60 20Q50 30 40 40T20 40Q30 30 20 20z'/%3E%3C/g%3E%3C/svg%3E");
+        }
+
+        /* Vecteezy-inspired Patterns */
+        .texture-vecteezy-triangular-grid {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='52' viewBox='0 0 60 52'%3E%3Cg fill='none' stroke='%23D16666' stroke-width='1' stroke-opacity='0.05'%3E%3Cpath d='M0 0l30 26L60 0M0 26l30 26L60 26'/%3E%3C/g%3E%3C/svg%3E");
+        }
+
+        .texture-vecteezy-abstract-lines {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Cg fill='none' stroke='%23EEE5E9' stroke-width='2' stroke-opacity='0.04'%3E%3Cpath d='M0 0Q50 50 100 0M0 100Q50 50 100 100'/%3E%3C/g%3E%3C/svg%3E");
+        }
+
+        .texture-vecteezy-seamless-dots {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='30' height='30' viewBox='0 0 30 30'%3E%3Cg fill='%23D16666' fill-opacity='0.06'%3E%3Ccircle cx='7.5' cy='7.5' r='2'/%3E%3Ccircle cx='22.5' cy='22.5' r='2'/%3E%3Ccircle cx='22.5' cy='7.5' r='1'/%3E%3Ccircle cx='7.5' cy='22.5' r='1'/%3E%3C/g%3E%3C/svg%3E");
+        }
+
+        .texture-vecteezy-geometric-arrows {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cg fill='%23EEE5E9' fill-opacity='0.05'%3E%3Cpath d='M20 0l10 20-10 20L10 20z'/%3E%3C/g%3E%3C/svg%3E");
+        }
+
+        /* More Hero Patterns */
+        .texture-hero-death-star {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='84' height='84' viewBox='0 0 84 84'%3E%3Cg fill='%23EEE5E9' fill-opacity='0.05'%3E%3Ccircle cx='42' cy='42' r='20'/%3E%3Ccircle cx='21' cy='21' r='8'/%3E%3Ccircle cx='63' cy='63' r='8'/%3E%3Ccircle cx='63' cy='21' r='6'/%3E%3Ccircle cx='21' cy='63' r='6'/%3E%3C/g%3E%3C/svg%3E");
+        }
+
+        .texture-hero-four-point-stars {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cg fill='%23D16666' fill-opacity='0.05'%3E%3Cpath d='M20 5l3 12 12-3-12 3 3 12-3-12-12 3 12-3z'/%3E%3C/g%3E%3C/svg%3E");
+        }
+
+        .texture-hero-heavy-rain {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cg fill='%23EEE5E9' fill-opacity='0.06'%3E%3Cpath d='M8 0l-2 10 2 10 2-10zM24 0l-2 10 2 10 2-10zM16 10l-2 10 2 10 2-10zM32 10l-2 10 2 10 2-10z'/%3E%3C/g%3E%3C/svg%3E");
+        }
+
+        .texture-hero-i-like-food {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'%3E%3Cg fill='%23D16666' fill-opacity='0.04'%3E%3Ccircle cx='30' cy='30' r='15'/%3E%3Ccircle cx='15' cy='15' r='5'/%3E%3Ccircle cx='45' cy='45' r='5'/%3E%3Crect x='27' y='27' width='6' height='6'/%3E%3C/g%3E%3C/svg%3E");
+        }
+
+        .texture-hero-formal-invitation {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='18' viewBox='0 0 100 18'%3E%3Cpath fill='%23EEE5E9' d='M61.82 18c3.47-1.45 6.86-3.78 11.3-7.34C78 6.76 80.34 5.1 83.87 3.42 88.56 1.16 93.75 0 100 0v6.16C98.76 6.05 97.43 6 96 6c-9.59 0-14.23 2.23-23.13 9.34-1.28 1.03-2.39 1.9-3.4 2.66h-7.65zm-23.64 0H22.52c-1-.76-2.1-1.63-3.4-2.66C11.57 9.3 7.08 6.78 0 6.16V0c6.25 0 11.44 1.16 16.14 3.42 3.53 1.7 5.87 3.35 10.73 7.24 4.45 3.56 7.84 5.9 11.31 7.34zM61.82 0h7.66a39.57 39.57 0 0 1-7.34 4.58C57.44 6.84 52.25 8 46 8S34.56 6.84 29.86 4.58A39.57 39.57 0 0 1 22.52 0h15.66C41.65 1.44 45.21 2 50 2c4.8 0 8.35-.56 11.82-2z'/%3E%3C/svg%3E");
+            opacity: 0.05;
+        }
+
+        .texture-hero-falling-triangles {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'%3E%3Cg fill='%23D16666' fill-opacity='0.05'%3E%3Cpath d='M30 10l10 20H20zM15 45l8 12H7zM45 45l8 12H37z'/%3E%3C/g%3E%3C/svg%3E");
+        }
+
+        .texture-hero-floating-cogs {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='360' height='360' viewBox='0 0 360 360'%3E%3Cpath fill='%23EEE5E9' d='M180 0l10 20 20-10-20 10 10 20-10-20-20 10 20-10zm40 40l8 16 16-8-16 8 8 16-8-16-16 8 16-8zm-80 0l8 16 16-8-16 8 8 16-8-16-16 8 16-8zm40 80l10 20 20-10-20 10 10 20-10-20-20 10 20-10z'/%3E%3C/svg%3E");
+            opacity: 0.05;
+        }
+
+        .texture-hero-endless-clouds {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 56 28' width='56' height='28'%3E%3Cpath fill='%23D16666' d='M56 26v2h-7.75c2.3-1.27 4.94-2 7.75-2zm-26 2a2 2 0 1 0-4 0h-4.09A25.98 25.98 0 0 0 0 16v-2c.67 0 1.34.02 2 .07V14a2 2 0 0 0-2-2v-2a4 4 0 0 1 3.98 3.6 28.09 28.09 0 0 1 2.8-3.86A8 8 0 0 0 0 6V4a9.99 9.99 0 0 1 8.17 4.23c.94-.95 1.96-1.83 3.03-2.63A13.98 13.98 0 0 0 0 0h7.75c2 1.1 3.73 2.63 5.1 4.45 1.12-.72 2.3-1.37 3.53-1.93A20.1 20.1 0 0 0 14.28 0h2.7c.45.56.88 1.14 1.29 1.74 1.3-.48 2.63-.87 4-1.15-.11-.2-.23-.4-.36-.59H26v.07a28.4 28.4 0 0 1 4 0V0h4.09l-.37.59c1.38.28 2.72.67 4.01 1.15.4-.6.84-1.18 1.3-1.74h2.69a20.1 20.1 0 0 0-2.1 2.52c1.23.56 2.41 1.2 3.54 1.93A16.06 16.06 0 0 1 48.25 0H56c-2.72 1.88-4.92 4.2-6.52 6.85a25.83 25.83 0 0 1 2.79 3.86A4 4 0 0 1 56 14v2c-.67 0-1.34-.02-2-.07V16c0 .76.67 1.51 2 .07zm-18 0c0-.76-.67-1.51-2-.07V16c.67 0 1.34.02 2 .07V16zm-16 0v.07c.67 0 1.34-.02 2-.07zm32 0v.07c.67 0 1.34-.02 2-.07z'/%3E%3C/svg%3E");
+            opacity: 0.04;
+        }
+
+        .texture-hero-charlie-brown {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cg fill='%23EEE5E9' fill-opacity='0.06'%3E%3Cpath d='M0 0h20v4H0zM20 8h20v4H20zM0 16h20v4H0zM20 24h20v4H20zM0 32h20v4H0z'/%3E%3C/g%3E%3C/svg%3E");
+        }
+
+        .texture-hero-architect {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'%3E%3Cg fill='none' stroke='%23D16666' stroke-width='1' stroke-opacity='0.05'%3E%3Crect x='5' y='5' width='50' height='50'/%3E%3Cpath d='M15 15h30v30H15zM25 25h10v10H25z'/%3E%3C/g%3E%3C/svg%3E");
+        }
+        
+        .texture-hero-texture {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' viewBox='0 0 4 4'%3E%3Cpath fill='%23EEE5E9' d='M1 3h1v1H1V3zm2-2h1v1H3V1z'/%3E%3C/svg%3E");
+            opacity: 0.06;
+        }
+        
+        .texture-hero-cutout {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Cg fill='%23D16666'%3E%3Cpath d='M12 0h18v6h6v6h6v18h-6v6h-6v6H12v-6H6v-6H0V12h6V6h6V0zm12 6h-6v6h-6v6H6v6h6v6h6v6h6v-6h6v-6h6v-6h-6v-6h-6V6zm-6 12h6v6h-6v-6zm24 24h6v6h-6v-6z'/%3E%3C/g%3E%3C/svg%3E");
+            opacity: 0.05;
+        }
+        
+        .texture-hero-jupiter {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='52' height='52' viewBox='0 0 52 52'%3E%3Cpath fill='%23EEE5E9' d='M0 17.83V0h17.83a3 3 0 0 1-5.66 2H5.9A5 5 0 0 1 2 5.9v6.27a3 3 0 0 1-2 5.66zm0 18.34a3 3 0 0 1 2 5.66v6.27A5 5 0 0 1 5.9 52h6.27a3 3 0 0 1 5.66 0H0V36.17zM36.17 52a3 3 0 0 1 5.66 0h6.27a5 5 0 0 1 3.9-3.9v-6.27a3 3 0 0 1 0-5.66V52H36.17zM0 31.93v-9.78a5 5 0 0 1 3.8.72l4.43-4.43a3 3 0 1 1 1.42 1.41L5.2 24.28a5 5 0 0 1 0 5.52l4.44 4.43a3 3 0 1 1-1.42 1.42L3.8 31.2a5 5 0 0 1-3.8.72zm52-14.1a3 3 0 0 1 0-5.66V5.9A5 5 0 0 1 48.1 2h-6.27a3 3 0 0 1-5.66-2H52v17.83zm0 14.1a4.97 4.97 0 0 1-1.72-.72l-4.43 4.44a3 3 0 1 1-1.41-1.42L48.84 30.07a4.99 4.99 0 0 1 0-5.42l-4.4-4.4a3 3 0 1 1 1.41-1.42l4.43 4.44c.53-.35 1.11-.6 1.72-.72v9.78z'/%3E%3C/svg%3E");
+            opacity: 0.05;
+        }
+        
+        .texture-hero-overcast {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 80' width='80' height='80'%3E%3Cg fill='%23D16666'%3E%3Cpath d='M0 0h80v80H0V0zm20 20v40h40V20H20zm20 35a15 15 0 1 1 0-30 15 15 0 0 1 0 30z' opacity='.5'/%3E%3Cpath d='M15 15h50l-5 5H20v40l-5 5V15zm0 50h50V15L80 0v80H0l15-15zm32.07-32.07l3.54-3.54A15 15 0 0 1 29.4 50.6l3.53-3.53a10 10 0 1 0 14.14-14.14zM32.93 47.07a10 10 0 1 1 14.14-14.14L32.93 47.07z'/%3E%3C/g%3E%3C/svg%3E");
+            opacity: 0.04;
+        }
+    </style>
+</head>
+<body>
+
+
+    <div class="controls">
+        <h2>Texture Controls</h2>
+        
+        <div class="control-group">
+            <label for="textureSelector">Texture Type:</label>
+            <select id="textureSelector">
+                <option value="none">None</option>
+                
+                <optgroup label="Hero Patterns (heropatterns.com) - Authentic SVGs">
+                    <option value="hero-jigsaw">Jigsaw ★</option>
+                    <option value="hero-overlapping-circles">Overlapping Circles</option>
+                    <option value="hero-brick-wall">Brick Wall</option>
+                    <option value="hero-hexagons">Hexagons</option>
+                    <option value="hero-diagonal-stripes">Diagonal Stripes</option>
+                    <option value="hero-graph-paper">Graph Paper</option>
+                    <option value="hero-polka-dots">Polka Dots</option>
+                    <option value="hero-zig-zag">Zig Zag</option>
+                    <option value="hero-bamboo">Bamboo</option>
+                    <option value="hero-anchors">Anchors ★</option>
+                    <option value="hero-aztec">Aztec</option>
+                    <option value="hero-boxes">Boxes</option>
+                    <option value="hero-dominos">Dominos</option>
+                    <option value="hero-death-star">Death Star</option>
+                    <option value="hero-four-point-stars">Four Point Stars</option>
+                    <option value="hero-heavy-rain">Heavy Rain</option>
+                    <option value="hero-i-like-food">I Like Food</option>
+                    <option value="hero-formal-invitation">Formal Invitation ★</option>
+                    <option value="hero-falling-triangles">Falling Triangles</option>
+                    <option value="hero-floating-cogs">Floating Cogs ★</option>
+                    <option value="hero-endless-clouds">Endless Clouds ★</option>
+                    <option value="hero-charlie-brown">Charlie Brown</option>
+                    <option value="hero-architect">Architect</option>
+                    <option value="hero-texture">Texture ★</option>
+                    <option value="hero-cutout">Cutout ★</option>
+                    <option value="hero-jupiter">Jupiter ★</option>
+                    <option value="hero-overcast">Overcast ★</option>
+                </optgroup>
+                
+                <optgroup label="SVG Backgrounds (svgbackgrounds.com)">
+                    <option value="svg-liquid-cheese">Liquid Cheese</option>
+                    <option value="svg-protruding-squares">Protruding Squares</option>
+                    <option value="svg-subtle-prism">Subtle Prism</option>
+                </optgroup>
+                
+                <optgroup label="Freepik Inspired">
+                    <option value="freepik-waves">Waves</option>
+                    <option value="freepik-geometric-mosaic">Geometric Mosaic</option>
+                    <option value="freepik-organic-cells">Organic Cells</option>
+                </optgroup>
+                
+                <optgroup label="Vecteezy Inspired">
+                    <option value="vecteezy-triangular-grid">Triangular Grid</option>
+                    <option value="vecteezy-abstract-lines">Abstract Lines</option>
+                    <option value="vecteezy-seamless-dots">Seamless Dots</option>
+                    <option value="vecteezy-geometric-arrows">Geometric Arrows</option>
+                </optgroup>
+                
+                <optgroup label="Geometric Patterns">
+                    <option value="geo-plus">Plus Grid</option>
+                    <option value="geo-triangles">Triangles</option>
+                    <option value="geo-diamonds">Diamonds</option>
+                    <option value="geo-chevron">Chevron</option>
+                    <option value="geo-isometric">Isometric</option>
+                    <option value="hexagon">Hexagon</option>
+                    <option value="grid">Grid</option>
+                    <option value="dots">Dots</option>
+                    <option value="crosshatch">Crosshatch</option>
+                </optgroup>
+                
+                <optgroup label="Organic/Nature">
+                    <option value="org-topography">Topography</option>
+                    <option value="org-bubbles">Bubbles</option>
+                    <option value="org-leaves">Leaves</option>
+                    <option value="org-rain">Rain</option>
+                    <option value="waves">Waves</option>
+                    <option value="organic">Organic</option>
+                    <option value="scales">Scales</option>
+                </optgroup>
+                
+                <optgroup label="Abstract">
+                    <option value="abs-noise">Noise</option>
+                    <option value="abs-gradient-waves">Gradient Waves</option>
+                    <option value="noise">Dot Noise</option>
+                    <option value="grain">Film Grain</option>
+                    <option value="marble">Marble</option>
+                </optgroup>
+                
+                <optgroup label="Technical/Grid">
+                    <option value="tech-circuit">Circuit Board</option>
+                    <option value="tech-dots-grid">Dot Grid</option>
+                    <option value="circuit">Circuit Lines</option>
+                    <option value="lines-h">Horizontal Lines</option>
+                    <option value="lines-v">Vertical Lines</option>
+                    <option value="diagonal">Diagonal Lines</option>
+                    <option value="mesh">Mesh</option>
+                    <option value="carbon">Carbon Fiber</option>
+                </optgroup>
+                
+                <optgroup label="Decorative">
+                    <option value="deco-moroccan">Moroccan</option>
+                    <option value="deco-japanese">Japanese Waves</option>
+                </optgroup>
+                
+                <optgroup label="Space/Celestial">
+                    <option value="stars">Stars</option>
+                    <option value="constellation">Constellation</option>
+                    <option value="nebula">Nebula</option>
+                    <option value="galaxy">Galaxy Spiral</option>
+                    <option value="asteroid">Asteroid Field</option>
+                </optgroup>
+                
+                <optgroup label="Material/Texture">
+                    <option value="paper">Paper</option>
+                    <option value="fabric">Fabric</option>
+                    <option value="perforated">Perforated</option>
+                    <option value="brushed">Brushed Metal</option>
+                    <option value="svg-carbon">Carbon Fiber (SVG)</option>
+                    <option value="svg-hexagon">Hexagon (SVG)</option>
+                    <option value="svg-paper">Paper Grain (SVG)</option>
+                    <option value="svg-fabric">Fabric Weave (SVG)</option>
+                </optgroup>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label for="opacitySlider">Opacity:</label>
+            <div class="slider-container">
+                <input type="range" id="opacitySlider" min="0" max="100" value="50">
+                <span class="slider-value" id="opacityValue">50%</span>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label for="fadeSlider">Fade Start Point:</label>
+            <div class="slider-container">
+                <input type="range" id="fadeSlider" min="0" max="100" value="20">
+                <span class="slider-value" id="fadeValue">20%</span>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label for="primaryColorPicker">Primary Color:</label>
+            <input type="color" id="primaryColorPicker" value="#EEE5E9">
+        </div>
+
+        <div class="control-group">
+            <label for="secondaryColorPicker">Secondary Color:</label>
+            <input type="color" id="secondaryColorPicker" value="#D16666">
+        </div>
+
+        <div class="control-group">
+            <label for="backgroundColorPicker">Background Color:</label>
+            <input type="color" id="backgroundColorPicker" value="#1D2B35">
+        </div>
+    </div>
+
+    <div class="texture-overlay" id="textureOverlay"></div>
+
+    <div class="content">
+        <div class="sample-section">
+            <h1>Texture Testing</h1>
+            <p>Use the dropdown above to test different background textures. Each texture is designed to be subtle and complement the existing color scheme.</p>
+        </div>
+
+        <div class="sample-section">
+            <h2>Sample Content</h2>
+            <p>This is sample text to help you see how the texture affects readability and overall visual appeal. The textures are designed to be subtle enough not to interfere with content while adding visual interest.</p>
+            
+            <div class="sample-cards">
+                <div class="card">
+                    <h3>Card Example 1</h3>
+                    <p>This card shows how textures look behind content blocks. The texture should be subtle enough not to distract from the content.</p>
+                </div>
+                <div class="card">
+                    <h3>Card Example 2</h3>
+                    <p>Another example to demonstrate the texture's effect on different content types and layouts.</p>
+                </div>
+                <div class="card">
+                    <h3>Card Example 3</h3>
+                    <p>This helps evaluate how the texture works with multiple elements on the page.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="sample-section">
+            <h2>More Sample Content</h2>
+            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.</p>
+            <p>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
+        </div>
+
+        <div class="sample-section">
+            <h2>Testing Different Headings</h2>
+            <p>This section helps you evaluate how the texture affects different heading levels and text sizes. The goal is to find a texture that adds visual interest without compromising readability.</p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const textureSelector = document.getElementById('textureSelector');
+            const opacitySlider = document.getElementById('opacitySlider');
+            const fadeSlider = document.getElementById('fadeSlider');
+            const textureOverlay = document.getElementById('textureOverlay');
+            const opacityValue = document.getElementById('opacityValue');
+            const fadeValue = document.getElementById('fadeValue');
+            const primaryColorPicker = document.getElementById('primaryColorPicker');
+            const secondaryColorPicker = document.getElementById('secondaryColorPicker');
+            const backgroundColorPicker = document.getElementById('backgroundColorPicker');
+
+            // Function to convert hex to RGB with opacity
+            function hexToRgba(hex, opacity) {
+                const r = parseInt(hex.slice(1, 3), 16);
+                const g = parseInt(hex.slice(3, 5), 16);
+                const b = parseInt(hex.slice(5, 7), 16);
+                return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+            }
+
+            // Function to URL encode color for SVG
+            function encodeColor(hex) {
+                return hex.replace('#', '%23');
+            }
+
+            function updateTexture() {
+                const selectedTexture = textureSelector.value;
+                const opacity = opacitySlider.value / 100;
+                const fadeStart = fadeSlider.value;
+                const primaryColor = primaryColorPicker.value;
+                const secondaryColor = secondaryColorPicker.value;
+                const backgroundColor = backgroundColorPicker.value;
+                
+                // Update display values
+                opacityValue.textContent = opacitySlider.value + '%';
+                fadeValue.textContent = fadeSlider.value + '%';
+                
+                // Update page background
+                document.body.style.backgroundColor = backgroundColor;
+                
+                // Reset classes and clear any inline styles
+                textureOverlay.className = 'texture-overlay';
+                textureOverlay.style.backgroundImage = '';
+                
+                // Apply selected texture with dynamic colors
+                if (selectedTexture !== 'none') {
+                    let backgroundImage = '';
+                    
+                    // Generate dynamic SVG patterns with custom colors
+                    switch(selectedTexture) {
+                        case 'hero-jigsaw':
+                            backgroundImage = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='192' height='192' viewBox='0 0 192 192'%3E%3Cpath fill='${encodeColor(primaryColor)}' d='M192 15v2a11 11 0 0 0-11 11c0 1.94 1.16 4.75 2.53 6.11l2.36 2.36a6.93 6.93 0 0 1 1.22 7.56l-.43.84a8.08 8.08 0 0 1-6.66 4.13H145v35.02a6.1 6.1 0 0 0 3.03 4.87l.84.43c1.58.79 4 .4 5.24-.85l2.36-2.36a12.04 12.04 0 0 1 7.51-3.11 13 13 0 1 1 .02 26 12 12 0 0 1-7.53-3.11l-2.36-2.36a4.93 4.93 0 0 0-5.24-.85l-.84.43a6.1 6.1 0 0 0-3.03 4.87V143h35.02a8.08 8.08 0 0 1 6.66 4.13l.43.84a6.91 6.91 0 0 1-1.22 7.56l-2.36 2.36A10.06 10.06 0 0 0 181 164a11 11 0 0 0 11 11v2a13 13 0 0 1-13-13 12 12 0 0 1 3.11-7.53l2.36-2.36a4.93 4.93 0 0 0 .85-5.24l-.43-.84a6.1 6.1 0 0 0-4.87-3.03H145v-35.02a8.08 8.08 0 0 1 4.13-6.66l.84-.43a6.91 6.91 0 0 1 7.56 1.22l2.36 2.36A10.06 10.06 0 0 0 167 107a11 11 0 0 0 11-11h2a13 13 0 0 1-13 13 12 12 0 0 1-7.53-3.11l-2.36-2.36a4.93 4.93 0 0 0-5.24-.85l-.84.43a6.1 6.1 0 0 0-3.03 4.87V143h-35.02a10.1 10.1 0 0 1-8.07-4.09l-.4-.72a4.92 4.92 0 0 1 .85-5.24l2.36-2.36A12 12 0 0 0 145 123a13 13 0 1 0-.02-26 12.04 12.04 0 0 0-7.51 3.11l-2.36 2.36a6.93 6.93 0 0 1-1.22-7.56l.43-.84a8.08 8.08 0 0 1 6.66-4.13H176V49.98a6.1 6.1 0 0 0-3.03-4.87l-.84-.43c-1.58-.79-4-.4-5.24.85l-2.36 2.36a12.04 12.04 0 0 1-7.51 3.11A13 13 0 1 1 164 26a12 12 0 0 1 7.53 3.11l2.36 2.36a4.93 4.93 0 0 0 5.24.85l.84-.43a6.1 6.1 0 0 0 3.03-4.87V49h-35.02a8.08 8.08 0 0 1-6.66-4.13l-.43-.84a6.91 6.91 0 0 1 1.22-7.56l2.36-2.36A10.06 10.06 0 0 0 147 28a11 11 0 0 0-11-11v-2a13 13 0 0 1 13 13 12 12 0 0 1-3.11 7.53l-2.36 2.36a4.93 4.93 0 0 0-.85 5.24l.43.84a6.1 6.1 0 0 0 4.87 3.03H183v35.02a8.08 8.08 0 0 1-4.13 6.66l-.84.43a6.91 6.91 0 0 1-7.56-1.22l-2.36-2.36A10.06 10.06 0 0 0 161 85a11 11 0 0 0-11 11h-2a13 13 0 0 1 13-13 12 12 0 0 1 7.53 3.11l2.36 2.36a4.93 4.93 0 0 0 5.24.85l.84-.43a6.1 6.1 0 0 0 3.03-4.87V49h35.02a10.1 10.1 0 0 1 8.07 4.09l.4.72a4.92 4.92 0 0 1-.85 5.24l-2.36 2.36A12 12 0 0 0 183 69a13 13 0 1 0 .02 26 12.04 12.04 0 0 0 7.51-3.11l2.36-2.36a6.93 6.93 0 0 1 1.22 7.56l-.43.84a8.08 8.08 0 0 1-6.66 4.13H152v35.02a6.1 6.1 0 0 0 3.03 4.87l.84.43c1.58.79 4 .4 5.24-.85l2.36-2.36a12.04 12.04 0 0 1 7.51-3.11A13 13 0 1 1 164 166a12 12 0 0 1 7.53 3.11l2.36 2.36a4.93 4.93 0 0 0 5.24.85l.84-.43a6.1 6.1 0 0 0 3.03-4.87V132h-35.02a8.08 8.08 0 0 1-6.66-4.13l-.43-.84a6.91 6.91 0 0 1 1.22-7.56l2.36-2.36A10.06 10.06 0 0 0 147 111a11 11 0 0 0-11-11v-2a13 13 0 0 1 13 13 12 12 0 0 1-3.11 7.53l-2.36 2.36a4.93 4.93 0 0 0-.85 5.24l.43.84a6.1 6.1 0 0 0 4.87 3.03H183v35.02a8.08 8.08 0 0 1-4.13 6.66l-.84.43a6.91 6.91 0 0 1-7.56-1.22l-2.36-2.36A10.06 10.06 0 0 0 161 168a11 11 0 0 0-11 11h-2a13 13 0 0 1 13-13 12 12 0 0 1 7.53 3.11l2.36 2.36a4.93 4.93 0 0 0 5.24.85l.84-.43a6.1 6.1 0 0 0 3.03-4.87V132h35.02a10.1 10.1 0 0 1 8.07 4.09l.4.72a4.92 4.92 0 0 1-.85 5.24l-2.36 2.36A12 12 0 0 0 183 152a13 13 0 1 0 .02 26 12.04 12.04 0 0 0 7.51-3.11l2.36-2.36a6.93 6.93 0 0 1 1.22 7.56l-.43.84a8.08 8.08 0 0 1-6.66 4.13H152v35.02a6.1 6.1 0 0 0 3.03 4.87l.84.43c1.58.79 4 .4 5.24-.85l2.36-2.36a12.04 12.04 0 0 1 7.51-3.11A13 13 0 1 1 164 192z'/%3E%3C/svg%3E")`;
+                            textureOverlay.style.opacity = '0.06';
+                            break;
+                        case 'hero-overlapping-circles':
+                            backgroundImage = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Cg fill='none' stroke='${encodeColor(secondaryColor)}' stroke-width='1' stroke-opacity='0.05'%3E%3Ccircle cx='40' cy='40' r='20'/%3E%3Ccircle cx='20' cy='20' r='20'/%3E%3Ccircle cx='60' cy='20' r='20'/%3E%3Ccircle cx='20' cy='60' r='20'/%3E%3Ccircle cx='60' cy='60' r='20'/%3E%3C/g%3E%3C/svg%3E")`;
+                            break;
+                        case 'hero-polka-dots':
+                            backgroundImage = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'%3E%3Cg fill='${encodeColor(primaryColor)}' fill-opacity='0.06'%3E%3Ccircle cx='10' cy='10' r='3'/%3E%3C/g%3E%3C/svg%3E")`;
+                            break;
+                        case 'geo-diamonds':
+                            backgroundImage = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cg fill='${encodeColor(primaryColor)}' fill-opacity='0.06'%3E%3Cpath d='M20 0l20 20-20 20L0 20z'/%3E%3C/g%3E%3C/svg%3E")`;
+                            break;
+                        case 'tech-circuit':
+                            backgroundImage = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Cg fill='none' stroke='${encodeColor(primaryColor)}' stroke-width='1' stroke-opacity='0.06'%3E%3Cpath d='M0 20h80M20 0v80M0 40h40M40 0v40'/%3E%3Ccircle cx='20' cy='20' r='3' fill='${encodeColor(secondaryColor)}' fill-opacity='0.05'/%3E%3Ccircle cx='40' cy='40' r='3' fill='${encodeColor(primaryColor)}' fill-opacity='0.05'/%3E%3C/g%3E%3C/svg%3E")`;
+                            break;
+                        case 'hero-anchors':
+                            backgroundImage = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 80' width='80' height='80'%3E%3Cpath fill='${encodeColor(primaryColor)}' d='M14 16H9v-2h5V9.87a4 4 0 1 1 2 0V14h5v2h-5v15.95A10 10 0 0 0 23.66 27l-3.46-2 8.2-2.2-2.9 5a12 12 0 0 1-21 0l-2.89-5 8.2 2.2-3.47 2A10 10 0 0 0 14 31.95V16zm40 40h-5v-2h5v-4.13a4 4 0 1 1 2 0V54h5v2h-5v15.95A10 10 0 0 0 63.66 67l-3.47-2 8.2-2.2-2.88 5a12 12 0 0 1-21.02 0l-2.88-5 8.2 2.2-3.47 2A10 10 0 0 0 54 71.95V56zm-39 6a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm40-40a2 2 0 1 1 0-4 2 2 0 0 1 0 4zM15 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm40 40a2 2 0 1 0 0-4 2 2 0 0 0 0 4z'/%3E%3C/svg%3E")`;
+                            textureOverlay.style.opacity = '0.05';
+                            break;
+                        case 'hero-aztec':
+                            backgroundImage = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Cg fill='${encodeColor(secondaryColor)}' fill-opacity='0.04'%3E%3Cpath d='M0 0h20v20H0zm20 20h20v20H20zm40 0h20v20H40zm0-20h20v20H40zM20 40h20v20H20zm40 20h20v20H40z'/%3E%3C/g%3E%3C/svg%3E")`;
+                            break;
+                        case 'hero-boxes':
+                            backgroundImage = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cg fill='none' stroke='${encodeColor(primaryColor)}' stroke-width='1' stroke-opacity='0.06'%3E%3Crect x='5' y='5' width='10' height='10'/%3E%3Crect x='25' y='25' width='10' height='10'/%3E%3Crect x='25' y='5' width='10' height='10'/%3E%3Crect x='5' y='25' width='10' height='10'/%3E%3C/g%3E%3C/svg%3E")`;
+                            break;
+                        case 'freepik-waves':
+                            backgroundImage = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Cpath fill='${encodeColor(primaryColor)}' fill-opacity='0.04' d='M0 50Q25 25 50 50T100 50L100 100L0 100z'/%3E%3C/svg%3E")`;
+                            break;
+                        case 'vecteezy-triangular-grid':
+                            backgroundImage = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='52' viewBox='0 0 60 52'%3E%3Cg fill='none' stroke='${encodeColor(secondaryColor)}' stroke-width='1' stroke-opacity='0.05'%3E%3Cpath d='M0 0l30 26L60 0M0 26l30 26L60 26'/%3E%3C/g%3E%3C/svg%3E")`;
+                            break;
+                        case 'vecteezy-seamless-dots':
+                            backgroundImage = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='30' height='30' viewBox='0 0 30 30'%3E%3Cg fill='${encodeColor(secondaryColor)}' fill-opacity='0.06'%3E%3Ccircle cx='7.5' cy='7.5' r='2'/%3E%3Ccircle cx='22.5' cy='22.5' r='2'/%3E%3Ccircle cx='22.5' cy='7.5' r='1'/%3E%3Ccircle cx='7.5' cy='22.5' r='1'/%3E%3C/g%3E%3C/svg%3E")`;
+                            break;
+                        case 'hero-death-star':
+                            backgroundImage = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='84' height='84' viewBox='0 0 84 84'%3E%3Cg fill='${encodeColor(primaryColor)}' fill-opacity='0.05'%3E%3Ccircle cx='42' cy='42' r='20'/%3E%3Ccircle cx='21' cy='21' r='8'/%3E%3Ccircle cx='63' cy='63' r='8'/%3E%3Ccircle cx='63' cy='21' r='6'/%3E%3Ccircle cx='21' cy='63' r='6'/%3E%3C/g%3E%3C/svg%3E")`;
+                            break;
+                        case 'hero-four-point-stars':
+                            backgroundImage = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cg fill='${encodeColor(secondaryColor)}' fill-opacity='0.05'%3E%3Cpath d='M20 5l3 12 12-3-12 3 3 12-3-12-12 3 12-3z'/%3E%3C/g%3E%3C/svg%3E")`;
+                            break;
+                        case 'hero-heavy-rain':
+                            backgroundImage = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cg fill='${encodeColor(primaryColor)}' fill-opacity='0.06'%3E%3Cpath d='M8 0l-2 10 2 10 2-10zM24 0l-2 10 2 10 2-10zM16 10l-2 10 2 10 2-10zM32 10l-2 10 2 10 2-10z'/%3E%3C/g%3E%3C/svg%3E")`;
+                            break;
+                        case 'hero-falling-triangles':
+                            backgroundImage = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'%3E%3Cg fill='${encodeColor(secondaryColor)}' fill-opacity='0.05'%3E%3Cpath d='M30 10l10 20H20zM15 45l8 12H7zM45 45l8 12H37z'/%3E%3C/g%3E%3C/svg%3E")`;
+                            break;
+                        case 'hero-endless-clouds':
+                            backgroundImage = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Cg fill='${encodeColor(secondaryColor)}' fill-opacity='0.04'%3E%3Cpath d='M25 40Q15 30 25 20Q35 30 45 20Q55 30 65 20Q75 30 85 40Q75 50 65 40Q55 50 45 40Q35 50 25 40z'/%3E%3Cpath d='M25 80Q15 70 25 60Q35 70 45 60Q55 70 65 60Q75 70 85 80Q75 90 65 80Q55 90 45 80Q35 90 25 80z'/%3E%3C/g%3E%3C/svg%3E")`;
+                            break;
+                        case 'hero-charlie-brown':
+                            backgroundImage = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cg fill='${encodeColor(primaryColor)}' fill-opacity='0.06'%3E%3Cpath d='M0 0h20v4H0zM20 8h20v4H20zM0 16h20v4H0zM20 24h20v4H20zM0 32h20v4H0z'/%3E%3C/g%3E%3C/svg%3E")`;
+                            break;
+                        case 'hero-formal-invitation':
+                            backgroundImage = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='18' viewBox='0 0 100 18'%3E%3Cpath fill='${encodeColor(primaryColor)}' d='M61.82 18c3.47-1.45 6.86-3.78 11.3-7.34C78 6.76 80.34 5.1 83.87 3.42 88.56 1.16 93.75 0 100 0v6.16C98.76 6.05 97.43 6 96 6c-9.59 0-14.23 2.23-23.13 9.34-1.28 1.03-2.39 1.9-3.4 2.66h-7.65zm-23.64 0H22.52c-1-.76-2.1-1.63-3.4-2.66C11.57 9.3 7.08 6.78 0 6.16V0c6.25 0 11.44 1.16 16.14 3.42 3.53 1.7 5.87 3.35 10.73 7.24 4.45 3.56 7.84 5.9 11.31 7.34zM61.82 0h7.66a39.57 39.57 0 0 1-7.34 4.58C57.44 6.84 52.25 8 46 8S34.56 6.84 29.86 4.58A39.57 39.57 0 0 1 22.52 0h15.66C41.65 1.44 45.21 2 50 2c4.8 0 8.35-.56 11.82-2z'/%3E%3C/svg%3E")`;
+                            textureOverlay.style.opacity = '0.05';
+                            break;
+                        case 'hero-floating-cogs':
+                            backgroundImage = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='360' height='360' viewBox='0 0 360 360'%3E%3Cpath fill='${encodeColor(primaryColor)}' d='M180 0l10 20 20-10-20 10 10 20-10-20-20 10 20-10zm40 40l8 16 16-8-16 8 8 16-8-16-16 8 16-8zm-80 0l8 16 16-8-16 8 8 16-8-16-16 8 16-8zm40 80l10 20 20-10-20 10 10 20-10-20-20 10 20-10z'/%3E%3C/svg%3E")`;
+                            textureOverlay.style.opacity = '0.05';
+                            break;
+                        case 'hero-endless-clouds':
+                            backgroundImage = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 56 28' width='56' height='28'%3E%3Cpath fill='${encodeColor(secondaryColor)}' d='M56 26v2h-7.75c2.3-1.27 4.94-2 7.75-2zm-26 2a2 2 0 1 0-4 0h-4.09A25.98 25.98 0 0 0 0 16v-2c.67 0 1.34.02 2 .07V14a2 2 0 0 0-2-2v-2a4 4 0 0 1 3.98 3.6 28.09 28.09 0 0 1 2.8-3.86A8 8 0 0 0 0 6V4a9.99 9.99 0 0 1 8.17 4.23c.94-.95 1.96-1.83 3.03-2.63A13.98 13.98 0 0 0 0 0h7.75c2 1.1 3.73 2.63 5.1 4.45 1.12-.72 2.3-1.37 3.53-1.93A20.1 20.1 0 0 0 14.28 0h2.7c.45.56.88 1.14 1.29 1.74 1.3-.48 2.63-.87 4-1.15-.11-.2-.23-.4-.36-.59H26v.07a28.4 28.4 0 0 1 4 0V0h4.09l-.37.59c1.38.28 2.72.67 4.01 1.15.4-.6.84-1.18 1.3-1.74h2.69a20.1 20.1 0 0 0-2.1 2.52c1.23.56 2.41 1.2 3.54 1.93A16.06 16.06 0 0 1 48.25 0H56c-2.72 1.88-4.92 4.2-6.52 6.85a25.83 25.83 0 0 1 2.79 3.86A4 4 0 0 1 56 14v2c-.67 0-1.34-.02-2-.07V16c0 .76.67 1.51 2 .07zm-18 0c0-.76-.67-1.51-2-.07V16c.67 0 1.34.02 2 .07V16zm-16 0v.07c.67 0 1.34-.02 2-.07zm32 0v.07c.67 0 1.34-.02 2-.07z'/%3E%3C/svg%3E")`;
+                            textureOverlay.style.opacity = '0.04';
+                            break;
+                        case 'hero-texture':
+                            backgroundImage = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' viewBox='0 0 4 4'%3E%3Cpath fill='${encodeColor(primaryColor)}' d='M1 3h1v1H1V3zm2-2h1v1H3V1z'/%3E%3C/svg%3E")`;
+                            textureOverlay.style.opacity = '0.06';
+                            break;
+                        case 'hero-cutout':
+                            backgroundImage = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Cg fill='${encodeColor(secondaryColor)}'%3E%3Cpath d='M12 0h18v6h6v6h6v18h-6v6h-6v6H12v-6H6v-6H0V12h6V6h6V0zm12 6h-6v6h-6v6H6v6h6v6h6v6h6v-6h6v-6h6v-6h-6v-6h-6V6zm-6 12h6v6h-6v-6zm24 24h6v6h-6v-6z'/%3E%3C/g%3E%3C/svg%3E")`;
+                            textureOverlay.style.opacity = '0.05';
+                            break;
+                        case 'hero-jupiter':
+                            backgroundImage = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='52' height='52' viewBox='0 0 52 52'%3E%3Cpath fill='${encodeColor(primaryColor)}' d='M0 17.83V0h17.83a3 3 0 0 1-5.66 2H5.9A5 5 0 0 1 2 5.9v6.27a3 3 0 0 1-2 5.66zm0 18.34a3 3 0 0 1 2 5.66v6.27A5 5 0 0 1 5.9 52h6.27a3 3 0 0 1 5.66 0H0V36.17zM36.17 52a3 3 0 0 1 5.66 0h6.27a5 5 0 0 1 3.9-3.9v-6.27a3 3 0 0 1 0-5.66V52H36.17zM0 31.93v-9.78a5 5 0 0 1 3.8.72l4.43-4.43a3 3 0 1 1 1.42 1.41L5.2 24.28a5 5 0 0 1 0 5.52l4.44 4.43a3 3 0 1 1-1.42 1.42L3.8 31.2a5 5 0 0 1-3.8.72zm52-14.1a3 3 0 0 1 0-5.66V5.9A5 5 0 0 1 48.1 2h-6.27a3 3 0 0 1-5.66-2H52v17.83zm0 14.1a4.97 4.97 0 0 1-1.72-.72l-4.43 4.44a3 3 0 1 1-1.41-1.42L48.84 30.07a4.99 4.99 0 0 1 0-5.42l-4.4-4.4a3 3 0 1 1 1.41-1.42l4.43 4.44c.53-.35 1.11-.6 1.72-.72v9.78z'/%3E%3C/svg%3E")`;
+                            textureOverlay.style.opacity = '0.05';
+                            break;
+                        case 'hero-overcast':
+                            backgroundImage = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 80' width='80' height='80'%3E%3Cg fill='${encodeColor(secondaryColor)}'%3E%3Cpath d='M0 0h80v80H0V0zm20 20v40h40V20H20zm20 35a15 15 0 1 1 0-30 15 15 0 0 1 0 30z' opacity='.5'/%3E%3Cpath d='M15 15h50l-5 5H20v40l-5 5V15zm0 50h50V15L80 0v80H0l15-15zm32.07-32.07l3.54-3.54A15 15 0 0 1 29.4 50.6l3.53-3.53a10 10 0 1 0 14.14-14.14zM32.93 47.07a10 10 0 1 1 14.14-14.14L32.93 47.07z'/%3E%3C/g%3E%3C/svg%3E")`;
+                            textureOverlay.style.opacity = '0.04';
+                            break;
+                        default:
+                            // For existing patterns, try to apply the class
+                            textureOverlay.classList.add(`texture-${selectedTexture}`);
+                            break;
+                    }
+                    
+                    if (backgroundImage) {
+                        textureOverlay.style.backgroundImage = backgroundImage;
+                    }
+                }
+                
+                // Apply opacity
+                textureOverlay.style.opacity = opacity;
+                
+                // Apply fade gradient mask
+                const maskGradient = `linear-gradient(to bottom, transparent ${fadeStart}%, rgba(0,0,0,1) ${Math.min(fadeStart + 30, 100)}%)`;
+                textureOverlay.style.webkitMaskImage = maskGradient;
+                textureOverlay.style.maskImage = maskGradient;
+            }
+
+            // Event listeners
+            textureSelector.addEventListener('change', updateTexture);
+            opacitySlider.addEventListener('input', updateTexture);
+            fadeSlider.addEventListener('input', updateTexture);
+            primaryColorPicker.addEventListener('input', updateTexture);
+            secondaryColorPicker.addEventListener('input', updateTexture);
+            backgroundColorPicker.addEventListener('input', updateTexture);
+            
+            // Initial setup
+            updateTexture();
+        });
+    </script>
+</body>
+</html>
