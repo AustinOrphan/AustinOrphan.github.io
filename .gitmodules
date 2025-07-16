@@ -1,0 +1,3 @@
+[submodule "ProjectileMotionSimulator"]
+	path = ProjectileMotionSimulator
+	url = https://github.com/austinorphan/ProjectileMotionSimulator.git
