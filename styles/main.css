@@ -300,13 +300,23 @@ p {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
     margin: 3vw;
-    width: 100%;
+    width: calc(100% - 6vw);
     justify-self: center;
-    position: absolute;
-    bottom: 0;
+    position: fixed;
+    bottom: max(3vw, env(safe-area-inset-bottom, 20px));
+    left: 50%;
+    transform: translateX(-50%);
     /* Ensure proper spacing between touch targets */
     gap: 8px;
-    z-index: 10;
+    z-index: 1000;
+    /* Add backdrop for better visibility */
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    background: rgba(29, 43, 53, 0.85);
+    padding: 2vw;
+    border-radius: 12px;
+    border: 1px solid rgba(238, 229, 233, 0.1);
+    transition: opacity 0.3s ease;
 }
 
 .divider {
@@ -391,8 +401,17 @@ a {
         margin: 0;
         width: fit-content;
         position: relative;
-        bottom: 0;
+        bottom: auto;
+        left: auto;
+        transform: none;
         z-index: 10;
+        /* Remove mobile-specific styling for desktop */
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        background: transparent;
+        padding: 0;
+        border-radius: 0;
+        border: none;
     }
 
     .icon {
