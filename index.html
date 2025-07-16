@@ -226,6 +226,17 @@
             // Observe all reveal elements
             [...projectCards, ...aboutElements, ...contactElements].forEach(el => observer.observe(el));
             
+            // Constants
+            const DESKTOP_WIDTH_THRESHOLD = 600; // Matches CSS breakpoint
+            
+            // Media query for better performance
+            const DESKTOP_MEDIA_QUERY = window.matchMedia(`(min-width: ${DESKTOP_WIDTH_THRESHOLD}px)`);
+            let isDesktop = DESKTOP_MEDIA_QUERY.matches;
+            
+            DESKTOP_MEDIA_QUERY.addEventListener('change', (e) => {
+                isDesktop = e.matches;
+            });
+            
             // Enhanced parallax effect with proper layering
             const heroContent = document.querySelector('.content-wrapper');
             const linkBar = document.querySelector('#linkBar');
@@ -250,7 +261,7 @@
                     
                     // LinkBar behavior depends on screen size
                     if (linkBar) {
-                        if (window.innerWidth >= 600) {
+                        if (isDesktop) {
                             // Desktop: Apply parallax effect
                             const parallaxLinkBar = scrolled * 0.1;
                             linkBar.style.transform = `translateY(${parallaxLinkBar}px)`;
@@ -265,7 +276,7 @@
                     // Reset transforms when past hero section
                     if (heroContent) heroContent.style.transform = '';
                     if (linkBar) {
-                        if (window.innerWidth >= 600) {
+                        if (isDesktop) {
                             linkBar.style.transform = '';
                         } else {
                             linkBar.style.opacity = '0.7';
