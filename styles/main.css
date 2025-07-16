@@ -584,7 +584,7 @@ h1, #cbar, #linkBar {
 .section-container {
     max-width: 1200px;
     margin: 0 auto;
-    padding: 0 20px;
+    padding: 0 40px;
 }
 
 .projects-section h2 {
@@ -1854,6 +1854,7 @@ h1, #cbar, #linkBar {
     grid-template-columns: 1fr;
     gap: 40px;
     margin-top: 40px;
+    max-width: 100%;
 }
 
 .about-text {
@@ -1882,9 +1883,10 @@ h1, #cbar, #linkBar {
 }
 
 .detail-section {
-    padding: 20px 0 20px 20px;
+    padding: 20px 0;
+    padding-left: 20px;
     border-left: 3px solid var(--color-accent);
-    margin-left: 10px;
+    margin-left: 0;
 }
 
 .detail-section h3 {
@@ -1909,7 +1911,8 @@ h1, #cbar, #linkBar {
 
 .skills-section, .experience-section {
     border-left: 3px solid var(--color-accent);
-    padding: 20px 0 20px 20px;
+    padding: 20px 0;
+    padding-left: 20px;
     margin-bottom: 30px;
 }
 
@@ -2238,6 +2241,13 @@ h1, #cbar, #linkBar {
     background: rgba(209, 102, 102, 0.1);
     border: 2px solid var(--color-secondary);
     color: var(--color-secondary);
+}
+
+/* Responsive Design - Mobile First */
+@media screen and (max-width: 767px) {
+    .section-container {
+        padding: 0 20px;
+    }
 }
 
 /* Responsive Design for Contact Section */
