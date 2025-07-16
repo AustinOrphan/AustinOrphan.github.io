@@ -5,8 +5,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Austin Orphan</title>
-    <script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+    
+    <!-- Preload critical resources -->
+    <link rel="preload" href="styles/main.css" as="style">
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Anta&family=Comfortaa:wght@700&family=Source+Sans+Pro:wght@900&display=swap" as="style">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="dns-prefetch" href="https://unpkg.com">
+    
+    <!-- Load critical CSS -->
     <link rel="stylesheet" href="styles/main.css" />
+    
+    <!-- Defer non-critical JavaScript -->
+    <script src="https://unpkg.com/@phosphor-icons/web@2.1.1" defer></script>
     <!-- favicon -->
     
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
@@ -45,6 +56,28 @@
     <!-- Additional SEO Tags -->
     <link rel="canonical" href="https://austinorphan.github.io/">
     <meta name="application-name" content="Austin Orphan Portfolio">
+    
+    <!-- Structured Data (JSON-LD) -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "Person",
+        "name": "Austin Orphan",
+        "url": "https://austinorphan.com",
+        "sameAs": [
+            "https://github.com/austinorphan",
+            "https://www.linkedin.com/in/austinorphan/"
+        ],
+        "jobTitle": "Developer & Designer",
+        "description": "Creative, Competitive, and Curious developer and designer specializing in innovative web development projects.",
+        "email": "AustinGOrphan@gmail.com",
+        "knowsAbout": ["Web Development", "JavaScript", "Python", "UI/UX Design", "React", "Node.js"],
+        "mainEntityOfPage": {
+            "@type": "WebSite",
+            "@id": "https://austinorphan.com"
+        }
+    }
+    </script>
     
 </head>
 
