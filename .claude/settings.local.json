@@ -40,7 +40,15 @@
       "WebFetch(domain:icons8.com)",
       "WebFetch(domain:www.flaticon.com)",
       "WebFetch(domain:thenounproject.com)",
-      "WebFetch(domain:nostalgic-css.github.io)"
+      "WebFetch(domain:nostalgic-css.github.io)",
+      "Bash(git branch:*)",
+      "mcp__github__get_pull_request_diff",
+      "mcp__github__get_issue",
+      "mcp__serena__think_about_collected_information",
+      "mcp__serena__think_about_task_adherence",
+      "mcp__serena__think_about_whether_you_are_done",
+      "mcp__serena__summarize_changes",
+      "mcp__serena__execute_shell_command"
     ],
     "deny": []
   }

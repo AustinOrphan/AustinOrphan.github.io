@@ -242,21 +242,36 @@
                 // Only apply parallax while in hero section
                 if (scrolled < heroHeight) {
                     const parallaxMain = scrolled * 0.25; // Main content parallax
-                    const parallaxLinkBar = scrolled * 0.1; // Slower parallax for linkBar
                     
                     // Apply different parallax speeds for layered effect
                     if (heroContent) {
                         heroContent.style.transform = `translateY(${parallaxMain}px)`;
                     }
                     
-                    // LinkBar moves slower to stay more visible
+                    // LinkBar behavior depends on screen size
                     if (linkBar) {
-                        linkBar.style.transform = `translateY(${parallaxLinkBar}px)`;
+                        if (window.innerWidth >= 600) {
+                            // Desktop: Apply parallax effect
+                            const parallaxLinkBar = scrolled * 0.1;
+                            linkBar.style.transform = `translateY(${parallaxLinkBar}px)`;
+                        } else {
+                            // Mobile: Keep fixed position, only adjust opacity
+                            const opacity = Math.max(0.7, 1 - (scrolled / heroHeight) * 0.3);
+                            linkBar.style.opacity = opacity;
+                            linkBar.style.transform = `translateX(-50%)`;
+                        }
                     }
                 } else {
                     // Reset transforms when past hero section
                     if (heroContent) heroContent.style.transform = '';
-                    if (linkBar) linkBar.style.transform = '';
+                    if (linkBar) {
+                        if (window.innerWidth >= 600) {
+                            linkBar.style.transform = '';
+                        } else {
+                            linkBar.style.opacity = '0.7';
+                            linkBar.style.transform = `translateX(-50%)`;
+                        }
+                    }
                 }
                 
                 ticking = false;
