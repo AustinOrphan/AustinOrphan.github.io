@@ -52,7 +52,7 @@ body {
 }
 
 body {
-    padding-bottom: 150px; /* Space for footer reveal */
+    padding-bottom: 120px; /* Space for footer reveal */
     position: relative;
 }
 
@@ -429,6 +429,16 @@ a {
         animation: iconWave 7s ease-in-out infinite;
         animation-delay: 0.6s;
     }
+    
+    /* Hover effect using CSS custom properties */
+    #linkBar a .icon {
+        --icon-opacity: 0.8;
+    }
+    
+    #linkBar a:hover .icon,
+    #linkBar a .icon:hover {
+        --icon-opacity: 1;
+    }
 
     .page-wrapper {
         padding: 0;
@@ -440,14 +450,18 @@ a {
         z-index: 5;
     }
 
-    .icon:hover {
+    .icon:hover,
+    #linkBar a:hover .icon {
         cursor: pointer;
         color: var(--color-background);
         background-color: var(--color-secondary);
         box-shadow: .3vw .3vw 0 var(--color-accent);
+        transform: scale(1.05);
+        transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
 
-    .ph-meteor:hover {
+    .ph-meteor:hover,
+    #linkBar a:hover .ph-meteor {
         box-shadow: -.3vw -.3vw 0 var(--color-accent);
     }
 
@@ -563,7 +577,7 @@ h1, #cbar, #linkBar {
 /* Projects Section */
 .projects-section {
     min-height: 100vh;
-    padding: 80px 0;
+    padding: 80px 0 0 0;
     background-color: var(--color-background);
 }
 
@@ -575,7 +589,7 @@ h1, #cbar, #linkBar {
 
 .projects-section h2 {
     font-family: "Anta", sans-serif;
-    font-size: 8vw;
+    font-size: 6vw;
     color: var(--color-primary);
     text-align: center;
     margin-bottom: 60px;
@@ -732,7 +746,7 @@ h1, #cbar, #linkBar {
 /* Footer Styles */
 .site-footer {
     margin-top: 0;
-    padding: 15px 0 10px;
+    padding: 15px 0 15px;
     background: transparent;
     position: fixed;
     bottom: 0;
@@ -907,7 +921,7 @@ h1, #cbar, #linkBar {
 @keyframes iconWave {
     0%, 90%, 100% { 
         transform: scale(1);
-        opacity: 0.8;
+        opacity: var(--icon-opacity, 0.8);
     }
     95% { 
         transform: scale(1.1);
@@ -1734,7 +1748,7 @@ h1, #cbar, #linkBar {
     .projects-section h2,
     .about-section h2,
     .contact-section h2 {
-        font-size: 3vw;
+        font-size: 6vw;
     }
     
     .projects-grid {
@@ -1800,7 +1814,7 @@ h1, #cbar, #linkBar {
 /* About Section Styles */
 .about-section {
     min-height: 100vh;
-    padding: 80px 0;
+    padding: 80px 0 0 0;
     position: relative;
     transition: transform 0.4s ease-out;
 }
@@ -1827,7 +1841,6 @@ h1, #cbar, #linkBar {
 
 .about-section h2 {
     font-family: "Anta", sans-serif;
-    font-size: 8vw;
     color: var(--color-primary);
     text-align: center;
     margin-bottom: 60px;
@@ -2000,8 +2013,8 @@ h1, #cbar, #linkBar {
 
 /* Contact Section */
 .contact-section {
-    min-height: 100vh;
-    padding: 80px 0 80px;
+    min-height: 80vh;
+    padding: 80px 0 0 0;
     background: linear-gradient(135deg, rgba(29, 43, 53, 0.95) 0%, var(--color-background) 100%);
     transition: transform 0.4s ease-out;
 }
@@ -2012,10 +2025,9 @@ h1, #cbar, #linkBar {
 
 .contact-section h2 {
     font-family: "Anta", sans-serif;
-    font-size: 8vw;
     color: var(--color-primary);
     text-align: center;
-    margin-bottom: 60px;
+    margin-bottom: 10px;
     letter-spacing: -0.3vw;
     text-shadow: 0.1vw 0.1vw 0 var(--color-secondary);
     transition: text-shadow 0.3s ease, transform 0.3s ease;
@@ -2025,7 +2037,7 @@ h1, #cbar, #linkBar {
     display: grid;
     grid-template-columns: 1fr;
     gap: 40px;
-    margin-top: 40px;
+    margin-top: 20px;
 }
 
 .contact-info {
@@ -2114,7 +2126,7 @@ h1, #cbar, #linkBar {
 }
 
 .contact-form {
-    padding: 30px 0;
+    padding: 15px 0;
 }
 
 .form-group {
