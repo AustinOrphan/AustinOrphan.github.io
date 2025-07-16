@@ -9,25 +9,24 @@
     <!-- Preload critical resources -->
     <link rel="preload" href="styles/main.css" as="style">
     <link rel="preload" href="https://fonts.googleapis.com/css2?family=Anta&family=Comfortaa:wght@700&family=Source+Sans+Pro:wght@900&display=swap" as="style">
-    
-    <!-- Load critical styles -->
-    <link rel="stylesheet" href="styles/main.css">
-    
-    <!-- Load 8-bit/pixel fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&family=Pixelify+Sans:wght@400;700&display=swap" rel="stylesheet">
     
-    <!-- Load icons with defer for better performance -->
-    <script src="https://unpkg.com/@phosphor-icons/web@2.1.1" defer></script>
+    <!-- Load critical CSS -->
+    <link rel="stylesheet" href="styles/main.css" />
     
+    <!-- Load critical JavaScript -->
+    <script src="https://unpkg.com/@phosphor-icons/web@2.1.1" defer></script>
+
     <!-- Component Loader System -->
     <script src="js/component-loader.js" defer></script>
+    
     <!-- favicon -->
     
-    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
     <link rel="manifest" href="/site.webmanifest">
     <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#6ee5e3">
     <meta name="msapplication-TileColor" content="#00aba9">
@@ -41,26 +40,48 @@
     <meta name="googlebot" content="index,follow">
     
     <!-- Open Graph Meta Tags -->
-    <meta property="og:url" content="https://austinorphan.github.io/">
+    <meta property="og:url" content="https://austinorphan.com/">
     <meta property="og:type" content="website">
     <meta property="og:title" content="Austin Orphan - Creative, Competitive, Curious">
     <meta property="og:description" content="Austin Orphan - Creative, Competitive, and Curious developer and designer. Explore my portfolio featuring innovative projects and professional work.">
-    <meta property="og:image" content="https://austinorphan.github.io/apple-touch-icon.png">
+    <meta property="og:image" content="https://austinorphan.com/apple-touch-icon.png">
     <meta property="og:image:alt" content="Austin Orphan Portfolio">
     <meta property="og:site_name" content="Austin Orphan Portfolio">
     <meta property="og:locale" content="en_US">
     
     <!-- Twitter Card Meta Tags -->
     <meta name="twitter:card" content="summary">
-    <meta name="twitter:url" content="https://austinorphan.github.io/">
+    <meta name="twitter:url" content="https://austinorphan.com/">
     <meta name="twitter:title" content="Austin Orphan - Creative, Competitive, Curious">
     <meta name="twitter:description" content="Austin Orphan - Creative, Competitive, and Curious developer and designer. Explore my portfolio featuring innovative projects and professional work.">
-    <meta name="twitter:image" content="https://austinorphan.github.io/apple-touch-icon.png">
+    <meta name="twitter:image" content="https://austinorphan.com/apple-touch-icon.png">
     <meta name="twitter:image:alt" content="Austin Orphan Portfolio">
     
     <!-- Additional SEO Tags -->
-    <link rel="canonical" href="https://austinorphan.github.io/">
+    <link rel="canonical" href="https://austinorphan.com/">
     <meta name="application-name" content="Austin Orphan Portfolio">
+    
+    <!-- Structured Data (JSON-LD) -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "Person",
+        "name": "Austin Orphan",
+        "url": "https://austinorphan.com",
+        "sameAs": [
+            "https://github.com/austinorphan",
+            "https://www.linkedin.com/in/austinorphan/"
+        ],
+        "jobTitle": "Developer & Designer",
+        "description": "Creative, Competitive, and Curious developer and designer specializing in innovative web development projects.",
+        "email": "AustinGOrphan@gmail.com",
+        "knowsAbout": ["Web Development", "JavaScript", "Python", "UI/UX Design", "React", "Node.js"],
+        "mainEntityOfPage": {
+            "@type": "WebSite",
+            "@id": "https://austinorphan.com"
+        }
+    }
+    </script>
     
     <!-- Google Analytics (replace YOUR_GA_ID with your actual GA4 measurement ID) -->
     <script>
