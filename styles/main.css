@@ -472,29 +472,28 @@ h1, #cbar, #linkBar {
     background-color: transparent;
 }
 
-/* Mobile icon animations */
-#linkBar a:nth-child(1) .icon {
+/* Mobile icon animations - DRY approach */
+#linkBar a .icon {
     animation: iconWave 7s ease-in-out infinite;
+}
+
+#linkBar a:nth-child(1) .icon {
     animation-delay: 0s;
 }
 
 #linkBar a:nth-child(2) .icon {
-    animation: iconWave 7s ease-in-out infinite;
     animation-delay: 0.15s;
 }
 
 #linkBar a:nth-child(3) .icon {
-    animation: iconWave 7s ease-in-out infinite;
     animation-delay: 0.3s;
 }
 
 #linkBar a:nth-child(4) .icon {
-    animation: iconWave 7s ease-in-out infinite;
     animation-delay: 0.45s;
 }
 
 #linkBar a:nth-child(5) .icon {
-    animation: iconWave 7s ease-in-out infinite;
     animation-delay: 0.6s;
 }
 
@@ -2007,30 +2006,7 @@ h1, #cbar, #linkBar {
         min-height: 48px;
     }
 
-    #linkBar a:nth-child(1) .icon {
-        animation: iconWave 7s ease-in-out infinite;
-        animation-delay: 0s;
-    }
-
-    #linkBar a:nth-child(2) .icon {
-        animation: iconWave 7s ease-in-out infinite;
-        animation-delay: 0.15s;
-    }
-
-    #linkBar a:nth-child(3) .icon {
-        animation: iconWave 7s ease-in-out infinite;
-        animation-delay: 0.3s;
-    }
-
-    #linkBar a:nth-child(4) .icon {
-        animation: iconWave 7s ease-in-out infinite;
-        animation-delay: 0.45s;
-    }
-
-    #linkBar a:nth-child(5) .icon {
-        animation: iconWave 7s ease-in-out infinite;
-        animation-delay: 0.6s;
-    }
+    /* Desktop icon animations inherit from mobile, no need to redefine */
 
     .page-wrapper {
         padding: 0;
