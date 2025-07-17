@@ -262,6 +262,11 @@
             const heroContent = document.querySelector('.content-wrapper');
             const linkBar = document.querySelector('#linkBar');
             
+            // Parallax calculation function for better readability
+            function calculateParallax(scrolled, factor = 0.25) {
+                return scrolled * factor;
+            }
+            
             // Throttled scroll handler for better performance
             let ticking = false;
             function updateOnScroll() {
@@ -275,7 +280,7 @@
                 if (scrolled < heroHeight) {
                     // Apply different parallax speeds for layered effect
                     if (heroContent && isDesktop) {
-                        const parallaxMain = scrolled * 0.25; // Main content parallax
+                        const parallaxMain = calculateParallax(scrolled); // Main content parallax
                         heroContent.style.transform = `translateY(${parallaxMain}px)`;
                     }
                     
@@ -283,7 +288,7 @@
                     if (linkBar) {
                         if (isDesktop) {
                             // Desktop: Apply parallax effect
-                            const parallaxLinkBar = scrolled * 0.1;
+                            const parallaxLinkBar = calculateParallax(scrolled, 0.1);
                             linkBar.style.transform = `translateY(${parallaxLinkBar}px)`;
                         } else {
                             // Mobile: Keep fixed position, fade to 0 as scrolling
@@ -315,7 +320,6 @@
             
             // Add smooth entrance animation for hero elements
             setTimeout(() => {
-                const linkBar = document.querySelector('#linkBar');
                 document.querySelector('h1').style.animation = 'slideInScale 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards';
                 document.querySelector('#cbar').style.animation = 'slideInScale 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.2s forwards';
                 
