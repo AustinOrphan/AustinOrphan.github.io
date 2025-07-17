@@ -262,6 +262,11 @@
             const heroContent = document.querySelector('.content-wrapper');
             const linkBar = document.querySelector('#linkBar');
             
+            // Parallax calculation function for better readability
+            function calculateParallax(scrolled, factor = 0.25) {
+                return scrolled * factor;
+            }
+            
             // Throttled scroll handler for better performance
             let ticking = false;
             function updateOnScroll() {
@@ -273,10 +278,9 @@
                 
                 // Only apply parallax while in hero section
                 if (scrolled < heroHeight) {
-                    const parallaxMain = scrolled * 0.25; // Main content parallax
-                    
                     // Apply different parallax speeds for layered effect
-                    if (heroContent) {
+                    if (heroContent && isDesktop) {
+                        const parallaxMain = calculateParallax(scrolled); // Main content parallax
                         heroContent.style.transform = `translateY(${parallaxMain}px)`;
                     }
                     
@@ -284,24 +288,22 @@
                     if (linkBar) {
                         if (isDesktop) {
                             // Desktop: Apply parallax effect
-                            const parallaxLinkBar = scrolled * 0.1;
+                            const parallaxLinkBar = calculateParallax(scrolled, 0.1);
                             linkBar.style.transform = `translateY(${parallaxLinkBar}px)`;
                         } else {
-                            // Mobile: Keep fixed position, only adjust opacity
-                            const opacity = Math.max(0.7, 1 - (scrolled / heroHeight) * 0.3);
+                            // Mobile: Keep fixed position, fade to 0 as scrolling
+                            const opacity = Math.max(0, 1 - (scrolled / heroHeight));
                             linkBar.style.opacity = opacity;
-                            linkBar.style.transform = `translateX(-50%)`;
                         }
                     }
                 } else {
                     // Reset transforms when past hero section
-                    if (heroContent) heroContent.style.transform = '';
+                    if (heroContent && isDesktop) heroContent.style.transform = '';
                     if (linkBar) {
                         if (isDesktop) {
                             linkBar.style.transform = '';
                         } else {
-                            linkBar.style.opacity = '0.7';
-                            linkBar.style.transform = `translateX(-50%)`;
+                            linkBar.style.opacity = '0';
                         }
                     }
                 }
@@ -320,7 +322,16 @@
             setTimeout(() => {
                 document.querySelector('h1').style.animation = 'slideInScale 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards';
                 document.querySelector('#cbar').style.animation = 'slideInScale 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.2s forwards';
-                document.querySelector('#linkBar').style.animation = 'slideInScale 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.4s forwards';
+                
+                // Use different animation for mobile vs desktop link bar
+                if (linkBar) {
+                    if (isDesktop) {
+                        linkBar.style.animation = 'slideInScale 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.4s forwards';
+                    } else {
+                        // Mobile uses fade only to avoid transform conflicts
+                        linkBar.style.animation = 'fadeInOnly 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.4s forwards';
+                    }
+                }
             }, 300);
             
             // Random red flash effect on project buttons
