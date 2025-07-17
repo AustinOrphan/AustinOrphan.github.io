@@ -186,6 +186,16 @@ body::after {
     }
 }
 
+/* Mobile-specific animation for fixed link bar */
+@keyframes fadeInOnly {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
 @keyframes floating {
     0%, 100% {
         transform: translateY(0px);
@@ -261,6 +271,7 @@ body::after {
     position: relative;
 }
 
+
 .content-wrapper {
     display: flex;
     width: 100%;
@@ -300,13 +311,13 @@ p {
     display: flex;
     justify-content: center;
     align-items: center;
-    margin: 0;
-    width: auto;
+    margin: 0 auto;
+    width: fit-content;
     max-width: 90vw;
     position: fixed;
-    bottom: max(20px, env(safe-area-inset-bottom, 20px));
-    left: 50%;
-    transform: translateX(-50%);
+    bottom: max(150px, calc(env(safe-area-inset-bottom) + 100px));
+    left: 0;
+    right: 0;
     /* Ensure proper spacing between touch targets */
     gap: 12px;
     z-index: 1000;
@@ -319,6 +330,8 @@ p {
     border: 1px solid rgba(238, 229, 233, 0.2);
     transition: opacity 0.3s ease;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    /* Start invisible on mobile */
+    opacity: 0;
 }
 
 .divider {
@@ -330,10 +343,10 @@ p {
     color: var(--color-primary);
     padding: 8px;
     border-radius: 50%;
-    font-size: 20px;
+    font-size: 28px;
     /* Ensure proper touch targets for mobile */
-    width: 44px;
-    height: 44px;
+    width: 56px;
+    height: 56px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -341,6 +354,7 @@ p {
     transform: translateZ(0);
     will-change: transform, background-color, color;
     transition: all 0.3s ease;
+    background-color: transparent;
 }
 
 a {
@@ -349,6 +363,32 @@ a {
     width: 100%;
     height: 100%;
     justify-content: center;
+}
+
+/* Mobile icon animations */
+#linkBar a:nth-child(1) .icon {
+    animation: iconWave 7s ease-in-out infinite;
+    animation-delay: 0s;
+}
+
+#linkBar a:nth-child(2) .icon {
+    animation: iconWave 7s ease-in-out infinite;
+    animation-delay: 0.15s;
+}
+
+#linkBar a:nth-child(3) .icon {
+    animation: iconWave 7s ease-in-out infinite;
+    animation-delay: 0.3s;
+}
+
+#linkBar a:nth-child(4) .icon {
+    animation: iconWave 7s ease-in-out infinite;
+    animation-delay: 0.45s;
+}
+
+#linkBar a:nth-child(5) .icon {
+    animation: iconWave 7s ease-in-out infinite;
+    animation-delay: 0.6s;
 }
 
 .ph-meteor {
@@ -360,6 +400,7 @@ a {
     background-color: var(--color-secondary);
     color: var(--color-background);
     transform: scale(0.95);
+    box-shadow: 0 0 0 3px rgba(238, 229, 233, 0.3);
 }
 
 /* Focus Management - Mobile (Base Styles) */
@@ -415,6 +456,7 @@ a {
         position: relative;
         bottom: auto;
         left: auto;
+        right: auto;
         transform: none;
         z-index: 10;
         gap: 8px;
@@ -427,6 +469,8 @@ a {
         border: none;
         box-shadow: none;
         max-width: none;
+        /* Reset opacity for desktop */
+        opacity: 1;
     }
 
     .icon {
@@ -586,6 +630,15 @@ a {
     position: relative;
     overflow: hidden;
     z-index: 10;
+}
+
+/* Hero-specific page wrapper positioning */
+.hero-section .page-wrapper {
+    justify-content: flex-start;
+    padding-top: 25vh;
+    min-height: auto;
+    height: 100vh;
+    box-sizing: border-box;
 }
 
 /* Initial hidden state for hero elements */
@@ -1673,7 +1726,7 @@ h1, #cbar, #linkBar {
 /* Scroll Indicator */
 .scroll-indicator {
     position: absolute;
-    bottom: 30px;
+    bottom: 200px;
     left: 50%;
     transform: translateX(-50%);
     animation: floatingPulse 3s ease-in-out infinite;
