@@ -1,0 +1,37 @@
+---
+---
+<script>
+  (function() {
+    const konamiCode = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a'];
+    let konamiIndex = 0;
+
+    document.addEventListener('keydown', function(e) {
+      if (e.key === konamiCode[konamiIndex]) {
+        konamiIndex++;
+        if (konamiIndex === konamiCode.length) {
+          activatePixelMode();
+          konamiIndex = 0;
+        }
+      } else {
+        konamiIndex = 0;
+      }
+    });
+
+    function activatePixelMode() {
+      const isPixelMode = document.body.classList.contains('pixel-mode');
+      document.body.classList.toggle('pixel-mode');
+
+      const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSpy0Ey9diMFl2+z5cp2Jhgse8DvpnAfBTF6w+zcrWoiC0ix1Out8embMwsYbNDzn5NW+8XN0eWQXAmjebrq13hDjPvl8N/AghgKGHzN8cuiRBQMVGLp5cd/zOfs9eS2XwgBa3bBAAAtAAAAAAAAAAAA');
+      audio.play().catch(() => {});
+
+      const existing = document.querySelector('.pixel-notification');
+      if (existing) existing.remove();
+
+      const notification = document.createElement('div');
+      notification.className = 'pixel-notification';
+      notification.textContent = isPixelMode ? '8-BIT MODE DEACTIVATED!' : '8-BIT MODE ACTIVATED!';
+      document.body.appendChild(notification);
+      setTimeout(() => notification.remove(), 3000);
+    }
+  })();
+</script>
