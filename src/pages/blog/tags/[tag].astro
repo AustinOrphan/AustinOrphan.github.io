@@ -37,7 +37,7 @@ const { posts, tag } = Astro.props;
     <p class="blog-page-subtitle">{posts.length} post{posts.length !== 1 ? 's' : ''}</p>
 
     {posts.map(post => (
-      <a href={`/blog/${post.id}/`} class="post-card">
+      <a href={`/blog/${post.id.replace(/\.mdx?$/, '')}/`} class="post-card">
         <h2 class="post-card-title">{post.data.title}</h2>
         <div class="post-card-meta">
           <time datetime={post.data.pubDate.toISOString()}>
