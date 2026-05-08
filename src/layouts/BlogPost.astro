@@ -22,9 +22,14 @@ const formattedDate = pubDate.toLocaleDateString('en-US', { year: 'numeric', mon
     <meta property="article:published_time" content={pubDate.toISOString()} />
   </Fragment>
 
+  <header class="blog-site-nav">
+    <a href="/">Austin Orphan</a>
+    <span class="nav-sep">/</span>
+    <a href="/blog/">Blog</a>
+  </header>
+
   <article class="blog-post">
     <div class="blog-post-header">
-      <a href="/blog" class="back-link">← back to blog</a>
       <h1 class="blog-post-title">{title}</h1>
       <div class="blog-post-meta">
         <time datetime={pubDate.toISOString()}>{formattedDate}</time>
