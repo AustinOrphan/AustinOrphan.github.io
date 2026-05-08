@@ -61,8 +61,8 @@ import ParticleSystem from '../components/ParticleSystem.astro';
   <script>
     (function() {
       const projectCards = document.querySelectorAll('.project-card');
-      const aboutElements = document.querySelectorAll('.detail-section, .skill-category');
-      const contactElements = document.querySelectorAll('.contact-method, .experience-item');
+      const aboutElements = document.querySelectorAll('.detail-section, .skill-category, .experience-item');
+      const contactElements = document.querySelectorAll('.contact-method');
 
       projectCards.forEach((el, i) => { el.classList.add('scroll-reveal'); el.style.transitionDelay = `${i * 0.1}s`; });
       aboutElements.forEach((el, i) => { el.classList.add('scroll-reveal'); el.style.transitionDelay = `${i * 0.08}s`; });
@@ -120,6 +120,10 @@ import ParticleSystem from '../components/ParticleSystem.astro';
             else linkBar.style.opacity = '0';
           }
         }
+        sectionNav?.classList.add('show-on-scroll');
+        clearTimeout(scrollTimeout);
+        scrollTimeout = setTimeout(() => sectionNav?.classList.remove('show-on-scroll'), 3000);
+        updateActiveSection();
         ticking = false;
       }
       window.addEventListener('scroll', () => {
@@ -168,13 +172,6 @@ import ParticleSystem from '../components/ParticleSystem.astro';
           }
         });
       }
-
-      window.addEventListener('scroll', () => {
-        sectionNav?.classList.add('show-on-scroll');
-        clearTimeout(scrollTimeout);
-        scrollTimeout = setTimeout(() => sectionNav?.classList.remove('show-on-scroll'), 3000);
-        updateActiveSection();
-      });
 
       document.addEventListener('mousemove', e => {
         if (window.innerWidth - e.clientX <= 80) {
