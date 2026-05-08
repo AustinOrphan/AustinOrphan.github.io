@@ -1,0 +1,188 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import About from '../components/About.astro';
+import Projects from '../components/Projects.astro';
+import Contact from '../components/Contact.astro';
+import Footer from '../components/Footer.astro';
+import KonamiEgg from '../components/KonamiEgg.astro';
+import ParticleSystem from '../components/ParticleSystem.astro';
+---
+<BaseLayout>
+  <!-- Hero Section -->
+  <section id="hero" class="hero-section">
+    <div class="page-wrapper">
+      <div class="content-wrapper">
+        <h1 data-particle-target>Austin Orphan</h1>
+        <p id="cbar">
+          Creative <span class="divider"> | </span>Competitive <span class="divider"> | </span> Curious
+        </p>
+        <div id="linkBar">
+          <a href="https://github.com/austinorphan" target="_blank" rel="noopener noreferrer" aria-label="GitHub Profile">
+            <i class="icon ph-duotone ph-github-logo"></i>
+          </a>
+          <a href="https://www.linkedin.com/in/austinorphan/" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn Profile">
+            <i class="icon ph-duotone ph-linkedin-logo"></i>
+          </a>
+          <a href="/AustinOrphanResume.pdf" download aria-label="Download Resume">
+            <i class="icon ph-duotone ph-read-cv-logo"></i>
+          </a>
+          <a href="mailto:AustinGOrphan@gmail.com" aria-label="Email Contact">
+            <i class="icon ph-duotone ph-envelope-simple"></i>
+          </a>
+          <a href="#projects" aria-label="View Projects">
+            <i class="icon ph-duotone ph-meteor"></i>
+          </a>
+        </div>
+      </div>
+      <div class="scroll-indicator">
+        <a href="#about" aria-label="Scroll to About">
+          <i class="ph-duotone ph-arrow-down"></i>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <About />
+  <Projects />
+  <Contact />
+  <Footer />
+
+  <!-- Navigation -->
+  <nav class="section-nav">
+    <a href="#hero" aria-label="Go to Hero Section"><i class="ph-duotone ph-house"></i></a>
+    <a href="#about" aria-label="Go to About Section"><i class="ph-duotone ph-user"></i></a>
+    <a href="#projects" aria-label="Go to Projects Section"><i class="ph-duotone ph-folder-open"></i></a>
+    <a href="#contact" aria-label="Go to Contact Section"><i class="ph-duotone ph-envelope"></i></a>
+  </nav>
+
+  <KonamiEgg />
+  <ParticleSystem />
+
+  <script>
+    (function() {
+      const projectCards = document.querySelectorAll('.project-card');
+      const aboutElements = document.querySelectorAll('.detail-section, .skill-category, .experience-item');
+      const contactElements = document.querySelectorAll('.contact-method');
+
+      projectCards.forEach((el, i) => { el.classList.add('scroll-reveal'); el.style.transitionDelay = `${i * 0.1}s`; });
+      aboutElements.forEach((el, i) => { el.classList.add('scroll-reveal'); el.style.transitionDelay = `${i * 0.08}s`; });
+      contactElements.forEach((el, i) => { el.classList.add('scroll-reveal'); el.style.transitionDelay = `${i * 0.08}s`; });
+
+      let lastScrollY = window.pageYOffset;
+      let scrollSpeed = 0;
+      let speedTimeout;
+
+      function calcScrollSpeed() {
+        const cur = window.pageYOffset;
+        scrollSpeed = Math.abs(cur - lastScrollY);
+        lastScrollY = cur;
+        clearTimeout(speedTimeout);
+        speedTimeout = setTimeout(() => { scrollSpeed = 0; }, 150);
+      }
+
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            if (scrollSpeed > 30) entry.target.classList.add('fast-reveal');
+            requestAnimationFrame(() => entry.target.classList.add('revealed'));
+            observer.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
+
+      [...projectCards, ...aboutElements, ...contactElements].forEach(el => observer.observe(el));
+
+      const DESKTOP_MQ = window.matchMedia('(min-width: 600px)');
+      let isDesktop = DESKTOP_MQ.matches;
+      DESKTOP_MQ.addEventListener('change', e => { isDesktop = e.matches; });
+
+      const heroContent = document.querySelector('.content-wrapper');
+      const linkBar = document.querySelector('#linkBar');
+
+      let ticking = false;
+      function updateOnScroll() {
+        const scrolled = window.pageYOffset;
+        const heroHeight = window.innerHeight;
+        calcScrollSpeed();
+        if (scrolled < heroHeight) {
+          if (heroContent && isDesktop) heroContent.style.transform = `translateY(${scrolled * 0.25}px)`;
+          if (linkBar) {
+            if (isDesktop) {
+              linkBar.style.transform = `translateY(${scrolled * 0.1}px)`;
+            } else {
+              linkBar.style.opacity = Math.max(0, 1 - scrolled / heroHeight);
+            }
+          }
+        } else {
+          if (heroContent && isDesktop) heroContent.style.transform = '';
+          if (linkBar) {
+            if (isDesktop) linkBar.style.transform = '';
+            else linkBar.style.opacity = '0';
+          }
+        }
+        sectionNav?.classList.add('show-on-scroll');
+        clearTimeout(scrollTimeout);
+        scrollTimeout = setTimeout(() => sectionNav?.classList.remove('show-on-scroll'), 3000);
+        updateActiveSection();
+        ticking = false;
+      }
+      window.addEventListener('scroll', () => {
+        if (!ticking) { requestAnimationFrame(updateOnScroll); ticking = true; }
+      }, { passive: true });
+
+      setTimeout(() => {
+        const h1 = document.querySelector('h1');
+        const cbar = document.querySelector('#cbar');
+        if (h1) h1.style.animation = 'slideInScale 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards';
+        if (cbar) cbar.style.animation = 'slideInScale 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.2s forwards';
+        if (linkBar) {
+          linkBar.style.animation = isDesktop
+            ? 'slideInScale 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.4s forwards'
+            : 'fadeInOnly 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.4s forwards';
+        }
+      }, 300);
+
+      const projectButtons = document.querySelectorAll('.project-links a');
+      function triggerRandomFlash() {
+        const num = Math.floor(Math.random() * 3) + 1;
+        const shuffled = Array.from(projectButtons).sort(() => Math.random() - 0.5);
+        for (let i = 0; i < num && i < shuffled.length; i++) {
+          const delay = i * 0.5 + Math.random() * 2;
+          const btn = shuffled[i];
+          setTimeout(() => {
+            btn.classList.add('flashing');
+            setTimeout(() => btn.classList.remove('flashing'), 2000);
+          }, delay * 1000);
+        }
+        setTimeout(triggerRandomFlash, 5000 + Math.random() * 10000);
+      }
+      setTimeout(triggerRandomFlash, 3000);
+
+      const sections = document.querySelectorAll('section[id]');
+      const navLinks = document.querySelectorAll('.section-nav a');
+      const sectionNav = document.querySelector('.section-nav');
+      let scrollTimeout;
+
+      function updateActiveSection() {
+        const pos = window.scrollY + window.innerHeight / 2;
+        sections.forEach((section, i) => {
+          if (pos >= section.offsetTop && pos < section.offsetTop + section.offsetHeight) {
+            navLinks.forEach(l => l.classList.remove('active'));
+            navLinks[i]?.classList.add('active');
+          }
+        });
+      }
+
+      document.addEventListener('mousemove', e => {
+        if (window.innerWidth - e.clientX <= 80) {
+          sectionNav?.classList.add('show-on-scroll');
+        } else if (!sectionNav?.matches(':hover')) {
+          sectionNav?.classList.remove('show-on-scroll');
+        }
+      });
+
+      navLinks.forEach(link => link.addEventListener('click', () => setTimeout(updateActiveSection, 100)));
+      updateActiveSection();
+    })();
+  </script>
+</BaseLayout>
