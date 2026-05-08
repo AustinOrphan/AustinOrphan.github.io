@@ -60,6 +60,7 @@
     const form = document.querySelector('.contact-form');
     const statusDiv = document.getElementById('form-status');
     if (!form) return;
+    let statusTimeout = null;
 
     function validateName(v) { return v.trim().length >= 2; }
     function validateEmail(v) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim()); }
@@ -81,7 +82,10 @@
       statusDiv.textContent = msg;
       statusDiv.className = 'form-status ' + type;
       statusDiv.style.display = 'block';
-      if (type === 'success') setTimeout(() => { statusDiv.style.display = 'none'; }, 5000);
+      if (type === 'success') {
+        clearTimeout(statusTimeout);
+        statusTimeout = setTimeout(() => { statusDiv.style.display = 'none'; }, 5000);
+      }
     }
 
     document.getElementById('name')?.addEventListener('blur', function() {
@@ -96,6 +100,7 @@
 
     form.addEventListener('submit', function(e) {
       e.preventDefault();
+      clearTimeout(statusTimeout);
       statusDiv.style.display = 'none';
       const data = new FormData(form);
       const name = data.get('name');

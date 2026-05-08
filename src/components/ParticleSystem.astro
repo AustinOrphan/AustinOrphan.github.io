@@ -104,20 +104,35 @@
       }));
     }
 
+    let rafId;
     function animate() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       particles = particles.filter(p => { p.update(); p.draw(); return p.life > 0; });
       createMouseTrail();
-      requestAnimationFrame(animate);
+      rafId = requestAnimationFrame(animate);
     }
-    animate();
+    rafId = requestAnimationFrame(animate);
+
+    document.addEventListener('astro:before-swap', () => {
+      cancelAnimationFrame(rafId);
+      window.removeEventListener('resize', resizeCanvas);
+    }, { once: true });
 
     document.addEventListener('mousemove', e => { mouseX = e.clientX; mouseY = e.clientY; });
 
     function showNotification(message, subtitle = '') {
       const n = document.createElement('div');
-      n.innerHTML = `<div style="font-size:18px;margin-bottom:${subtitle?'8px':'0'};font-weight:bold">${message}</div>${subtitle?`<div style="font-size:14px;opacity:.9">${subtitle}</div>`:''}`;
       n.style.cssText = `position:fixed;top:-100px;right:20px;width:300px;background:rgba(0,0,0,.95);color:white;padding:16px 20px;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,.3);z-index:10000;border-left:4px solid var(--color-accent);animation:dropdownSlide 4s ease-in-out forwards;backdrop-filter:blur(10px)`;
+      const titleEl = document.createElement('div');
+      titleEl.style.cssText = `font-size:18px;margin-bottom:${subtitle ? '8px' : '0'};font-weight:bold`;
+      titleEl.textContent = message;
+      n.appendChild(titleEl);
+      if (subtitle) {
+        const subEl = document.createElement('div');
+        subEl.style.cssText = 'font-size:14px;opacity:.9';
+        subEl.textContent = subtitle;
+        n.appendChild(subEl);
+      }
       document.body.appendChild(n);
       setTimeout(() => n.remove(), 4000);
     }
@@ -154,7 +169,7 @@
     });
 
     let nameClicks = 0;
-    const nameEl = document.querySelector('h1');
+    const nameEl = document.querySelector('[data-particle-target]') ?? document.querySelector('h1');
     if (nameEl) {
       nameEl.style.cursor = 'pointer';
       nameEl.addEventListener('click', e => {
