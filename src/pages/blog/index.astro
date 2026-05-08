@@ -8,23 +8,20 @@ const allPosts = await getCollection('blog', ({ data }) => {
 });
 
 const posts = allPosts.sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
-
-const allTags = [...new Set(posts.flatMap(p => p.data.tags))].sort();
 ---
 <BaseLayout title="Blog — Austin Orphan" description="Thoughts, projects, and technical notes from Austin Orphan.">
+  <header class="blog-site-nav">
+    <a href="/">Austin Orphan</a>
+    <span class="nav-sep">/</span>
+    <a href="/blog/">Blog</a>
+  </header>
+
   <div class="blog-page">
     <h1 class="blog-page-title">BLOG</h1>
     <p class="blog-page-subtitle">thoughts, projects, and technical notes</p>
 
-    <nav class="tag-filter" aria-label="Filter by tag">
-      <a href="/blog" class="tag-filter-link active">all</a>
-      {allTags.map(tag => (
-        <a href={`/blog/tags/${tag}`} class="tag-filter-link">{tag}</a>
-      ))}
-    </nav>
-
     {posts.map(post => (
-      <a href={`/blog/${post.id}`} class="post-card">
+      <a href={`/blog/${post.id}/`} class="post-card">
         <h2 class="post-card-title">{post.data.title}</h2>
         <div class="post-card-meta">
           <time datetime={post.data.pubDate.toISOString()}>
