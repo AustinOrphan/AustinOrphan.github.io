@@ -4,12 +4,16 @@ import '../styles/global.css';
 interface Props {
   title?: string;
   description?: string;
+  canonicalURL?: string;
 }
 
 const {
   title = 'Austin Orphan',
   description = 'Austin Orphan - Creative, Competitive, and Curious developer and designer.',
+  canonicalURL: canonicalURLProp,
 } = Astro.props;
+
+const canonicalURL = canonicalURLProp ?? new URL(Astro.url.pathname, Astro.site).toString();
 ---
 <!DOCTYPE html>
 <html lang="en">
@@ -36,7 +40,7 @@ const {
   <meta name="author" content="Austin Orphan">
   <meta name="robots" content="index,follow">
 
-  <meta property="og:url" content="https://austinorphan.com/">
+  <meta property="og:url" content={canonicalURL}>
   <meta property="og:type" content="website">
   <meta property="og:title" content={title}>
   <meta property="og:description" content={description}>
@@ -48,7 +52,7 @@ const {
   <meta name="twitter:description" content={description}>
   <meta name="twitter:image" content="https://austinorphan.com/apple-touch-icon.png">
 
-  <link rel="canonical" href="https://austinorphan.com/">
+  <link rel="canonical" href={canonicalURL}>
 
   <script type="application/ld+json">
   {
@@ -71,15 +75,13 @@ const {
   }
   </script>
 
-  <script>
-    const GA_ID = 'YOUR_GA_ID';
-  </script>
   <script async src="https://www.googletagmanager.com/gtag/js?id=YOUR_GA_ID"></script>
   <script>
+    const GA_ID = 'YOUR_GA_ID';
     window.dataLayer = window.dataLayer || [];
     function gtag(){dataLayer.push(arguments);}
     gtag('js', new Date());
-    gtag('config', 'YOUR_GA_ID', {
+    gtag('config', GA_ID, {
       page_title: document.title,
       page_location: window.location.href
     });
