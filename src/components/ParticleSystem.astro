@@ -1,0 +1,178 @@
+---
+---
+<canvas id="particle-canvas" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 999;"></canvas>
+
+<script>
+  (function() {
+    const canvas = document.getElementById('particle-canvas');
+    const ctx = canvas.getContext('2d');
+    let particles = [];
+    let particleMode = 'off';
+    let particlesEnabled = false;
+    let mouseX = 0;
+    let mouseY = 0;
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    class Particle {
+      constructor(x, y, options = {}) {
+        this.x = x;
+        this.y = y;
+        this.vx = options.vx || (Math.random() - 0.5) * 4;
+        this.vy = options.vy || (Math.random() - 0.5) * 4;
+        this.radius = options.radius || Math.random() * 3 + 1;
+        this.color = options.color || `hsl(${Math.random() * 360}, 100%, 50%)`;
+        this.life = options.life || 1;
+        this.decay = options.decay || 0.01;
+        this.gravity = options.gravity || 0;
+        this.bounce = options.bounce || 0;
+      }
+      update() {
+        this.x += this.vx;
+        this.y += this.vy;
+        this.vy += this.gravity;
+        this.life = Math.max(0, Math.min(1, this.life - this.decay));
+        if (this.bounce > 0) {
+          if (this.x <= this.radius || this.x >= canvas.width - this.radius) this.vx *= -this.bounce;
+          if (this.y >= canvas.height - this.radius) { this.vy *= -this.bounce; this.y = canvas.height - this.radius; }
+        }
+      }
+      draw() {
+        if (this.life <= 0) return;
+        ctx.save();
+        ctx.globalAlpha = this.life;
+        const is8Bit = document.body.classList.contains('pixel-mode');
+        if (is8Bit) {
+          ctx.fillStyle = this.color;
+          const ps = Math.round(this.radius * 2);
+          ctx.fillRect(Math.round(this.x - ps/2), Math.round(this.y - ps/2), ps, ps);
+        } else {
+          ctx.fillStyle = this.color;
+          ctx.beginPath();
+          ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+    }
+
+    function get8BitColor() {
+      return ['#00ff00','#00ffff','#ff00ff','#ffff00','#ff0000','#0080ff','#ff8000'][Math.floor(Math.random()*7)];
+    }
+
+    function createBurst(x, y, count = 30, options = {}) {
+      if (!particlesEnabled) return;
+      for (let i = 0; i < count; i++) {
+        const angle = (Math.PI * 2 * i) / count;
+        const speed = Math.random() * 5 + 2;
+        particles.push(new Particle(x, y, { vx: Math.cos(angle)*speed, vy: Math.sin(angle)*speed, ...options }));
+      }
+    }
+
+    function createFirework(x, y) {
+      if (!particlesEnabled) return;
+      const is8Bit = document.body.classList.contains('pixel-mode');
+      const color = is8Bit ? get8BitColor() : `hsl(${Math.random()*360}, 100%, 50%)`;
+      createBurst(x, y, is8Bit ? 30 : 50, { color, decay: 0.02, gravity: is8Bit ? 0.15 : 0.1, radius: is8Bit ? 2 : null });
+    }
+
+    function createConfetti() {
+      if (!particlesEnabled) return;
+      const is8Bit = document.body.classList.contains('pixel-mode');
+      for (let i = 0; i < (is8Bit ? 50 : 100); i++) {
+        particles.push(new Particle(Math.random()*canvas.width, -10, {
+          vx: (Math.random()-0.5)*2, vy: Math.random()*3+1,
+          color: is8Bit ? get8BitColor() : `hsl(${Math.random()*360},100%,50%)`,
+          radius: is8Bit ? 3 : Math.random()*4+2, decay: 0.001, gravity: 0.05, bounce: 0.8
+        }));
+      }
+    }
+
+    function createMouseTrail() {
+      if (!particlesEnabled || particleMode !== 'trail') return;
+      const is8Bit = document.body.classList.contains('pixel-mode');
+      particles.push(new Particle(mouseX, mouseY, {
+        vx: (Math.random()-0.5)*2, vy: (Math.random()-0.5)*2,
+        radius: is8Bit ? 2 : Math.random()*2+1,
+        color: is8Bit ? get8BitColor() : `hsl(${Date.now()*0.1%360},100%,50%)`,
+        decay: 0.02
+      }));
+    }
+
+    function animate() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      particles = particles.filter(p => { p.update(); p.draw(); return p.life > 0; });
+      createMouseTrail();
+      requestAnimationFrame(animate);
+    }
+    animate();
+
+    document.addEventListener('mousemove', e => { mouseX = e.clientX; mouseY = e.clientY; });
+
+    function showNotification(message, subtitle = '') {
+      const n = document.createElement('div');
+      n.innerHTML = `<div style="font-size:18px;margin-bottom:${subtitle?'8px':'0'};font-weight:bold">${message}</div>${subtitle?`<div style="font-size:14px;opacity:.9">${subtitle}</div>`:''}`;
+      n.style.cssText = `position:fixed;top:-100px;right:20px;width:300px;background:rgba(0,0,0,.95);color:white;padding:16px 20px;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,.3);z-index:10000;border-left:4px solid var(--color-accent);animation:dropdownSlide 4s ease-in-out forwards;backdrop-filter:blur(10px)`;
+      document.body.appendChild(n);
+      setTimeout(() => n.remove(), 4000);
+    }
+
+    const style = document.createElement('style');
+    style.textContent = `@keyframes dropdownSlide{0%{top:-100px;opacity:0;transform:translateY(-20px)}15%{top:20px;opacity:1;transform:translateY(0)}85%{top:20px;opacity:1;transform:translateY(0)}100%{top:-100px;opacity:0;transform:translateY(-20px)}}`;
+    document.head.appendChild(style);
+
+    function createDisableButton() {
+      const btn = document.createElement('button');
+      btn.id = 'particle-disable-btn';
+      btn.innerHTML = '✕ Disable Particles';
+      btn.style.cssText = `position:fixed;top:20px;right:20px;background:rgba(0,0,0,.8);color:white;border:2px solid var(--color-accent);padding:10px 15px;border-radius:8px;font-size:14px;cursor:pointer;z-index:10001;transition:all .3s ease;font-family:inherit`;
+      btn.addEventListener('mouseover', () => { btn.style.background = 'var(--color-accent)'; btn.style.color = 'var(--color-background)'; });
+      btn.addEventListener('mouseout', () => { btn.style.background = 'rgba(0,0,0,.8)'; btn.style.color = 'white'; });
+      btn.addEventListener('click', () => { particlesEnabled=false; particles=[]; particleMode='off'; btn.remove(); showNotification('❌ Particle System Disabled'); });
+      document.body.appendChild(btn);
+    }
+
+    let keySequence = [];
+    document.addEventListener('keydown', e => {
+      keySequence.push(e.key.toLowerCase());
+      if (keySequence.length > 5) keySequence.shift();
+      const seq = keySequence.join('');
+      if (!particlesEnabled && seq.endsWith('party')) {
+        particlesEnabled = true; createDisableButton(); createConfetti();
+        showNotification('🎉 Party Mode Activated!', 'Click the ✕ button to disable');
+        keySequence = [];
+      } else if (particlesEnabled) {
+        if (seq.endsWith('fun')) { createConfetti(); }
+        else if (seq.endsWith('trail')) { particleMode = particleMode==='trail'?'off':'trail'; showNotification(particleMode==='trail'?'✨ Mouse Trail On':'✨ Mouse Trail Off'); }
+        else if (seq.endsWith('clear')) { particles=[]; particleMode='off'; showNotification('🧹 Particles Cleared'); }
+      }
+    });
+
+    let nameClicks = 0;
+    const nameEl = document.querySelector('h1');
+    if (nameEl) {
+      nameEl.style.cursor = 'pointer';
+      nameEl.addEventListener('click', e => {
+        if (!particlesEnabled) return;
+        nameClicks++;
+        if (nameClicks >= 3) { createFirework(e.clientX, e.clientY); }
+        if (nameClicks >= 5) { createConfetti(); nameClicks = 0; }
+      });
+    }
+
+    document.querySelectorAll('a').forEach(link => {
+      link.addEventListener('click', e => {
+        if (!particlesEnabled) return;
+        createBurst(e.clientX, e.clientY, 20, {
+          color: getComputedStyle(document.documentElement).getPropertyValue('--color-accent'),
+          decay: 0.03, radius: 2
+        });
+      });
+    });
+  })();
+</script>
