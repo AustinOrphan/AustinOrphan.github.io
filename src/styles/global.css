@@ -497,6 +497,10 @@ h1, #cbar, #linkBar {
     animation-delay: 0.6s;
 }
 
+#linkBar a:nth-child(6) .icon {
+    animation-delay: 0.75s;
+}
+
 .ph-meteor {
     rotate: 180deg;
 }
@@ -1973,7 +1977,7 @@ h1, #cbar, #linkBar {
 
     #linkBar {
         display: grid;
-        grid-template-columns: repeat(5, 1fr);
+        grid-template-columns: repeat(6, 1fr);
         margin: 0;
         width: fit-content;
         position: relative;
@@ -2462,3 +2466,25 @@ h1, #cbar, #linkBar {
   text-decoration: none;
 }
 .rss-link:hover { text-decoration: underline; }
+
+/* Blog site nav (persistent top bar on blog pages) */
+.blog-site-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.85rem 2rem;
+  border-bottom: 1px solid rgba(40, 146, 215, 0.2);
+  position: sticky;
+  top: 0;
+  background: var(--color-background);
+  z-index: 100;
+  font-size: 0.82rem;
+}
+.blog-site-nav a {
+  color: var(--color-accent);
+  text-decoration: none;
+  font-family: 'Anta', sans-serif;
+  letter-spacing: 0.04em;
+}
+.blog-site-nav a:hover { opacity: 0.75; }
+.blog-site-nav .nav-sep { color: rgba(238, 229, 233, 0.25); }
