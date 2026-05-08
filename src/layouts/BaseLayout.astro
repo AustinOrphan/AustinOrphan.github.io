@@ -1,0 +1,101 @@
+---
+import '../styles/global.css';
+
+interface Props {
+  title?: string;
+  description?: string;
+}
+
+const {
+  title = 'Austin Orphan',
+  description = 'Austin Orphan - Creative, Competitive, and Curious developer and designer.',
+} = Astro.props;
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{title}</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Anta&family=Comfortaa:wght@700&family=Source+Sans+Pro:wght@900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&family=Pixelify+Sans:wght@400;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/@phosphor-icons/web@2.1.1" defer></script>
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#6ee5e3">
+  <meta name="msapplication-TileColor" content="#00aba9">
+  <meta name="theme-color" content="#000000">
+
+  <meta name="description" content={description}>
+  <meta name="author" content="Austin Orphan">
+  <meta name="robots" content="index,follow">
+
+  <meta property="og:url" content="https://austinorphan.com/">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content={title}>
+  <meta property="og:description" content={description}>
+  <meta property="og:image" content="https://austinorphan.com/apple-touch-icon.png">
+  <meta property="og:site_name" content="Austin Orphan Portfolio">
+
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content={title}>
+  <meta name="twitter:description" content={description}>
+  <meta name="twitter:image" content="https://austinorphan.com/apple-touch-icon.png">
+
+  <link rel="canonical" href="https://austinorphan.com/">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Person",
+    "name": "Austin Orphan",
+    "url": "https://austinorphan.com",
+    "sameAs": [
+      "https://github.com/austinorphan",
+      "https://www.linkedin.com/in/austinorphan/"
+    ],
+    "jobTitle": "Developer & Designer",
+    "description": "Creative, Competitive, and Curious developer and designer.",
+    "email": "AustinGOrphan@gmail.com",
+    "knowsAbout": ["Web Development", "JavaScript", "Python", "UI/UX Design", "React", "Node.js"],
+    "mainEntityOfPage": {
+      "@type": "WebSite",
+      "@id": "https://austinorphan.com"
+    }
+  }
+  </script>
+
+  <script>
+    const GA_ID = 'YOUR_GA_ID';
+  </script>
+  <script async src="https://www.googletagmanager.com/gtag/js?id=YOUR_GA_ID"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'YOUR_GA_ID', {
+      page_title: document.title,
+      page_location: window.location.href
+    });
+  </script>
+
+  <slot name="head" />
+</head>
+<body>
+  <slot />
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(() => {});
+      });
+    }
+  </script>
+</body>
+</html>
