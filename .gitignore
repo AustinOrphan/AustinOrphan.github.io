@@ -39,3 +39,4 @@ Temporary Items
 .worktrees/
 node_modules/
 .astro/
+dist/
