@@ -21,7 +21,7 @@ const posts = allPosts.sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.
     <p class="blog-page-subtitle">thoughts, projects, and technical notes</p>
 
     {posts.map(post => (
-      <a href={`/blog/${post.id}/`} class="post-card">
+      <a href={`/blog/${post.id.replace(/\.mdx?$/, '')}/`} class="post-card">
         <h2 class="post-card-title">{post.data.title}</h2>
         <div class="post-card-meta">
           <time datetime={post.data.pubDate.toISOString()}>
