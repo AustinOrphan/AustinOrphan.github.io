@@ -13,15 +13,19 @@ self.addEventListener('install', function(event) {
       return cache.addAll(urlsToCache);
     })
   );
+  self.skipWaiting();
 });
 
 self.addEventListener('activate', function(event) {
   event.waitUntil(
-    caches.keys().then(function(keys) {
-      return Promise.all(
-        keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))
-      );
-    })
+    Promise.all([
+      caches.keys().then(function(keys) {
+        return Promise.all(
+          keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))
+        );
+      }),
+      self.clients.claim(),
+    ])
   );
 });
 
