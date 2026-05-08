@@ -37,3 +37,5 @@ Temporary Items
 * 4.*
 .superpowers/
 .worktrees/
+node_modules/
+.astro/
