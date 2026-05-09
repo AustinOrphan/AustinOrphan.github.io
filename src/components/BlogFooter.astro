@@ -1,0 +1,26 @@
+---
+interface Props {
+  showBackLink?: boolean;
+}
+const { showBackLink = false } = Astro.props;
+const year = new Date().getFullYear();
+---
+<footer class="blog-footer">
+  <div class="blog-footer-inner">
+    {showBackLink && (
+      <a href="/blog/" class="blog-footer-back">← All posts</a>
+    )}
+    <div class="blog-footer-social">
+      <a href="https://github.com/austinorphan" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
+        <i class="ph-duotone ph-github-logo"></i>
+      </a>
+      <a href="https://www.linkedin.com/in/austinorphan/" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn">
+        <i class="ph-duotone ph-linkedin-logo"></i>
+      </a>
+      <a href="mailto:AustinGOrphan@gmail.com" aria-label="Email">
+        <i class="ph-duotone ph-envelope-simple"></i>
+      </a>
+    </div>
+    <p class="blog-footer-copy">© {year} Austin Orphan</p>
+  </div>
+</footer>
