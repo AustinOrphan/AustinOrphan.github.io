@@ -2445,7 +2445,7 @@ h1, #cbar, #linkBar {
 .post-card-meta .reading-time { color: var(--color-accent); }
 
 .post-card-description {
-  color: #ccc;
+  color: var(--color-primary);
   font-size: 0.85rem;
   margin-bottom: 0.75rem;
   line-height: 1.6;
@@ -2478,12 +2478,13 @@ h1, #cbar, #linkBar {
   top: 0;
   background: var(--color-background);
   z-index: 100;
-  font-size: 0.82rem;
+  font-size: 1rem;
 }
 .blog-site-nav a {
   color: var(--color-accent);
   text-decoration: none;
   font-family: 'Anta', sans-serif;
+  font-size: 1rem;
   letter-spacing: 0.04em;
 }
 .blog-site-nav a:hover { opacity: 0.75; }
