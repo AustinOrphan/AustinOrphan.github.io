@@ -2266,7 +2266,7 @@ a {
 .blog-post {
   max-width: 720px;
   margin: 0 auto;
-  padding: 4rem 2rem;
+  padding: 7rem 2rem 4rem;
 }
 
 .blog-post-header {
@@ -2366,7 +2366,7 @@ a {
 .blog-page {
   max-width: 720px;
   margin: 0 auto;
-  padding: 4rem 2rem;
+  padding: 7rem 2rem 4rem;
 }
 
 .blog-page-title {
@@ -2416,6 +2416,8 @@ a {
   margin-bottom: 1rem;
   text-decoration: none;
   display: block;
+  box-sizing: border-box;
+  width: 100%;
   transition: border-color 0.2s;
 }
 .post-card:hover { border-color: var(--color-accent); }
@@ -2469,8 +2471,10 @@ body.blog {
   gap: 0.5rem;
   padding: 0.85rem 2rem;
   border-bottom: 1px solid rgba(40, 146, 215, 0.2);
-  position: sticky;
+  position: fixed;
   top: 0;
+  left: 0;
+  right: 0;
   background: var(--color-background);
   z-index: 100;
   font-size: 1.15rem;
@@ -2495,7 +2499,7 @@ body.blog {
   }
   .blog-page,
   .blog-post {
-    padding: 1.5rem 1rem;
+    padding: 5.5rem 1rem 1.5rem;
   }
   .post-card {
     padding: 1rem;
