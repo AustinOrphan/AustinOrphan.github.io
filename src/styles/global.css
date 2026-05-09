@@ -497,14 +497,6 @@ h1, #cbar, #linkBar {
     animation-delay: 0.6s;
 }
 
-#linkBar a:nth-child(6) .icon {
-    animation-delay: 0.75s;
-}
-
-.ph-meteor {
-    rotate: 180deg;
-}
-
 /* Mobile touch interaction */
 .icon:active {
     background-color: var(--color-secondary);
@@ -1977,7 +1969,7 @@ h1, #cbar, #linkBar {
 
     #linkBar {
         display: grid;
-        grid-template-columns: repeat(6, 1fr);
+        grid-template-columns: repeat(5, 1fr);
         margin: 0;
         width: fit-content;
         position: relative;
@@ -2030,10 +2022,6 @@ h1, #cbar, #linkBar {
         box-shadow: .3vw .3vw 0 var(--color-accent);
     }
 
-    .ph-meteor:hover {
-        box-shadow: -.3vw -.3vw 0 var(--color-accent);
-    }
-
     /* Focus Management - WCAG 2.1 AA Compliance */
     .icon:focus {
         outline: 2px solid var(--color-accent);
@@ -2046,10 +2034,6 @@ h1, #cbar, #linkBar {
         background-color: var(--color-secondary);
         color: var(--color-background);
         box-shadow: .3vw .3vw 0 var(--color-accent);
-    }
-
-    .ph-meteor:focus-visible {
-        box-shadow: -.3vw -.3vw 0 var(--color-accent);
     }
 
     /* Remove default focus outline when focus-visible is supported */
