@@ -2316,6 +2316,8 @@ a {
   font-size: 0.85rem;
   text-decoration: none;
   transition: background 0.2s, color 0.2s;
+  display: inline-block;
+  width: auto;
 }
 .tag-badge:hover {
   background: var(--color-secondary);
