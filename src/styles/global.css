@@ -2312,7 +2312,7 @@ h1, #cbar, #linkBar {
 
 .blog-post-meta {
   color: #aaa;
-  font-size: 0.8rem;
+  font-size: 0.95rem;
   margin-bottom: 0.75rem;
 }
 .blog-post-meta .reading-time { color: var(--color-accent); }
@@ -2327,9 +2327,9 @@ h1, #cbar, #linkBar {
 .tag-badge {
   border: 1px solid var(--color-secondary);
   color: var(--color-secondary);
-  padding: 0.1rem 0.5rem;
+  padding: 0.15rem 0.55rem;
   border-radius: 3px;
-  font-size: 0.72rem;
+  font-size: 0.85rem;
   text-decoration: none;
   transition: background 0.2s, color 0.2s;
 }
@@ -2343,6 +2343,12 @@ h1, #cbar, #linkBar {
   font-family: 'Comfortaa', sans-serif;
   font-size: 1rem;
   line-height: 1.8;
+}
+.blog-post-body p {
+  color: var(--color-primary);
+  font-family: 'Comfortaa', sans-serif;
+  font-size: 1rem;
+  margin: 0 0 1rem;
 }
 .blog-post-body h2,
 .blog-post-body h3 {
@@ -2391,7 +2397,7 @@ h1, #cbar, #linkBar {
 
 .blog-page-subtitle {
   color: var(--color-accent);
-  font-size: 0.82rem;
+  font-size: 1rem;
   margin-bottom: 2rem;
 }
 
@@ -2439,7 +2445,7 @@ h1, #cbar, #linkBar {
 
 .post-card-meta {
   color: #aaa;
-  font-size: 0.75rem;
+  font-size: 0.9rem;
   margin-bottom: 0.5rem;
 }
 .post-card-meta .reading-time { color: var(--color-accent); }
@@ -2478,13 +2484,13 @@ h1, #cbar, #linkBar {
   top: 0;
   background: var(--color-background);
   z-index: 100;
-  font-size: 1rem;
+  font-size: 1.15rem;
 }
 .blog-site-nav a {
   color: var(--color-accent);
   text-decoration: none;
   font-family: 'Anta', sans-serif;
-  font-size: 1rem;
+  font-size: 1.15rem;
   letter-spacing: 0.04em;
 }
 .blog-site-nav a:hover { opacity: 0.75; }
