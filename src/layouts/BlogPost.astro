@@ -1,5 +1,6 @@
 ---
 import BaseLayout from './BaseLayout.astro';
+import BlogFooter from '../components/BlogFooter.astro';
 import { getReadingTime } from '../utils/reading-time';
 
 interface Props {
@@ -49,4 +50,5 @@ const formattedDate = pubDate.toLocaleDateString('en-US', { year: 'numeric', mon
       <slot />
     </div>
   </article>
+  <BlogFooter showBackLink />
 </BaseLayout>
