@@ -2461,9 +2461,17 @@ a {
 }
 .rss-link:hover { text-decoration: underline; }
 
-/* Blog pages have no fixed footer — reset the body padding added for the footer reveal */
+/* Blog pages: reset portfolio footer padding, use flex column to push footer to bottom */
 body.blog {
   padding-bottom: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.blog-page,
+.blog-post {
+  flex: 1;
 }
 
 /* Blog site nav (persistent top bar on blog pages) */
@@ -2509,15 +2517,39 @@ body.blog {
   gap: 1rem;
 }
 
-.blog-footer-back {
-  color: var(--color-accent);
-  font-size: 0.9rem;
-  display: inline-block;
+.blog-footer-nav {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  gap: 1rem;
+}
+
+.blog-footer-prev,
+.blog-footer-next {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
   width: auto;
-  align-self: flex-start;
+  max-width: 45%;
+  text-decoration: none;
   transition: opacity 0.2s;
 }
-.blog-footer-back:hover { opacity: 0.75; }
+.blog-footer-prev { align-items: flex-start; }
+.blog-footer-next { align-items: flex-end; }
+.blog-footer-prev:hover,
+.blog-footer-next:hover { opacity: 0.75; }
+
+.blog-footer-nav-label {
+  font-family: 'Comfortaa', cursive;
+  font-size: 0.75rem;
+  color: rgba(238, 229, 233, 0.45);
+}
+
+.blog-footer-nav-title {
+  font-family: 'Anta', sans-serif;
+  font-size: 0.9rem;
+  color: var(--color-accent);
+}
 
 .blog-footer-social {
   display: flex;

@@ -3,15 +3,22 @@ import BaseLayout from './BaseLayout.astro';
 import BlogFooter from '../components/BlogFooter.astro';
 import { getReadingTime } from '../utils/reading-time';
 
+interface PostLink {
+  title: string;
+  id: string;
+}
+
 interface Props {
   title: string;
   description: string;
   pubDate: Date;
   tags: string[];
   rawContent: string;
+  prevPost?: PostLink;
+  nextPost?: PostLink;
 }
 
-const { title, description, pubDate, tags, rawContent } = Astro.props;
+const { title, description, pubDate, tags, rawContent, prevPost, nextPost } = Astro.props;
 const readingTime = getReadingTime(rawContent);
 const formattedDate = pubDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 ---
@@ -50,5 +57,5 @@ const formattedDate = pubDate.toLocaleDateString('en-US', { year: 'numeric', mon
       <slot />
     </div>
   </article>
-  <BlogFooter showBackLink />
+  <BlogFooter prevPost={prevPost} nextPost={nextPost} />
 </BaseLayout>
