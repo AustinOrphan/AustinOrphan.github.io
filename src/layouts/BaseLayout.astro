@@ -5,12 +5,14 @@ interface Props {
   title?: string;
   description?: string;
   canonicalURL?: string;
+  bodyClass?: string;
 }
 
 const {
   title = 'Austin Orphan',
   description = 'Austin Orphan - Creative, Competitive, and Curious developer and designer.',
   canonicalURL: canonicalURLProp,
+  bodyClass,
 } = Astro.props;
 
 const canonicalURL = canonicalURLProp ?? new URL(Astro.url.pathname, Astro.site).toString();
@@ -89,7 +91,7 @@ const canonicalURL = canonicalURLProp ?? new URL(Astro.url.pathname, Astro.site)
 
   <slot name="head" />
 </head>
-<body>
+<body class={bodyClass}>
   <slot />
 
   <script>
