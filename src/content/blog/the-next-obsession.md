@@ -29,7 +29,7 @@ I am not consistent.
 
 Really, frustration with myself might be the most consistent thing about me. Or this self-sabotaging cycle I’m centered within. Trapped in the eye of a self-inflicted hurricane.
 
-## Enter Running
+Enter running
 
 Or re-enter running.
 
@@ -77,9 +77,7 @@ Part of it is probably the scenery and the adventure. Part of it is the absurdit
 
 But I think a deeper part of me wants proof that I can keep showing up for something long enough to become someone different through it.
 
-> Not fixed.  
-> Not put together.  
-> Just forged a little.
+Not fixed. Not put together. Just forged a little.
 
 Choosing to navigate with purpose instead of aimlessly drifting with the current, tossed around by life’s waves, flooded by distractions from influences lurking beneath the surface, sinking deeper into ideas that aren’t even my own, drowning in meaningless noise while refusing to bare responsibility and take hold of the wheel.
 
