@@ -1,14 +1,34 @@
 ---
-interface Props {
-  showBackLink?: boolean;
+interface PostLink {
+  title: string;
+  id: string;
 }
-const { showBackLink = false } = Astro.props;
+
+interface Props {
+  prevPost?: PostLink;
+  nextPost?: PostLink;
+}
+
+const { prevPost, nextPost } = Astro.props;
 const year = new Date().getFullYear();
 ---
 <footer class="blog-footer">
   <div class="blog-footer-inner">
-    {showBackLink && (
-      <a href="/blog/" class="blog-footer-back">← All posts</a>
+    {(prevPost || nextPost) && (
+      <nav class="blog-footer-nav">
+        {prevPost ? (
+          <a href={`/blog/${prevPost.id}/`} class="blog-footer-prev">
+            <span class="blog-footer-nav-label">← Previous</span>
+            <span class="blog-footer-nav-title">{prevPost.title}</span>
+          </a>
+        ) : <span />}
+        {nextPost ? (
+          <a href={`/blog/${nextPost.id}/`} class="blog-footer-next">
+            <span class="blog-footer-nav-label">Next →</span>
+            <span class="blog-footer-nav-title">{nextPost.title}</span>
+          </a>
+        ) : <span />}
+      </nav>
     )}
     <div class="blog-footer-social">
       <a href="https://github.com/austinorphan" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
