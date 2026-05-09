@@ -2579,6 +2579,7 @@ body.blog {
   .blog-page-title,
   .blog-post-title {
     -webkit-text-stroke-width: 1px;
+    text-shadow: 1px 1px 0 var(--color-accent);
   }
 }
 
