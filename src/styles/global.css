@@ -415,8 +415,8 @@ a {
     box-sizing: border-box;
 }
 
-/* Initial hidden state for hero elements */
-h1, #cbar, #linkBar {
+/* Initial hidden state for hero elements only */
+.hero-section h1, #cbar, #linkBar {
     opacity: 0;
     transform: translateY(50px) scale(0.95);
 }
@@ -2187,7 +2187,7 @@ h1, #cbar, #linkBar {
         padding: 10px 0 135px 0;
     }
 
-    body {
+    body:not(.blog) {
         padding-bottom: 280px; /* Ensure content doesn't overlap footer */
     }
 }
@@ -2457,6 +2457,11 @@ h1, #cbar, #linkBar {
 }
 .rss-link:hover { text-decoration: underline; }
 
+/* Blog pages have no fixed footer — reset the body padding added for the footer reveal */
+body.blog {
+  padding-bottom: 0;
+}
+
 /* Blog site nav (persistent top bar on blog pages) */
 .blog-site-nav {
   display: flex;
@@ -2479,3 +2484,20 @@ h1, #cbar, #linkBar {
 }
 .blog-site-nav a:hover { opacity: 0.75; }
 .blog-site-nav .nav-sep { color: rgba(238, 229, 233, 0.25); }
+
+@media (max-width: 600px) {
+  .blog-site-nav {
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+  }
+  .blog-site-nav a {
+    font-size: 1rem;
+  }
+  .blog-page,
+  .blog-post {
+    padding: 1.5rem 1rem;
+  }
+  .post-card {
+    padding: 1rem;
+  }
+}

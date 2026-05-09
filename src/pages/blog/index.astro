@@ -9,7 +9,7 @@ const allPosts = await getCollection('blog', ({ data }) => {
 
 const posts = allPosts.sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
 ---
-<BaseLayout title="Blog — Austin Orphan" description="Thoughts, projects, and technical notes from Austin Orphan.">
+<BaseLayout title="Blog — Austin Orphan" description="Thoughts, projects, and technical notes from Austin Orphan." bodyClass="blog">
   <header class="blog-site-nav">
     <a href="/">Austin Orphan</a>
     <span class="nav-sep">/</span>

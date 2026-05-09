@@ -14,7 +14,7 @@ const { title, description, pubDate, tags, rawContent } = Astro.props;
 const readingTime = getReadingTime(rawContent);
 const formattedDate = pubDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 ---
-<BaseLayout title={`${title} — Austin Orphan`} description={description}>
+<BaseLayout title={`${title} — Austin Orphan`} description={description} bodyClass="blog">
   <Fragment slot="head">
     <meta property="og:type" content="article" />
     <meta property="og:title" content={title} />
