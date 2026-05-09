@@ -4,68 +4,62 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository Overview
 
-This is a personal portfolio website for Austin Orphan, hosted on GitHub Pages with a custom domain (austinorphan.com). It's a minimalist, single-page static site showcasing contact information and social links.
+Personal portfolio website for Austin Orphan, hosted on GitHub Pages at austinorphan.com. Multi-section site with a dynamic component loading system.
 
 ## Architecture
 
-**Static Site Structure:**
-- `index.html` - Main entry point with semantic HTML5 structure
-- `styles/main.css` - Primary stylesheet with responsive design
-- `styles/second.css` - Alternative stylesheet (contains navigation/footer components not currently used)
-- `CNAME` - Custom domain configuration for GitHub Pages
-- Favicon package and resume PDF in root directory
+**Entry point:** `index.html` defines the page shell with a Hero section and empty `<div>` containers (`#about-container`, `#projects-container`, `#contact-container`, `#footer-container`). On load, `js/component-loader.js` fetches and injects the four HTML components from `components/` into those containers.
 
-**Design System:**
-- Mobile-first responsive design using CSS Grid and Flexbox
-- Viewport-based typography (vw units) for fluid scaling
-- Three-color palette: #1D2B35 (background), #EEE5E9 (text), #D16666 (coral), #2892D7 (blue)
-- External dependencies: Google Fonts (Anta, Comfortaa, Source Sans Pro) and Phosphor Icons
+**Component system:** `js/component-loader.js` uses `fetch()` to load `components/{about,projects,contact,footer}.html`. This fails when opened via `file://` protocol due to CORS — always use an HTTP server for local development. The loader dispatches `componentLoaded` and `allComponentsLoaded` custom events that other scripts can listen to.
+
+**CSS:** `styles/main.css` is the sole active stylesheet. It is organized by a numbered table of contents (font imports → variables → reset → animations → layout → sections → special modes → media queries). Backup files (`main_backup.css`, `main_backup_v2.css`, `main_original.css`) exist for reference only — do not edit them.
+
+**Service worker:** `sw.js` caches core assets for offline support. Cache is versioned as `austin-orphan-portfolio-v1`; bump the version string when adding new cacheable assets.
+
+**Git submodule:** `ProjectileMotionSimulator/` is a submodule pointing to `https://github.com/AustinOrphan/ProjectileMotionSimulator.git`. Clone with `--recurse-submodules` to populate it.
 
 ## Development Commands
 
-**Local Development:**
 ```bash
-# Serve locally for testing
-python -m http.server 8000
-# or
+# Local dev (required — file:// breaks component loading)
 python3 -m http.server 8000
+# visit http://localhost:8000
 
-# Then visit http://localhost:8000
+# Clone with submodule
+git clone --recurse-submodules <repo-url>
+# or after a plain clone:
+git submodule update --init
 ```
 
-**Deployment:**
-```bash
-# Deploy to GitHub Pages (automatic)
-git add .
-git commit -m "Update site"
-git push origin master
-```
+## Design System
 
-## Key Implementation Details
+**Color variables** (defined in `:root` in `main.css`):
+- `--color-background`: `#1D2B35`
+- `--color-primary`: `#EEE5E9`
+- `--color-accent`: `#2892D7`
+- `--color-secondary`: `#D16666`
 
-**CSS Architecture:**
-- `main.css` contains the active design system with mobile-first approach
-- `second.css` imports main.css and extends it with navigation/footer components (legacy/future use)
-- Media query breakpoint at 600px for desktop styles
-- Uses webkit-text-stroke for text outline effects on desktop
+**Fonts:** Anta, Comfortaa, Source Sans Pro (main UI); Press Start 2P, VT323, Pixelify Sans (8-bit mode only, loaded in `index.html`).
 
-**HTML Structure:**
-- Semantic wrapper classes: `.page-wrapper` → `.content-wrapper`
-- Social links in `#linkBar` using CSS Grid (5 columns)
-- Phosphor Icons loaded from CDN with `ph-duotone` classes
-- Complete favicon implementation for all platforms
+**Responsive breakpoints** (mobile-first):
+- Default: mobile (<600px) — absolute-positioned link bar, large touch targets
+- 600px+: tablet
+- 768px+: desktop — relative positioning, hover effects, `webkit-text-stroke` outlines
+- 1024px+: large desktop
 
-**Responsive Behavior:**
-- Mobile: Absolute positioning for link bar, larger touch targets
-- Desktop: Relative positioning, hover effects with transitions, smaller compact layout
+**8-bit mode:** A hidden easter egg toggled by a CSS class. Styles are in the "11. Special Modes" section of `main.css`.
 
-## Common Tasks
+**Icons:** Phosphor Icons (`ph-duotone` class prefix) loaded from CDN via `unpkg.com/@phosphor-icons/web@2.1.1`.
 
-**Content Updates:**
-- Update resume: Replace `AustinOrphanResume.pdf`
-- Add social links: Update `index.html` and corresponding CSS in `styles/main.css`
-- Design changes: Modify color variables and layout in `styles/main.css`
+## Pending Configuration (TODO.md)
 
-**Domain Configuration:**
-- Custom domain managed through `CNAME` file
-- GitHub Pages automatically serves from master branch
+Two placeholders remain in `index.html` that need real values before the site is fully functional:
+- **Formspree:** Replace `YOUR_FORM_ID` (contact form `action` URL in `components/contact.html`)
+- **Google Analytics:** Replace `YOUR_GA_ID` in the `<head>` GA4 snippet
+
+## Content Updates
+
+- **Resume:** Replace `AustinOrphanResume.pdf` in root; also referenced in `components/about.html` and `components/contact.html`
+- **Social links / hero icons:** Edit `#linkBar` in `index.html` and corresponding CSS in `main.css`
+- **About/Projects/Contact content:** Edit the respective file in `components/`
+- **Cached assets:** After adding new cacheable assets, update `urlsToCache` in `sw.js` and bump `CACHE_NAME`
