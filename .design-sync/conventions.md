@@ -29,7 +29,7 @@ Dark, warm, playful-technical. Solid dark-teal background, cream text, blue and 
 - `.projects-grid` + `.project-card` — the card idiom: frosted translucent surface, 4px accent left border, 12px radius, lift-and-glow on hover. `.project-card.placeholder` = dashed red variant. Card `h3` is Comfortaa 24px.
 - `.icon-button` — round floating icon button (accent tint, fills red on hover).
 - `.tech-tag` — tiny uppercase outlined label, accent color, square corners.
-- `.tag-badge` — outlined pill, secondary red, fills solid on hover.
+- `.tag-badge` — outlined rounded tag (3px corners), secondary red, fills solid on hover.
 - `.back-link` — quiet small accent link for navigation.
 - `.scroll-reveal` (+ `.revealed`) — fade-up entrance; keyframes `fadeInUp`, `buttonFloat`, `gentleGlow`, `floating` are available for subtle motion.
 - `.texture-overlay` — apply to a `position: relative/fixed` container to add the site's animated pixel-texture layer. Use on full-page shells only.
