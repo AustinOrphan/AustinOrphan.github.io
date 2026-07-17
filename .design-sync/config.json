@@ -1,0 +1,7 @@
+{
+  "projectId": "7e294bc3-c0cd-492d-89e2-93c7904eca72",
+  "projectName": "Austin Orphan Portfolio",
+  "shape": "styles-only",
+  "readmeHeader": ".design-sync/conventions.md",
+  "notes": "Repo is an Astro website, not a component library. User chose a styles-only sync: tokens, fonts, and base CSS — no components. See .design-sync/NOTES.md."
+}
