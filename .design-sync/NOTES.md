@@ -1,0 +1,7 @@
+# Design-sync notes — austinorphan.com portfolio
+
+- **2026-07-04 (first sync):** This repo is an Astro personal website, not a design system. It has no React component library, no `dist/` of consumable components, no Storybook, and no `*.stories.*` files. The user explicitly chose a **styles-only sync**: color tokens, fonts, and base styling from `src/styles/global.css` — no `components/` tree, no `_ds_bundle.js`, no `_ds_sync.json` (honest omission: nothing component-shaped to anchor; a future re-sync re-verifies everything, which is trivial at this scale).
+- Bundle is hand-authored (off-script layout) into `ds-bundle/`, since the converter's package/storybook shapes don't apply. Source of truth for tokens and fonts: `src/styles/global.css` (§1 font imports, §2 `:root` variables).
+- Fonts are loaded from Google Fonts CDN in the site (`@import url(fonts.googleapis.com...)` — Anta 400, Comfortaa 700, Source Sans Pro 900). For the design project they are self-hosted as woff2 in `fonts/` because rendered designs may not be able to reach external CDNs.
+- The site's signature look: dark teal `#1D2B35` background, cream `#EEE5E9` text, blue `#2892D7` accent, muted red `#D16666` secondary; Anta for hero/display, Comfortaa for headings/nav, Source Sans Pro 900 for body; subtle animated pixel-texture overlay; `-webkit-text-stroke` outline treatment on desktop headings.
+- If components ever get extracted into a React library, redo this as a real package/storybook sync into the same project (it is pinned in config.json).
