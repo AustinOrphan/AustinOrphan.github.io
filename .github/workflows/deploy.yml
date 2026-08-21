@@ -29,6 +29,16 @@ jobs:
 
       - run: npm ci
 
+      # `npm run build` runs scripts/sync-blog.mjs first, which reads
+      # markdown from $VAULT_PATH (default: ./test-vault) and writes
+      # transformed posts into src/content/blog/ before Astro builds.
+      # When the real vault is set up:
+      #   1. Add a `Check out vault` step using actions/checkout@v4 with
+      #      `repository: austinorphan/<vault-repo>`, `path: .vault`,
+      #      and `ssh-key: ${{ secrets.VAULT_DEPLOY_KEY }}`
+      #   2. Set `VAULT_PATH: ${{ github.workspace }}/.vault` on this step
+      #   3. Add `schedule: - cron: '0 13 * * *'` to the workflow triggers
+      #      so future-dated posts get released automatically
       - run: npm run build
 
       - uses: actions/upload-pages-artifact@v3
