@@ -497,6 +497,88 @@ a {
     animation-delay: 0.6s;
 }
 
+#linkBar .projects-menu:nth-child(6) .icon {
+    animation-delay: 0.75s;
+}
+
+/* 7.2.1 Projects Dropdown */
+.projects-menu {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.projects-menu .projects-menu-trigger {
+    display: flex;
+}
+
+.projects-menu-list {
+    position: absolute;
+    bottom: calc(100% + 12px);
+    left: 50%;
+    transform: translateX(-50%) translateY(8px);
+    margin: 0;
+    padding: 8px;
+    list-style: none;
+    min-width: 220px;
+    background: rgba(29, 43, 53, 0.97);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(238, 229, 233, 0.2);
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    z-index: 1100;
+}
+
+.projects-menu.open .projects-menu-list {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateX(-50%) translateY(0);
+}
+
+.projects-menu-list a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    color: var(--color-primary);
+    text-decoration: none;
+    font-family: 'Comfortaa', sans-serif;
+    font-size: 15px;
+    line-height: 1.2;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.projects-menu-list a i {
+    font-size: 22px;
+    color: var(--color-accent);
+    transition: color 0.2s ease;
+}
+
+.projects-menu-list a:active {
+    background-color: var(--color-secondary);
+    color: var(--color-background);
+}
+
+.projects-menu-list a:active i {
+    color: var(--color-background);
+}
+
+.projects-menu-list a:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: -2px;
+}
+
+.projects-menu-divider {
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid rgba(238, 229, 233, 0.15);
+}
+
 /* Mobile touch interaction */
 .icon:active {
     background-color: var(--color-secondary);
@@ -1969,7 +2051,7 @@ a {
 
     #linkBar {
         display: grid;
-        grid-template-columns: repeat(5, 1fr);
+        grid-template-columns: repeat(6, 1fr);
         margin: 0;
         width: fit-content;
         position: relative;
