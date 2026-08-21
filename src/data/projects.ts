@@ -25,8 +25,8 @@ export const projects: Project[] = [
   {
     title: 'Tanks!',
     description:
-      'Browser-based artillery game. Take turns lobbing shells across destructible terrain, adjusting angle and power to land the shot.',
-    tech: ['JavaScript', 'HTML5 Canvas', 'Game Development', 'Physics'],
+      'A deterministic top-down arena tank game with ricochets, mines, and tactical AI.',
+    tech: ['TypeScript', 'three.js', 'Game Development', 'Deterministic Simulation'],
     demo: '/tanks/',
     icon: 'crosshair',
     repo: 'https://github.com/austinorphan/tanks',
