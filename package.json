@@ -3,17 +3,22 @@
   "type": "module",
   "version": "1.0.0",
   "scripts": {
-    "dev": "astro dev",
-    "build": "astro build",
+    "sync": "node scripts/sync-blog.mjs",
+    "export": "node scripts/export-vault.mjs",
+    "dev": "npm run sync && astro dev",
+    "build": "npm run sync && astro build",
     "preview": "astro preview",
-    "check": "astro check"
+    "check": "npm run sync && astro check"
   },
   "dependencies": {
     "@astrojs/rss": "^4.0.18",
-    "astro": "^6.3.1"
+    "astro": "^6.3.1",
+    "rehype-callouts": "^2.1.2",
+    "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.2",
+    "gray-matter": "^4.0.3",
     "typescript": "^5.4.5"
   }
 }
