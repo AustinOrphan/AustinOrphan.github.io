@@ -164,9 +164,6 @@ live in the "11. Special Modes" section of `global.css`.
   it into `dist/`. The link 404s in production. Either populate the submodule
   and arrange for it to be copied into the build output, or point the link at
   the GitHub repo.
-- **Empty stray directories:** `models/`, `vaults/`, and `workflows/` in the
-  repo root are empty leftovers from the removed swamp integration and can be
-  deleted.
 - **Type errors:** `npm run check` reports ~155 pre-existing DOM typing errors,
   mostly `Property 'style' does not exist on type 'Element'` in
   `src/pages/index.astro`. They do not affect the build.
