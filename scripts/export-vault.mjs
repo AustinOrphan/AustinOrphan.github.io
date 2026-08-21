@@ -24,7 +24,7 @@
 
 import { readFile, writeFile, mkdir, readdir, copyFile, rm, stat } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
-import { join, basename, resolve, relative } from 'node:path';
+import { join, basename, dirname, resolve, relative } from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import matter from 'gray-matter';
@@ -64,6 +64,16 @@ if (!existsSync(join(EXPORT_PATH, '.git'))) {
 const rel = relative(VAULT_PATH, EXPORT_PATH);
 if (rel === '' || (!rel.startsWith('..') && !resolve(rel).startsWith('/'))) {
   fail('EXPORT_PATH must not be inside VAULT_PATH');
+}
+
+// Mirrors slugify() in sync-blog.mjs — keep the two in step.
+function slugify(s) {
+  return s
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-');
 }
 
 async function walk(dir, predicate) {
@@ -136,19 +146,29 @@ if (published.length === 0) {
   );
 }
 
-// Notes are written flat, so two published notes with the same filename in
-// different folders would silently clobber each other.
+// Notes keep their vault-relative folder structure in the export repo.
+// sync-blog.mjs walks recursively and derives each slug from the filename,
+// so nesting is organizational only — it does not affect URLs. What it buys:
+// readable diffs grouped by project, and no clobbering between same-named
+// notes in different folders.
+//
+// Slugs are still global, so a collision is a real conflict regardless of
+// folder. Catch it here with both paths named rather than letting the site
+// build fail later with less context.
 const seen = new Map();
 for (const note of published) {
-  const name = basename(note.path);
-  const prior = seen.get(name);
+  const slug =
+    typeof note.data.slug === 'string' && note.data.slug
+      ? note.data.slug
+      : slugify(basename(note.path, '.md'));
+  const prior = seen.get(slug);
   if (prior) {
     fail(
-      `Filename collision on "${name}":\n    ${prior}\n    ${note.path}\n` +
-        '  Rename one of the notes.'
+      `Slug collision on "${slug}":\n    ${prior}\n    ${note.path}\n` +
+        '  Rename one of the notes, or set a unique `slug` in its frontmatter.'
     );
   }
-  seen.set(name, note.path);
+  seen.set(slug, note.path);
 }
 
 // Attachments referenced by published notes only.
@@ -167,7 +187,9 @@ for (const entry of await readdir(EXPORT_PATH, { withFileTypes: true })) {
 }
 
 for (const note of published) {
-  await writeFile(join(EXPORT_PATH, basename(note.path)), note.raw);
+  const dest = join(EXPORT_PATH, relative(VAULT_PATH, note.path));
+  await mkdir(dirname(dest), { recursive: true });
+  await writeFile(dest, note.raw);
 }
 
 let copied = 0;
