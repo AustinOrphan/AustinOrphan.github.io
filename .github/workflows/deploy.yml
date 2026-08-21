@@ -3,6 +3,9 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [master]
+  schedule:
+    # Daily, so future-dated posts publish themselves once pubDate arrives.
+    - cron: '0 13 * * *'
   workflow_dispatch:
 
 permissions:
@@ -22,6 +25,16 @@ jobs:
         with:
           submodules: recursive
 
+      # Published blog notes, exported from the Obsidian vault by
+      # scripts/export-vault.mjs. Contains only notes marked `publish: true`;
+      # the vault itself is never uploaded. Read-only deploy key.
+      - name: Check out vault export
+        uses: actions/checkout@v4
+        with:
+          repository: AustinOrphan/blog-vault-export
+          path: .vault
+          ssh-key: ${{ secrets.VAULT_DEPLOY_KEY }}
+
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
@@ -29,7 +42,12 @@ jobs:
 
       - run: npm ci
 
+      # `npm run build` runs scripts/sync-blog.mjs first, which reads markdown
+      # from $VAULT_PATH and writes transformed posts into src/content/blog/
+      # before Astro builds.
       - run: npm run build
+        env:
+          VAULT_PATH: ${{ github.workspace }}/.vault
 
       - uses: actions/upload-pages-artifact@v3
         with:

@@ -40,3 +40,9 @@ Temporary Items
 node_modules/
 .astro/
 dist/
+
+# Sync-blog build artifacts (generated from vault by scripts/sync-blog.mjs)
+src/content/blog/
+public/blog-assets/
+
+ds-bundle/
