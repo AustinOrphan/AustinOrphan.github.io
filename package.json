@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "scripts": {
     "sync": "node scripts/sync-blog.mjs",
+    "export": "node scripts/export-vault.mjs",
     "dev": "npm run sync && astro dev",
     "build": "npm run sync && astro build",
     "preview": "astro preview",
