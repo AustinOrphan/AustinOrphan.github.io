@@ -497,6 +497,148 @@ a {
     animation-delay: 0.6s;
 }
 
+#linkBar .projects-menu:nth-child(6) .icon {
+    animation-delay: 0.75s;
+}
+
+/* 7.2.1 Projects Dropdown */
+.projects-menu {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.projects-menu .projects-menu-trigger {
+    display: flex;
+}
+
+/* Trigger shows an accent tint while its menu is open */
+.projects-menu.open .projects-menu-trigger .icon {
+    color: var(--color-accent);
+    background-color: rgba(40, 146, 215, 0.16);
+}
+
+.projects-menu-list {
+    position: absolute;
+    bottom: calc(100% + 14px);
+    right: -14px;
+    margin: 0;
+    padding: 8px 10px;
+    list-style: none;
+    min-width: 230px;
+    background: rgba(29, 43, 53, 0.97);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(238, 229, 233, 0.2);
+    border-radius: 16px;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.45);
+    transform-origin: bottom right;
+    transform: translateY(10px) scale(0.9);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.22s ease, transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+    z-index: 1100;
+}
+
+.projects-menu.open .projects-menu-list {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0) scale(1);
+}
+
+/* Caret pointing at the trigger icon */
+.projects-menu-list::after {
+    content: '';
+    position: absolute;
+    bottom: -6px;
+    right: 60px;
+    width: 11px;
+    height: 11px;
+    background: rgba(29, 43, 53, 0.97);
+    border-right: 1px solid rgba(238, 229, 233, 0.2);
+    border-bottom: 1px solid rgba(238, 229, 233, 0.2);
+    border-radius: 0 0 3px 0;
+    transform: rotate(45deg);
+}
+
+.projects-menu-list li:not(:last-child) {
+    margin-bottom: 2px;
+}
+
+.projects-menu-list a {
+    /* The global reset sets no box-sizing, so with width:100% + padding
+       each row is 24px wider than its container. border-box keeps the
+       padding inside the list's own padding. */
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+     /* Override the global centered `a` reset — items are left-aligned rows */
+    justify-content: flex-start;
+    width: 100%;
+    height: auto;
+    gap: 10px;
+    padding: 12px 16px;
+    border-radius: 10px;
+    color: var(--color-primary);
+    text-decoration: none;
+    font-family: 'Comfortaa', sans-serif;
+    font-size: 15px;
+    line-height: 1.2;
+    transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+/* Items cascade in when the menu opens */
+@keyframes projectsMenuItemIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.projects-menu.open .projects-menu-list li {
+    animation: projectsMenuItemIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+}
+
+.projects-menu.open .projects-menu-list li:nth-child(1) { animation-delay: 0.04s; }
+.projects-menu.open .projects-menu-list li:nth-child(2) { animation-delay: 0.10s; }
+.projects-menu.open .projects-menu-list li:nth-child(3) { animation-delay: 0.16s; }
+
+.projects-menu-list a i {
+    font-size: 22px;
+    color: var(--color-accent);
+    transition: color 0.2s ease, transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.projects-menu-list a:hover,
+.projects-menu-list a:focus-visible {
+    background-color: rgba(40, 146, 215, 0.18);
+}
+
+.projects-menu-list a:hover i,
+.projects-menu-list a:focus-visible i {
+    color: var(--color-secondary);
+    transform: scale(1.2);
+}
+
+.projects-menu-list a:active {
+    background-color: var(--color-secondary);
+    color: var(--color-background);
+    transform: translateX(3px) scale(0.98);
+}
+
+.projects-menu-list a:active i {
+    color: var(--color-background);
+}
+
+.projects-menu-list a:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: -2px;
+}
+
+.projects-menu-divider {
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid rgba(238, 229, 233, 0.15);
+}
+
 /* Mobile touch interaction */
 .icon:active {
     background-color: var(--color-secondary);
@@ -1969,7 +2111,7 @@ a {
 
     #linkBar {
         display: grid;
-        grid-template-columns: repeat(5, 1fr);
+        grid-template-columns: repeat(6, 1fr);
         margin: 0;
         width: fit-content;
         position: relative;

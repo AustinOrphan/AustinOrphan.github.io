@@ -11,13 +11,14 @@
     "check": "npm run sync && astro check"
   },
   "dependencies": {
-    "@astrojs/rss": "^4.0.18",
-    "astro": "^6.3.1",
+    "@astrojs/markdown-remark": "^7.2.4",
+    "@astrojs/rss": "^4.0.19",
+    "astro": "^7.2.4",
     "rehype-callouts": "^2.1.2",
     "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
-    "@astrojs/check": "^0.9.2",
+    "@astrojs/check": "^0.9.10",
     "gray-matter": "^4.0.3",
     "typescript": "^5.4.5"
   }

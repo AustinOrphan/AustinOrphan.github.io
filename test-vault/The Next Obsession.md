@@ -5,6 +5,7 @@ pubDate: 2026-05-08
 tags:
   - personal
   - discipline
+  - adhd
 aliases:
   - Obsession
   - Cocodona Essay
