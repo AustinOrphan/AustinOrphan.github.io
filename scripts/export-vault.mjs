@@ -7,14 +7,19 @@
 // export repo, so a leak of that repo exposes nothing beyond what is already
 // destined for the website.
 //
-//   VAULT_PATH     source vault (required)
-//   EXPORT_PATH    local clone of the export repo (required)
+//   VAULT_PATH     source vault
+//                  (default: ~/Library/Mobile Documents/iCloud~md~obsidian/
+//                            Documents/00_MainBrain)
+//   EXPORT_PATH    local clone of the export repo
+//                  (default: ~/src/blog-vault-export)
 //   VAULT_INCLUDE  comma-separated vault-relative dirs to scan
 //                  (optional; defaults to INCLUDE_DEFAULTS below)
 //
-//   node scripts/export-vault.mjs           # write files, leave git alone
-//   node scripts/export-vault.mjs --push    # also commit and push
-//   node scripts/export-vault.mjs --all     # scan the whole vault
+// Run from the portfolio repo root:
+//
+//   npm run export              # dry run: write files, leave git alone
+//   npm run export -- --push    # also commit and push
+//   npm run export -- --all     # scan the whole vault
 //
 // Scanning is scoped to a few directories rather than the whole vault: it
 // keeps a stray `publish: true` in a journal or an archived note from
@@ -26,6 +31,7 @@ import { readFile, writeFile, mkdir, readdir, copyFile, rm, stat } from 'node:fs
 import { existsSync } from 'node:fs';
 import { join, basename, dirname, resolve, relative } from 'node:path';
 import { execFile } from 'node:child_process';
+import { homedir } from 'node:os';
 import { promisify } from 'node:util';
 import matter from 'gray-matter';
 
@@ -36,8 +42,16 @@ const INCLUDE_DEFAULTS = [
   '10_Projects',
 ];
 
-const VAULT_PATH = process.env.VAULT_PATH && resolve(process.env.VAULT_PATH);
-const EXPORT_PATH = process.env.EXPORT_PATH && resolve(process.env.EXPORT_PATH);
+// Defaults for this machine. Both are overridable by env var, so a different
+// checkout or a second vault needs no code change.
+const VAULT_DEFAULT = join(
+  homedir(),
+  'Library/Mobile Documents/iCloud~md~obsidian/Documents/00_MainBrain'
+);
+const EXPORT_DEFAULT = join(homedir(), 'src/blog-vault-export');
+
+const VAULT_PATH = resolve(process.env.VAULT_PATH || VAULT_DEFAULT);
+const EXPORT_PATH = resolve(process.env.EXPORT_PATH || EXPORT_DEFAULT);
 const SHOULD_PUSH = process.argv.includes('--push');
 const SCAN_ALL = process.argv.includes('--all');
 
@@ -52,10 +66,15 @@ function fail(msg) {
   process.exit(1);
 }
 
-if (!VAULT_PATH) fail('VAULT_PATH is not set');
-if (!EXPORT_PATH) fail('EXPORT_PATH is not set');
-if (!existsSync(VAULT_PATH)) fail(`Vault not found: ${VAULT_PATH}`);
-if (!existsSync(EXPORT_PATH)) fail(`Export repo not found: ${EXPORT_PATH}`);
+if (!existsSync(VAULT_PATH)) fail(`Vault not found: ${VAULT_PATH}\n  Set VAULT_PATH to override the default.`);
+if (!existsSync(EXPORT_PATH)) {
+  fail(
+    `Export repo not found: ${EXPORT_PATH}\n` +
+      '  Clone it first:\n' +
+      '    git clone git@github.com:AustinOrphan/blog-vault-export.git ~/src/blog-vault-export\n' +
+      '  or set EXPORT_PATH to override the default.'
+  );
+}
 if (!existsSync(join(EXPORT_PATH, '.git'))) {
   fail(`Export path is not a git repo: ${EXPORT_PATH}`);
 }
