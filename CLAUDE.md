@@ -21,15 +21,90 @@ Personal portfolio website for Austin Orphan, hosted on GitHub Pages at austinor
 ## Development Commands
 
 ```bash
-# Local dev (required — file:// breaks component loading)
-python3 -m http.server 8000
-# visit http://localhost:8000
+# Local dev server (runs the vault sync first, then Astro)
+npm run dev
+
+# Type-check and build
+npm run check
+npm run build
+npm run preview
 
 # Clone with submodule
 git clone --recurse-submodules <repo-url>
 # or after a plain clone:
 git submodule update --init
 ```
+
+Note: `npm run check` currently reports pre-existing DOM typing errors in
+`src/pages/index.astro`. They are unrelated to the build, which passes.
+
+## Blog Publishing
+
+Posts are authored in the Obsidian vault, not in this repo. `src/content/blog/`
+and `public/blog-assets/` are generated build output and are gitignored — never
+edit them by hand.
+
+Pipeline: **vault → export repo → sync → Astro build**
+
+The vault is never uploaded anywhere. `scripts/export-vault.mjs` copies only
+notes marked `publish: true` (plus the images they embed) into a small private
+repo, `AustinOrphan/blog-vault-export`, which CI checks out. A leak of that
+repo would expose nothing beyond what is already on the website.
+
+### Publishing a post
+
+1. In Obsidian, give the note frontmatter with `title`, `description`,
+   `pubDate`, and `publish: true`. A future `pubDate` holds it back until that
+   date passes.
+2. From this repo's root:
+   ```bash
+   npm run export -- --push
+   ```
+3. CI publishes on the next push to `master`, or on the daily 13:00 UTC cron —
+   whichever comes first.
+
+Step 2 is the only manual step; nothing on this machine runs on a schedule.
+Omit `--push` for a dry run that writes files but leaves git alone.
+
+Paths default to `~/Library/Mobile Documents/iCloud~md~obsidian/Documents/00_MainBrain`
+and `~/src/blog-vault-export`; override with `VAULT_PATH` / `EXPORT_PATH`.
+
+### Scanned directories
+
+The exporter only looks in a few vault directories, so a stray `publish: true`
+in a journal or archived note can't reach the site. Defaults are in
+`INCLUDE_DEFAULTS` in `scripts/export-vault.mjs`:
+
+- `40_Journal/Blog`
+- `10_Projects`
+
+Override per-run with `VAULT_INCLUDE="40_Journal/Blog,20_Areas"`, or pass
+`--all` to scan everything. When you start publishing from a new directory,
+add it to `INCLUDE_DEFAULTS` rather than relying on `--all`.
+
+Notes keep their vault folder structure in the export repo, but slugs come
+from the filename — `10_Projects/homelab/Foo.md` publishes to `/blog/foo/`.
+Nesting is organizational only.
+
+### Safety behavior
+
+- Aborts if zero published notes are found, so a botched frontmatter edit
+  can't silently empty the site.
+- Aborts on a slug collision between two published notes, naming both paths.
+- Refuses an `EXPORT_PATH` inside the vault, and never touches `.git` when
+  clearing the previous export.
+- Notes with unparseable frontmatter are skipped with a warning, not fatally.
+
+### CI setup
+
+`.github/workflows/deploy.yml` checks out the export repo to `.vault` using a
+read-only deploy key stored in the `VAULT_DEPLOY_KEY` secret, then builds with
+`VAULT_PATH` pointed at it. The private half of that key lives at
+`~/.ssh/id_ed25519_blog_vault` — on this machine and in the repo secret, and
+nowhere else.
+
+Local builds default to the `test-vault/` fixtures; set `VAULT_PATH` to build
+from real content.
 
 ## Design System
 
