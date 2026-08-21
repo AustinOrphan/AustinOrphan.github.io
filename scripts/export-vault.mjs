@@ -7,13 +7,22 @@
 // export repo, so a leak of that repo exposes nothing beyond what is already
 // destined for the website.
 //
-//   VAULT_PATH   source vault (required)
-//   EXPORT_PATH  local clone of the export repo (required)
+//   VAULT_PATH     source vault (required)
+//   EXPORT_PATH    local clone of the export repo (required)
+//   VAULT_INCLUDE  comma-separated vault-relative dirs to scan
+//                  (optional; defaults to INCLUDE_DEFAULTS below)
 //
 //   node scripts/export-vault.mjs           # write files, leave git alone
 //   node scripts/export-vault.mjs --push    # also commit and push
+//   node scripts/export-vault.mjs --all     # scan the whole vault
+//
+// Scanning is scoped to a few directories rather than the whole vault: it
+// keeps a stray `publish: true` in a journal or an archived note from
+// reaching the site, and makes the blast radius of a bad frontmatter edit
+// explicit. Add a directory here (or via VAULT_INCLUDE) when you start
+// publishing from it.
 
-import { readFile, writeFile, mkdir, readdir, copyFile, rm } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, readdir, copyFile, rm, stat } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join, basename, resolve, relative } from 'node:path';
 import { execFile } from 'node:child_process';
@@ -22,9 +31,19 @@ import matter from 'gray-matter';
 
 const run = promisify(execFile);
 
+const INCLUDE_DEFAULTS = [
+  '40_Journal/Blog',
+  '10_Projects',
+];
+
 const VAULT_PATH = process.env.VAULT_PATH && resolve(process.env.VAULT_PATH);
 const EXPORT_PATH = process.env.EXPORT_PATH && resolve(process.env.EXPORT_PATH);
 const SHOULD_PUSH = process.argv.includes('--push');
+const SCAN_ALL = process.argv.includes('--all');
+
+const INCLUDE_DIRS = process.env.VAULT_INCLUDE
+  ? process.env.VAULT_INCLUDE.split(',').map((s) => s.trim()).filter(Boolean)
+  : INCLUDE_DEFAULTS;
 
 const IMAGE_EXT = /\.(png|jpe?g|gif|webp|svg|avif)$/i;
 
@@ -61,7 +80,37 @@ async function walk(dir, predicate) {
 console.log(`◆ Vault:  ${VAULT_PATH}`);
 console.log(`◆ Export: ${EXPORT_PATH}`);
 
-const mdPaths = await walk(VAULT_PATH, (n) => n.endsWith('.md'));
+// Resolve the roots to scan for publishable notes.
+const scanRoots = [];
+if (SCAN_ALL) {
+  console.log('◆ Scope:  entire vault (--all)');
+  scanRoots.push(VAULT_PATH);
+} else {
+  for (const dir of INCLUDE_DIRS) {
+    const abs = resolve(VAULT_PATH, dir);
+    if (!abs.startsWith(VAULT_PATH)) fail(`Include path escapes the vault: ${dir}`);
+    if (!existsSync(abs)) {
+      console.warn(`  ⚠ include path does not exist, skipping: ${dir}`);
+      continue;
+    }
+    if (!(await stat(abs)).isDirectory()) {
+      console.warn(`  ⚠ include path is not a directory, skipping: ${dir}`);
+      continue;
+    }
+    scanRoots.push(abs);
+  }
+  if (scanRoots.length === 0) fail('No valid include paths to scan');
+  console.log(`◆ Scope:  ${INCLUDE_DIRS.join(', ')}`);
+}
+
+const mdPaths = [];
+for (const root of scanRoots) {
+  mdPaths.push(...(await walk(root, (n) => n.endsWith('.md'))));
+}
+
+// Attachments are resolved vault-wide by basename: Obsidian keeps images in a
+// shared attachments folder, which usually sits outside the scanned dirs.
+// Only images actually embedded by a published note are ever copied.
 const imagePaths = await walk(VAULT_PATH, (n) => IMAGE_EXT.test(n));
 const imageByBasename = new Map();
 for (const p of imagePaths) imageByBasename.set(basename(p), p);
@@ -80,7 +129,26 @@ for (const path of mdPaths) {
 }
 
 if (published.length === 0) {
-  fail('No notes marked `publish: true` were found — refusing to empty the export repo');
+  fail(
+    `No notes marked \`publish: true\` in: ${SCAN_ALL ? 'the vault' : INCLUDE_DIRS.join(', ')}\n` +
+      '  Refusing to empty the export repo. Add a directory to VAULT_INCLUDE\n' +
+      '  if you are publishing from somewhere new.'
+  );
+}
+
+// Notes are written flat, so two published notes with the same filename in
+// different folders would silently clobber each other.
+const seen = new Map();
+for (const note of published) {
+  const name = basename(note.path);
+  const prior = seen.get(name);
+  if (prior) {
+    fail(
+      `Filename collision on "${name}":\n    ${prior}\n    ${note.path}\n` +
+        '  Rename one of the notes.'
+    );
+  }
+  seen.set(name, note.path);
 }
 
 // Attachments referenced by published notes only.
