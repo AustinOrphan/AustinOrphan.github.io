@@ -158,12 +158,20 @@ live in the "11. Special Modes" section of `global.css`.
 
 ## Known Issues
 
-- **Dead demo link:** `src/components/Projects.astro:55` links to
-  `/ProjectileMotionSimulator/src/`, but the submodule is not checked out
-  (`git submodule status` shows it uninitialized) and the build does not copy
-  it into `dist/`. The link 404s in production. Either populate the submodule
-  and arrange for it to be copied into the build output, or point the link at
-  the GitHub repo.
 - **Type errors:** `npm run check` reports ~155 pre-existing DOM typing errors,
   mostly `Property 'style' does not exist on type 'Element'` in
   `src/pages/index.astro`. They do not affect the build.
+
+## Sibling Pages Sites
+
+Some projects are served from their own repos' GitHub Pages, published into
+subpaths of austinorphan.com rather than built by this repo:
+
+- `/ProjectileMotionSimulator/` — from `AustinOrphan/ProjectileMotionSimulator`
+  (`master`)
+- `/tanks/` — from `AustinOrphan/tanks` (`main`)
+
+They will not appear in this repo's `dist/`, and the `ProjectileMotionSimulator`
+submodule checkout is unrelated to how that demo is served. Link to them with
+plain absolute paths; note `/tanks` 301-redirects to `/tanks/`, so link the
+trailing-slash form.
