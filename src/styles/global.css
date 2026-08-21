@@ -551,7 +551,7 @@ a {
     content: '';
     position: absolute;
     bottom: -6px;
-    right: -6px;
+    right: 60px;
     width: 11px;
     height: 11px;
     background: rgba(29, 43, 53, 0.97);
