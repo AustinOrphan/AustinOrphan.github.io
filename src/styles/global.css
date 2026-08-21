@@ -523,7 +523,7 @@ a {
     bottom: calc(100% + 14px);
     right: -14px;
     margin: 0;
-    padding: 8px;
+    padding: 8px 10px;
     list-style: none;
     min-width: 230px;
     background: rgba(29, 43, 53, 0.97);
@@ -566,6 +566,10 @@ a {
 }
 
 .projects-menu-list a {
+    /* The global reset sets no box-sizing, so with width:100% + padding
+       each row is 24px wider than its container. border-box keeps the
+       padding inside the list's own padding. */
+    box-sizing: border-box;
     display: flex;
     align-items: center;
     /* Override the global centered `a` reset — items are left-aligned rows */
