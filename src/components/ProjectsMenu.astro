@@ -1,0 +1,74 @@
+---
+import { demoProjects } from '../data/projects';
+---
+<!--
+  Hero link-bar entry for live playable demos. Renders as a sixth icon in
+  #linkBar; clicking opens a small menu of demos rather than navigating.
+  Falls back to a plain link to the Projects section when JS is unavailable.
+-->
+<div class="projects-menu" data-projects-menu>
+    <a
+        href="#projects"
+        class="projects-menu-trigger"
+        aria-label="Live project demos"
+        aria-haspopup="true"
+        aria-expanded="false"
+        aria-controls="projects-menu-list"
+    >
+        <i class="icon ph-duotone ph-game-controller"></i>
+    </a>
+    <ul class="projects-menu-list" id="projects-menu-list" role="menu" hidden>
+        {demoProjects.map((project) => (
+            <li role="none">
+                <a role="menuitem" href={project.demo} target="_blank" rel="noopener noreferrer">
+                    <i class={`ph-duotone ph-${project.icon ?? 'play-circle'}`} aria-hidden="true"></i>
+                    <span>{project.title}</span>
+                </a>
+            </li>
+        ))}
+        <li role="none" class="projects-menu-divider">
+            <a role="menuitem" href="#projects">
+                <i class="ph-duotone ph-folder-open" aria-hidden="true"></i>
+                <span>All projects</span>
+            </a>
+        </li>
+    </ul>
+</div>
+
+<script>
+    const menu = document.querySelector<HTMLElement>('[data-projects-menu]');
+    const trigger = menu?.querySelector<HTMLAnchorElement>('.projects-menu-trigger');
+    const list = menu?.querySelector<HTMLElement>('.projects-menu-list');
+
+    if (menu && trigger && list) {
+        const setOpen = (open: boolean) => {
+            menu.classList.toggle('open', open);
+            trigger.setAttribute('aria-expanded', String(open));
+            list.hidden = !open;
+        };
+
+        trigger.addEventListener('click', (event) => {
+            // Let the anchor behave normally for keyboard/no-JS fallthrough
+            // only when the menu is already open and the user re-clicks.
+            event.preventDefault();
+            setOpen(!menu.classList.contains('open'));
+        });
+
+        document.addEventListener('click', (event) => {
+            if (!menu.contains(event.target as Node)) setOpen(false);
+        });
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && menu.classList.contains('open')) {
+                setOpen(false);
+                trigger.focus();
+            }
+        });
+
+        // Close after choosing a destination so the menu isn't left open
+        // behind an in-page scroll.
+        list.querySelectorAll('a').forEach((link) => {
+            link.addEventListener('click', () => setOpen(false));
+        });
+    }
+</script>
