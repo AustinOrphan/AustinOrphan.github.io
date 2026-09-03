@@ -1,4 +1,4 @@
-const CACHE_NAME = 'austin-orphan-portfolio-v2';
+const CACHE_NAME = 'austin-orphan-portfolio-v3';
 const urlsToCache = [
   '/',
   '/blog',

@@ -66,6 +66,14 @@
     --color-primary: #EEE5E9;
     --color-accent: #2892D7;
     --color-secondary: #D16666;
+
+    /* Same hues, lifted just past WCAG AA (4.5:1 on --color-background) for
+       small text. Borders, fills and large headings keep the originals. */
+    --color-accent-text: #3599D9;
+    --color-secondary-text: #D67676;
+
+    /* Channel form of --color-primary, for rgba() at a custom alpha */
+    --color-primary-rgb: 238, 229, 233;
 }
 
 /* ==========================================================================
@@ -345,10 +353,20 @@ body::before {
     transition-duration: 0.3s;
 }
 
-/* Reduced motion for performance */
+/* Default reveal: a shorter slide than the 30px fallback above */
 @media (prefers-reduced-motion: no-preference) {
     .scroll-reveal {
         transform: translateY(20px);
+    }
+}
+
+/* Anyone who asked for less motion gets none: content is visible on arrival */
+@media (prefers-reduced-motion: reduce) {
+    .scroll-reveal,
+    .scroll-reveal.revealed {
+        opacity: 1;
+        transform: none;
+        transition: none;
     }
 }
 
@@ -1114,24 +1132,28 @@ a {
 
 .skills-grid {
     display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
     gap: 20px;
 }
 
 .skill-category h4 {
     font-family: "Comfortaa", cursive;
     font-size: 16px;
-    color: var(--color-secondary);
+    color: var(--color-secondary-text);
     margin-bottom: 10px;
 }
 
 .skill-tags {
     display: flex;
     flex-wrap: wrap;
+    align-items: flex-start;
     gap: 8px;
+    list-style: none;
+    padding: 0;
 }
 
 .skill-tag {
-    color: var(--color-accent);
+    color: var(--color-accent-text);
     padding: 2px 8px;
     border: 1px solid var(--color-accent);
     font-size: 11px;
@@ -1144,7 +1166,7 @@ a {
 .experience-item {
     margin-bottom: 20px;
     padding-bottom: 20px;
-    border-bottom: 1px solid rgba(238, 229, 233, 0.1);
+    border-bottom: 1px solid rgba(var(--color-primary-rgb), 0.1);
 }
 
 .experience-item:last-child {
@@ -1161,10 +1183,10 @@ a {
 }
 
 .experience-period {
-    color: var(--color-secondary);
+    color: var(--color-secondary-text);
     font-size: 14px;
     font-weight: 600;
-    margin-bottom: 8px;
+    margin: 0 0 8px;
 }
 
 .experience-description {
@@ -1172,6 +1194,61 @@ a {
     font-size: 14px;
     line-height: 1.5;
     margin: 0;
+}
+
+/* Short positioning line under the Professional Journey heading */
+.experience-intro {
+    color: var(--color-primary);
+    font-size: 15px;
+    line-height: 1.6;
+    max-width: 68ch;
+    margin: 0 auto 28px;
+    text-align: center;
+}
+
+/* Sub-areas of a single role (current position only) */
+.experience-item h5 {
+    font-family: "Comfortaa", cursive;
+    font-size: 12px;
+    color: var(--color-primary);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin: 14px 0 4px;
+}
+
+.experience-areas {
+    display: grid;
+    /* min() so the track can still collapse on very narrow screens (<333px) */
+    grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
+    gap: 24px;
+    margin-top: 16px;
+}
+
+/* Prior capabilities, kept but visually quieter than the current stack.
+   Dimmed rather than recoloured: on this background luminance, not hue,
+   is what makes a block read as primary. Both values stay above 4.5:1. */
+.skill-category-secondary h4 {
+    color: rgba(var(--color-primary-rgb), 0.6);
+}
+
+.skill-tag-secondary {
+    color: rgba(var(--color-primary-rgb), 0.62);
+    border-color: rgba(var(--color-primary-rgb), 0.22);
+}
+
+/* Professional Journey and the resume button span the full About grid */
+.about-content > .experience-section {
+    order: 3;
+    margin-bottom: 0;
+}
+
+.about-content > .download-section {
+    order: 4;
+}
+
+/* The band spans the full grid, so its heading outweighs the sidebar's 22px */
+.about-content > .experience-section h3 {
+    font-size: 24px;
 }
 
 .download-section {
@@ -1695,6 +1772,11 @@ a {
     line-height: 1.5 !important;
 }
 
+/* Without this the sub-area label renders smaller than the text it labels */
+.pixel-mode .experience-item h5 {
+    font-size: 1.1rem !important;
+}
+
 .pixel-mode .icon {
     /* Keep Phosphor icons but style them 8-bit */
     font-size: 1.5rem !important;
@@ -2104,6 +2186,13 @@ a {
         font-size: 1.5vw;
     }
 
+    /* Floor the About prose: 1.5vw renders it at 9px here and 11.5px at 768px,
+       smaller than the same copy on a phone. Wider viewports are unchanged. */
+    .about-intro p,
+    .detail-section p {
+        font-size: max(15px, 1.5vw);
+    }
+
     #cbar {
         font-size: 3.4vw;
         padding: 0;
@@ -2398,6 +2487,30 @@ a {
 
     .detail-section h3 {
         font-size: 26px;
+    }
+
+    .about-content > .experience-section,
+    .about-content > .download-section {
+        grid-column: 1 / -1;
+    }
+
+    .about-content > .experience-section h3 {
+        font-size: 30px;
+    }
+
+    /* Earlier roles sit side by side so the current role keeps the most weight */
+    .experience-pair {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 40px;
+        align-items: start;
+    }
+
+    /* In a 2-up row the :last-child rule would underline only the left cell */
+    .experience-pair .experience-item {
+        margin-bottom: 0;
+        padding-bottom: 0;
+        border-bottom: none;
     }
 }
 
