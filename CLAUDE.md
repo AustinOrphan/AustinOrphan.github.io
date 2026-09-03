@@ -32,10 +32,6 @@ organized by a numbered table of contents at the top of the file: font imports
 Zod schema (`title`, `description`, `pubDate`, `tags`). Post files in
 `src/content/blog/` are generated — see Blog Publishing below.
 
-**Git submodule:** `ProjectileMotionSimulator/` points to
-https://github.com/AustinOrphan/ProjectileMotionSimulator.git. Clone with
-`--recurse-submodules` to populate it.
-
 ## Development Commands
 
 ```bash
@@ -46,11 +42,6 @@ npm run dev
 npm run check
 npm run build
 npm run preview
-
-# Clone with submodule
-git clone --recurse-submodules <repo-url>
-# or after a plain clone:
-git submodule update --init
 ```
 
 ## Blog Publishing
@@ -171,7 +162,6 @@ subpaths of austinorphan.com rather than built by this repo:
   (`master`)
 - `/tanks/` — from `AustinOrphan/tanks` (`main`)
 
-They will not appear in this repo's `dist/`, and the `ProjectileMotionSimulator`
-submodule checkout is unrelated to how that demo is served. Link to them with
-plain absolute paths; note `/tanks` 301-redirects to `/tanks/`, so link the
-trailing-slash form.
+They will not appear in this repo's `dist/`. Link to them with plain absolute
+paths; note `/tanks` 301-redirects to `/tanks/`, so link the trailing-slash
+form.
