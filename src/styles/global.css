@@ -72,8 +72,11 @@
     --color-accent-text: #3599D9;
     --color-secondary-text: #D67676;
 
-    /* Channel form of --color-primary, for rgba() at a custom alpha */
+    /* Channel forms of the palette above, for rgba() at a custom alpha */
     --color-primary-rgb: 238, 229, 233;
+    --color-accent-rgb: 40, 146, 215;
+    --color-secondary-rgb: 209, 102, 102;
+    --color-background-rgb: 29, 43, 53;
 }
 
 /* ==========================================================================
@@ -263,8 +266,8 @@ body::before {
 
 /* Additional subtle animations */
 @keyframes gentleGlow {
-    0%, 100% { text-shadow: 0 0 5px rgba(40, 146, 215, 0.2); }
-    50% { text-shadow: 0 0 15px rgba(40, 146, 215, 0.4); }
+    0%, 100% { text-shadow: 0 0 5px rgba(var(--color-accent-rgb), 0.2); }
+    50% { text-shadow: 0 0 15px rgba(var(--color-accent-rgb), 0.4); }
 }
 
 @keyframes subtleFloat {
@@ -457,10 +460,10 @@ a {
     /* Add backdrop for better visibility */
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
-    background: rgba(29, 43, 53, 0.9);
+    background: rgba(var(--color-background-rgb), 0.9);
     padding: 12px 16px;
     border-radius: 25px;
-    border: 1px solid rgba(238, 229, 233, 0.2);
+    border: 1px solid rgba(var(--color-primary-rgb), 0.2);
     transition: opacity 0.3s ease;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
     /* Start invisible on mobile */
@@ -533,7 +536,7 @@ a {
 /* Trigger shows an accent tint while its menu is open */
 .projects-menu.open .projects-menu-trigger .icon {
     color: var(--color-accent);
-    background-color: rgba(40, 146, 215, 0.16);
+    background-color: rgba(var(--color-accent-rgb), 0.16);
 }
 
 .projects-menu-list {
@@ -544,10 +547,10 @@ a {
     padding: 8px 10px;
     list-style: none;
     min-width: 230px;
-    background: rgba(29, 43, 53, 0.97);
+    background: rgba(var(--color-background-rgb), 0.97);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(238, 229, 233, 0.2);
+    border: 1px solid rgba(var(--color-primary-rgb), 0.2);
     border-radius: 16px;
     box-shadow: 0 4px 24px rgba(0, 0, 0, 0.45);
     transform-origin: bottom right;
@@ -572,9 +575,9 @@ a {
     right: 60px;
     width: 11px;
     height: 11px;
-    background: rgba(29, 43, 53, 0.97);
-    border-right: 1px solid rgba(238, 229, 233, 0.2);
-    border-bottom: 1px solid rgba(238, 229, 233, 0.2);
+    background: rgba(var(--color-background-rgb), 0.97);
+    border-right: 1px solid rgba(var(--color-primary-rgb), 0.2);
+    border-bottom: 1px solid rgba(var(--color-primary-rgb), 0.2);
     border-radius: 0 0 3px 0;
     transform: rotate(45deg);
 }
@@ -627,7 +630,7 @@ a {
 
 .projects-menu-list a:hover,
 .projects-menu-list a:focus-visible {
-    background-color: rgba(40, 146, 215, 0.18);
+    background-color: rgba(var(--color-accent-rgb), 0.18);
 }
 
 .projects-menu-list a:hover i,
@@ -654,7 +657,7 @@ a {
 .projects-menu-divider {
     margin-top: 6px;
     padding-top: 6px;
-    border-top: 1px solid rgba(238, 229, 233, 0.15);
+    border-top: 1px solid rgba(var(--color-primary-rgb), 0.15);
 }
 
 /* Mobile touch interaction */
@@ -662,7 +665,7 @@ a {
     background-color: var(--color-secondary);
     color: var(--color-background);
     transform: scale(0.95);
-    box-shadow: 0 0 0 3px rgba(238, 229, 233, 0.3);
+    box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb), 0.3);
 }
 
 /* Focus Management - Mobile (Base Styles) */
@@ -703,16 +706,16 @@ a {
     width: 50px;
     height: 50px;
     border-radius: 50%;
-    background: rgba(40, 146, 215, 0.1);
+    background: rgba(var(--color-accent-rgb), 0.1);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
 .scroll-indicator a:hover {
-    background: rgba(40, 146, 215, 0.2);
+    background: rgba(var(--color-accent-rgb), 0.2);
     transform: scale(1.1);
-    box-shadow: 0 0 20px rgba(40, 146, 215, 0.3);
+    box-shadow: 0 0 20px rgba(var(--color-accent-rgb), 0.3);
 }
 
 /* Separate pulse animation for the circular effect */
@@ -724,7 +727,7 @@ a {
     width: 100%;
     height: 100%;
     border-radius: 50%;
-    background: rgba(40, 146, 215, 0.3);
+    background: rgba(var(--color-accent-rgb), 0.3);
     transform: translate(-50%, -50%);
     animation: circularPulse 3s ease-in-out infinite;
     z-index: -1;
@@ -783,8 +786,8 @@ a {
     height: 36px;
     margin: 8px 0;
     /* Container style */
-    background-color: rgba(238, 229, 233, 0.1);
-    border: 1px solid rgba(238, 229, 233, 0.2);
+    background-color: rgba(var(--color-primary-rgb), 0.1);
+    border: 1px solid rgba(var(--color-primary-rgb), 0.2);
     /* Hardware acceleration for smooth mobile performance */
     transform: translateZ(0);
     will-change: transform, background-color, color;
@@ -822,8 +825,8 @@ a {
 /* Hover state for navigation */
 .section-nav a:hover {
     opacity: 0.8;
-    background-color: rgba(238, 229, 233, 0.2);
-    border-color: rgba(238, 229, 233, 0.4);
+    background-color: rgba(var(--color-primary-rgb), 0.2);
+    border-color: rgba(var(--color-primary-rgb), 0.4);
     transform: scale(1.05);
 }
 
@@ -833,7 +836,7 @@ a {
     background-color: var(--color-accent);
     border-color: var(--color-accent);
     color: var(--color-background);
-    box-shadow: 0 0 20px rgba(40, 146, 215, 0.4);
+    box-shadow: 0 0 20px rgba(var(--color-accent-rgb), 0.4);
     transform: scale(1.1);
 }
 
@@ -879,7 +882,7 @@ a {
 .projects-section h2:hover,
 .about-section h2:hover,
 .contact-section h2:hover {
-    text-shadow: 0.1vw 0.1vw 0 var(--color-secondary), 0 0 20px rgba(40, 146, 215, 0.3);
+    text-shadow: 0.1vw 0.1vw 0 var(--color-secondary), 0 0 20px rgba(var(--color-accent-rgb), 0.3);
     transform: translateY(-3px);
 }
 
@@ -891,7 +894,7 @@ a {
 }
 
 .project-card {
-    background: rgba(238, 229, 233, 0.02);
+    background: rgba(var(--color-primary-rgb), 0.02);
     border-left: 4px solid var(--color-accent);
     padding: 25px;
     transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
@@ -909,16 +912,16 @@ a {
     left: 0;
     width: 100%;
     height: 100%;
-    background: linear-gradient(135deg, rgba(40, 146, 215, 0.05) 0%, rgba(209, 102, 102, 0.05) 100%);
+    background: linear-gradient(135deg, rgba(var(--color-accent-rgb), 0.05) 0%, rgba(var(--color-secondary-rgb), 0.05) 100%);
     opacity: 0;
     transition: opacity 0.4s ease;
     pointer-events: none;
 }
 
 .project-card:hover {
-    background: rgba(238, 229, 233, 0.08);
+    background: rgba(var(--color-primary-rgb), 0.08);
     transform: translateY(-8px) scale(1.02);
-    box-shadow: 0 20px 40px rgba(40, 146, 215, 0.2), 0 0 20px rgba(209, 102, 102, 0.1);
+    box-shadow: 0 20px 40px rgba(var(--color-accent-rgb), 0.2), 0 0 20px rgba(var(--color-secondary-rgb), 0.1);
 }
 
 .project-card:hover::before {
@@ -928,7 +931,7 @@ a {
 .project-card.placeholder {
     border-style: dashed;
     border-color: var(--color-secondary);
-    background: rgba(209, 102, 102, 0.05);
+    background: rgba(var(--color-secondary-rgb), 0.05);
 }
 
 .project-header {
@@ -949,7 +952,7 @@ a {
 }
 
 .project-card:hover .project-header h3 {
-    text-shadow: 0 0 10px rgba(40, 146, 215, 0.3);
+    text-shadow: 0 0 10px rgba(var(--color-accent-rgb), 0.3);
     color: var(--color-accent);
 }
 
@@ -967,7 +970,7 @@ a {
     transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
     padding: 8px;
     border-radius: 50%;
-    background: rgba(40, 146, 215, 0.1);
+    background: rgba(var(--color-accent-rgb), 0.1);
     position: relative;
     overflow: hidden;
     animation: buttonFloat 4s ease-in-out infinite;
@@ -993,9 +996,9 @@ a {
     background: linear-gradient(90deg, 
         transparent 0%, 
         transparent 30%,
-        rgba(214, 102, 102, 0.4) 45%, 
-        rgba(214, 102, 102, 0.8) 50%, 
-        rgba(214, 102, 102, 0.4) 55%, 
+        rgba(var(--color-secondary-rgb), 0.4) 45%, 
+        rgba(var(--color-secondary-rgb), 0.8) 50%, 
+        rgba(var(--color-secondary-rgb), 0.4) 55%, 
         transparent 70%,
         transparent 100%);
     transform: rotate(45deg);
@@ -1012,7 +1015,7 @@ a {
     color: var(--color-background);
     background: var(--color-secondary);
     transform: scale(1.1) translateY(-2px);
-    box-shadow: 0 5px 15px rgba(209, 102, 102, 0.4);
+    box-shadow: 0 5px 15px rgba(var(--color-secondary-rgb), 0.4);
 }
 
 .project-description {
@@ -1055,7 +1058,7 @@ a {
     left: 0;
     right: 0;
     bottom: 0;
-    background: linear-gradient(135deg, var(--color-background) 0%, rgba(29, 43, 53, 0.95) 100%);
+    background: linear-gradient(135deg, var(--color-background) 0%, rgba(var(--color-background-rgb), 0.95) 100%);
     z-index: -1;
 }
 
@@ -1322,7 +1325,7 @@ a {
     align-items: center;
     gap: 20px;
     padding: 15px 0;
-    border-bottom: 1px solid rgba(238, 229, 233, 0.1);
+    border-bottom: 1px solid rgba(var(--color-primary-rgb), 0.1);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     border-radius: 8px;
     position: relative;
@@ -1343,7 +1346,7 @@ a {
 
 .contact-method:hover {
     padding-left: 15px;
-    background: rgba(40, 146, 215, 0.05);
+    background: rgba(var(--color-accent-rgb), 0.05);
 }
 
 .contact-method:hover::before {
@@ -1414,7 +1417,7 @@ a {
 .form-group input:hover,
 .form-group textarea:hover {
     transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(40, 146, 215, 0.1);
+    box-shadow: 0 2px 8px rgba(var(--color-accent-rgb), 0.1);
 }
 
 .form-group input:focus,
@@ -1422,7 +1425,7 @@ a {
     outline: none;
     border-bottom: 2px solid var(--color-accent);
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(40, 146, 215, 0.2);
+    box-shadow: 0 4px 12px rgba(var(--color-accent-rgb), 0.2);
 }
 
 .form-group input.error,
@@ -1484,13 +1487,13 @@ a {
 }
 
 .form-status.success {
-    background: rgba(40, 146, 215, 0.1);
+    background: rgba(var(--color-accent-rgb), 0.1);
     border: 2px solid var(--color-accent);
     color: var(--color-accent);
 }
 
 .form-status.error {
-    background: rgba(209, 102, 102, 0.1);
+    background: rgba(var(--color-secondary-rgb), 0.1);
     border: 2px solid var(--color-secondary);
     color: var(--color-secondary);
 }
@@ -1581,7 +1584,7 @@ a {
     width: 35px;
     height: 35px;
     border-radius: 50%;
-    background: rgba(238, 229, 233, 0.05);
+    background: rgba(var(--color-primary-rgb), 0.05);
     color: var(--color-accent);
     text-decoration: none;
     transition: all 0.3s ease;
@@ -1612,7 +1615,7 @@ a {
 .footer-social-link:hover {
     color: var(--color-background);
     transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(209, 102, 102, 0.3);
+    box-shadow: 0 5px 15px rgba(var(--color-secondary-rgb), 0.3);
 }
 
 /* 10.3 Back to Top Button */
@@ -1620,8 +1623,8 @@ a {
     display: flex;
     align-items: center;
     gap: 8px;
-    background: rgba(238, 229, 233, 0.05);
-    border: 1px solid rgba(238, 229, 233, 0.2);
+    background: rgba(var(--color-primary-rgb), 0.05);
+    border: 1px solid rgba(var(--color-primary-rgb), 0.2);
     color: var(--color-accent);
     padding: 8px 12px;
     border-radius: 20px;
@@ -1636,7 +1639,7 @@ a {
     background: var(--color-accent);
     color: var(--color-background);
     transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(40, 146, 215, 0.3);
+    box-shadow: 0 5px 15px rgba(var(--color-accent-rgb), 0.3);
 }
 
 .back-to-top i {
@@ -1663,6 +1666,11 @@ a {
     --pixel-yellow: #ffff00;
     --pixel-white: #ffffff;
     --pixel-gray: #808080;
+
+    /* Channel forms, for rgba() at a custom alpha */
+    --pixel-primary-rgb: 0, 255, 0;
+    --pixel-red-rgb: 255, 0, 0;
+    --pixel-accent-rgb: 0, 255, 255;
     
     image-rendering: pixelated;
     image-rendering: -moz-crisp-edges;
@@ -1676,24 +1684,24 @@ a {
             0deg,
             transparent 0px,
             transparent 1px,
-            rgba(0, 255, 0, 0.03) 1px,
-            rgba(0, 255, 0, 0.03) 2px
+            rgba(var(--pixel-primary-rgb), 0.03) 1px,
+            rgba(var(--pixel-primary-rgb), 0.03) 2px
         ),
         /* Dithering pattern */
         repeating-linear-gradient(
             90deg,
             var(--pixel-bg) 0px,
             var(--pixel-bg) 1px,
-            rgba(0, 255, 0, 0.01) 1px,
-            rgba(0, 255, 0, 0.01) 2px
+            rgba(var(--pixel-primary-rgb), 0.01) 1px,
+            rgba(var(--pixel-primary-rgb), 0.01) 2px
         ),
         /* Pixel grid */
         repeating-conic-gradient(
             from 0deg at 0 0,
             transparent 0deg 90deg,
-            rgba(0, 255, 0, 0.005) 90deg 180deg,
+            rgba(var(--pixel-primary-rgb), 0.005) 90deg 180deg,
             transparent 180deg 270deg,
-            rgba(0, 255, 0, 0.005) 270deg 360deg
+            rgba(var(--pixel-primary-rgb), 0.005) 270deg 360deg
         ),
         var(--pixel-bg) !important;
     background-size: 100% 2px, 2px 100%, 4px 4px, auto;
@@ -1729,7 +1737,7 @@ a {
         2px 0 0 var(--pixel-accent),
         0 2px 0 var(--pixel-secondary),
         2px 2px 0 var(--pixel-red),
-        4px 4px 0 rgba(255, 0, 0, 0.5) !important;
+        4px 4px 0 rgba(var(--pixel-red-rgb), 0.5) !important;
     animation: pixelFlicker 0.3s infinite, pixelShift 4s ease-in-out infinite;
     /* Pixel-perfect positioning */
     transform: translateX(0) translateY(0);
@@ -1820,17 +1828,17 @@ a {
         /* Checkerboard dithering */
         repeating-conic-gradient(
             var(--pixel-bg) 0% 25%,
-            rgba(0, 255, 255, 0.1) 25% 50%,
+            rgba(var(--pixel-accent-rgb), 0.1) 25% 50%,
             var(--pixel-bg) 50% 75%,
-            rgba(0, 255, 255, 0.1) 75% 100%
+            rgba(var(--pixel-accent-rgb), 0.1) 75% 100%
         ),
         /* Scanline pattern */
         repeating-linear-gradient(
             0deg,
             transparent 0px,
             transparent 2px,
-            rgba(0, 255, 0, 0.05) 2px,
-            rgba(0, 255, 0, 0.05) 4px
+            rgba(var(--pixel-primary-rgb), 0.05) 2px,
+            rgba(var(--pixel-primary-rgb), 0.05) 4px
         ),
         var(--pixel-bg) !important;
     background-size: 8px 8px, 100% 4px, auto !important;
@@ -1845,8 +1853,8 @@ a {
         12px 6px 0 var(--pixel-red),
         6px 12px 0 var(--pixel-red),
         12px 12px 0 var(--pixel-red),
-        18px 12px 0 rgba(255, 0, 0, 0.7),
-        12px 18px 0 rgba(255, 0, 0, 0.7) !important;
+        18px 12px 0 rgba(var(--pixel-red-rgb), 0.7),
+        12px 18px 0 rgba(var(--pixel-red-rgb), 0.7) !important;
     color: var(--pixel-primary) !important;
     /* Pixel-perfect positioning */
     transform: translateX(0) translateY(0);
@@ -2065,7 +2073,7 @@ a {
         text-shadow: 
             2px 2px 0 var(--color-secondary),
             4px 4px 0 var(--color-accent),
-            6px 6px 10px rgba(40, 146, 215, 0.5);
+            6px 6px 10px rgba(var(--color-accent-rgb), 0.5);
     }
 }
 
@@ -2298,8 +2306,8 @@ a {
     .section-nav a:hover {
         cursor: pointer;
         opacity: 0.8;
-        background-color: rgba(238, 229, 233, 0.2);
-        border-color: rgba(238, 229, 233, 0.4);
+        background-color: rgba(var(--color-primary-rgb), 0.2);
+        border-color: rgba(var(--color-primary-rgb), 0.4);
         transform: scale(1.05);
     }
     
@@ -2328,7 +2336,7 @@ a {
         background-color: var(--color-accent);
         border-color: var(--color-accent);
         color: var(--color-background);
-        box-shadow: 0 0 20px rgba(40, 146, 215, 0.4);
+        box-shadow: 0 0 20px rgba(var(--color-accent-rgb), 0.4);
         transform: scale(1.1);
     }
     
@@ -2526,7 +2534,7 @@ a {
 
 .blog-post-header {
   margin-bottom: 3rem;
-  border-bottom: 1px solid rgba(238, 229, 233, 0.15);
+  border-bottom: 1px solid rgba(var(--color-primary-rgb), 0.15);
   padding-bottom: 2rem;
 }
 
@@ -2667,7 +2675,7 @@ a {
 
 /* Post card */
 .post-card {
-  border: 1px solid rgba(40, 146, 215, 0.3);
+  border: 1px solid rgba(var(--color-accent-rgb), 0.3);
   border-radius: 4px;
   padding: 1.25rem;
   margin-bottom: 1rem;
@@ -2735,7 +2743,7 @@ body.blog {
   align-items: center;
   gap: 0.5rem;
   padding: 0.85rem 2rem;
-  border-bottom: 1px solid rgba(40, 146, 215, 0.2);
+  border-bottom: 1px solid rgba(var(--color-accent-rgb), 0.2);
   position: fixed;
   top: 0;
   left: 0;
@@ -2752,11 +2760,11 @@ body.blog {
   letter-spacing: 0.04em;
 }
 .blog-site-nav a:hover { opacity: 0.75; }
-.blog-site-nav .nav-sep { color: rgba(238, 229, 233, 0.25); }
+.blog-site-nav .nav-sep { color: rgba(var(--color-primary-rgb), 0.25); }
 
 /* Blog footer */
 .blog-footer {
-  border-top: 1px solid rgba(40, 146, 215, 0.2);
+  border-top: 1px solid rgba(var(--color-accent-rgb), 0.2);
   margin-top: 3rem;
   padding: 2rem;
   max-width: 720px;
@@ -2797,7 +2805,7 @@ body.blog {
 .blog-footer-nav-label {
   font-family: 'Comfortaa', cursive;
   font-size: 0.75rem;
-  color: rgba(238, 229, 233, 0.45);
+  color: rgba(var(--color-primary-rgb), 0.45);
 }
 
 .blog-footer-nav-title {
@@ -2824,7 +2832,7 @@ body.blog {
 .blog-footer-social a:hover { color: var(--color-secondary); }
 
 .blog-footer-copy {
-  color: rgba(238, 229, 233, 0.4);
+  color: rgba(var(--color-primary-rgb), 0.4);
   font-family: 'Comfortaa', cursive;
   font-size: 0.8rem;
   margin: 0;
