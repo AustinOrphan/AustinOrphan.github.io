@@ -22,8 +22,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: recursive
 
       # Published blog notes, exported from the Obsidian vault by
       # scripts/export-vault.mjs. Contains only notes marked `publish: true`;
