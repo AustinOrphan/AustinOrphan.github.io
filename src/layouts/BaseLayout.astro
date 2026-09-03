@@ -1,6 +1,13 @@
 ---
 import '../styles/global.css';
 
+// Single source of truth for the site-level description. Used by the schema.org
+// Person below and as the default meta description. Pages may override the
+// `description` prop for their own meta tags; the Person schema always describes
+// the site owner, never the page, so it must not follow that prop.
+const SITE_DESCRIPTION =
+  'Software engineer. Fintech backend, plus shared LLM infrastructure. Projects, writing, and experiments.';
+
 interface Props {
   title?: string;
   description?: string;
@@ -10,12 +17,48 @@ interface Props {
 
 const {
   title = 'Austin Orphan',
-  description = 'Software engineer. Fintech backend, plus shared LLM infrastructure. Projects, writing, and experiments.',
+  description = SITE_DESCRIPTION,
   canonicalURL: canonicalURLProp,
   bodyClass,
 } = Astro.props;
 
 const canonicalURL = canonicalURLProp ?? new URL(Astro.url.pathname, Astro.site).toString();
+
+const personSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'Person',
+  name: 'Austin Orphan',
+  url: 'https://austinorphan.com',
+  sameAs: ['https://github.com/austinorphan', 'https://www.linkedin.com/in/austinorphan/'],
+  jobTitle: 'Backend Software Engineer',
+  description: SITE_DESCRIPTION,
+  email: 'AustinGOrphan@gmail.com',
+  knowsAbout: [
+    'Backend Engineering',
+    'Python',
+    'SQL',
+    'C#',
+    'TypeScript',
+    'PostgreSQL',
+    'AI/LLM Platform Engineering',
+    'LiteLLM',
+    'Langfuse',
+    'Vertex AI',
+    'Retrieval-Augmented Generation',
+    'Model Context Protocol',
+    'Kubernetes',
+  ],
+  mainEntityOfPage: {
+    '@type': 'WebSite',
+    '@id': 'https://austinorphan.com',
+  },
+};
+
+// set:html renders raw, so escape "<" as its JSON unicode form. JSON.stringify
+// does not escape it, and a "</script>" sequence appearing in any value would
+// otherwise terminate the tag early. Inert for the current author-controlled
+// data; this keeps a future edit from being able to break the document.
+const jsonLd = JSON.stringify(personSchema).replace(/</g, '\\u003c');
 ---
 <!DOCTYPE html>
 <html lang="en">
@@ -56,26 +99,7 @@ const canonicalURL = canonicalURLProp ?? new URL(Astro.url.pathname, Astro.site)
 
   <link rel="canonical" href={canonicalURL}>
 
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "Person",
-    "name": "Austin Orphan",
-    "url": "https://austinorphan.com",
-    "sameAs": [
-      "https://github.com/austinorphan",
-      "https://www.linkedin.com/in/austinorphan/"
-    ],
-    "jobTitle": "Backend Software Engineer",
-    "description": "Software engineer. Fintech backend, plus shared LLM infrastructure. Projects, writing, and experiments.",
-    "email": "AustinGOrphan@gmail.com",
-    "knowsAbout": ["Backend Engineering", "Python", "SQL", "C#", "TypeScript", "PostgreSQL", "AI/LLM Platform Engineering", "LiteLLM", "Langfuse", "Vertex AI", "Retrieval-Augmented Generation", "Model Context Protocol", "Kubernetes"],
-    "mainEntityOfPage": {
-      "@type": "WebSite",
-      "@id": "https://austinorphan.com"
-    }
-  }
-  </script>
+  <script type="application/ld+json" set:html={jsonLd}></script>
 
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-GL8J5KLG7C"></script>
   <script>
