@@ -63,11 +63,18 @@ import ProjectsMenu from '../components/ProjectsMenu.astro';
   <script>
     (function() {
       const projectCards = document.querySelectorAll('.project-card');
-      const aboutElements = document.querySelectorAll('.detail-section, .skill-category, .experience-item');
       const contactElements = document.querySelectorAll('.contact-method');
 
       projectCards.forEach((el, i) => { el.classList.add('scroll-reveal'); el.style.transitionDelay = `${i * 0.1}s`; });
-      aboutElements.forEach((el, i) => { el.classList.add('scroll-reveal'); el.style.transitionDelay = `${i * 0.08}s`; });
+      // Stagger within each about block, so the longer experience list doesn't trail off
+      const aboutElements = ['.detail-section', '.skill-category', '.experience-item'].flatMap(sel => {
+        const els = Array.from(document.querySelectorAll(sel));
+        els.forEach((el, i) => {
+          el.classList.add('scroll-reveal');
+          el.style.transitionDelay = `${Math.min(i, 4) * 0.08}s`;
+        });
+        return els;
+      });
       contactElements.forEach((el, i) => { el.classList.add('scroll-reveal'); el.style.transitionDelay = `${i * 0.08}s`; });
 
       let lastScrollY = window.pageYOffset;
