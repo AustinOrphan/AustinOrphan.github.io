@@ -1212,11 +1212,16 @@ a {
 /* Sub-areas of a single role (current position only) */
 .experience-item h5 {
     font-family: "Comfortaa", cursive;
-    font-size: 12px;
-    color: var(--color-primary);
+    /* Matches the body's 14px so the label is never nominally smaller than the
+       text it labels. Being all-caps, its cap height (10.93px) then lands
+       exactly on the body's ascender height, well above its 7.66px x-height. */
+    font-size: 14px;
+    /* Accent, like every other heading here. Only Comfortaa 700 is loaded, so
+       weight cannot separate this from the body text below it; colour must. */
+    color: var(--color-accent-text);
     text-transform: uppercase;
-    letter-spacing: 1px;
-    margin: 14px 0 4px;
+    letter-spacing: 1.5px;
+    margin: 18px 0 4px;
 }
 
 .experience-areas {
