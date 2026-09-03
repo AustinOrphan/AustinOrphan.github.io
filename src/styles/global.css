@@ -112,6 +112,17 @@ body {
 }
 
 /* Hero Patterns Texture - Authentic Texture Pattern via ::before */
+@property --texture-color {
+    /* Registered so the colour INTERPOLATES. An unregistered custom property
+       animates discretely, which would make the texture snap between hues
+       instead of drifting the way it always has. initial-value must be a
+       literal because var() is not allowed there; it never renders, since
+       body::before assigns --texture-color unconditionally. */
+    syntax: '<color>';
+    inherits: false;
+    initial-value: transparent;
+}
+
 body::before {
     content: '';
     position: fixed;
@@ -121,9 +132,12 @@ body::before {
     height: 100%;
     pointer-events: none;
     z-index: 1;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' viewBox='0 0 4 4'%3E%3Cpath fill='%23EEE5E9' d='M1 3h1v1H1V3zm2-2h1v1H3V1z'/%3E%3C/svg%3E");
-    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, transparent 40%, rgba(0,0,0,0.1) 100%);
-    mask-image: linear-gradient(to bottom, transparent 0%, transparent 40%, rgba(0,0,0,0.1) 100%);
+    opacity: 0.1;
+    --texture-color: var(--color-primary);
+    background-image: linear-gradient(to bottom, transparent 0%, transparent 40%, var(--texture-color) 100%);
+    /* Dot tile used as an alpha mask; only its alpha channel matters, so the fill is inert. */
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' viewBox='0 0 4 4'%3E%3Cpath fill='%23000000' d='M1 3h1v1H1V3zm2-2h1v1H3V1z'/%3E%3C/svg%3E");
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' viewBox='0 0 4 4'%3E%3Cpath fill='%23000000' d='M1 3h1v1H1V3zm2-2h1v1H3V1z'/%3E%3C/svg%3E");
     animation: textureColorShift 20s ease-in-out infinite;
 }
 
@@ -131,20 +145,14 @@ body::before {
    4. Animations & Keyframes
    ========================================================================== */
 @keyframes textureColorShift {
-    0% { 
-        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' viewBox='0 0 4 4'%3E%3Cpath fill='%23EEE5E9' d='M1 3h1v1H1V3zm2-2h1v1H3V1z'/%3E%3C/svg%3E");
+    0%, 75%, 100% {
+        --texture-color: var(--color-primary);
     }
-    25% { 
-        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' viewBox='0 0 4 4'%3E%3Cpath fill='%23D16666' d='M1 3h1v1H1V3zm2-2h1v1H3V1z'/%3E%3C/svg%3E");
+    25% {
+        --texture-color: var(--color-secondary);
     }
-    50% { 
-        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' viewBox='0 0 4 4'%3E%3Cpath fill='%232892D7' d='M1 3h1v1H1V3zm2-2h1v1H3V1z'/%3E%3C/svg%3E");
-    }
-    75% { 
-        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' viewBox='0 0 4 4'%3E%3Cpath fill='%23EEE5E9' d='M1 3h1v1H1V3zm2-2h1v1H3V1z'/%3E%3C/svg%3E");
-    }
-    100% { 
-        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' viewBox='0 0 4 4'%3E%3Cpath fill='%23EEE5E9' d='M1 3h1v1H1V3zm2-2h1v1H3V1z'/%3E%3C/svg%3E");
+    50% {
+        --texture-color: var(--color-accent);
     }
 }
 
