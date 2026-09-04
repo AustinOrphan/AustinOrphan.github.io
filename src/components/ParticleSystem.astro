@@ -4,9 +4,9 @@
 
 <script>
   (function() {
-    const canvas = document.getElementById('particle-canvas');
-    const ctx = canvas.getContext('2d');
-    let particles = [];
+    const canvas = document.getElementById('particle-canvas') as HTMLCanvasElement;
+    const ctx = canvas.getContext('2d')!;
+    let particles: Particle[] = [];
     let particleMode = 'off';
     let particlesEnabled = false;
     let mouseX = 0;
@@ -19,8 +19,20 @@
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
 
+    // Callers pass null for "use the default", which the constructor's `||`
+    // handles, so the option types allow it rather than forcing a runtime change.
+    interface ParticleOptions {
+      vx?: number | null; vy?: number | null; radius?: number | null;
+      color?: string | null; life?: number | null; decay?: number | null;
+      gravity?: number | null; bounce?: number | null;
+    }
+
     class Particle {
-      constructor(x, y, options = {}) {
+      x: number; y: number; vx: number; vy: number;
+      radius: number; color: string; life: number;
+      decay: number; gravity: number; bounce: number;
+
+      constructor(x: number, y: number, options: ParticleOptions = {}) {
         this.x = x;
         this.y = y;
         this.vx = options.vx || (Math.random() - 0.5) * 4;
@@ -65,7 +77,7 @@
       return ['#00ff00','#00ffff','#ff00ff','#ffff00','#ff0000','#0080ff','#ff8000'][Math.floor(Math.random()*7)];
     }
 
-    function createBurst(x, y, count = 30, options = {}) {
+    function createBurst(x: number, y: number, count = 30, options: ParticleOptions = {}) {
       if (!particlesEnabled) return;
       for (let i = 0; i < count; i++) {
         const angle = (Math.PI * 2 * i) / count;
@@ -74,7 +86,7 @@
       }
     }
 
-    function createFirework(x, y) {
+    function createFirework(x: number, y: number) {
       if (!particlesEnabled) return;
       const is8Bit = document.body.classList.contains('pixel-mode');
       const color = is8Bit ? get8BitColor() : `hsl(${Math.random()*360}, 100%, 50%)`;
@@ -104,7 +116,7 @@
       }));
     }
 
-    let rafId;
+    let rafId: number | undefined;
     function animate() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       particles = particles.filter(p => { p.update(); p.draw(); return p.life > 0; });
@@ -114,13 +126,13 @@
     rafId = requestAnimationFrame(animate);
 
     document.addEventListener('astro:before-swap', () => {
-      cancelAnimationFrame(rafId);
+      if (rafId !== undefined) cancelAnimationFrame(rafId);
       window.removeEventListener('resize', resizeCanvas);
     }, { once: true });
 
-    document.addEventListener('mousemove', e => { mouseX = e.clientX; mouseY = e.clientY; });
+    document.addEventListener('mousemove', (e: MouseEvent) => { mouseX = e.clientX; mouseY = e.clientY; });
 
-    function showNotification(message, subtitle = '') {
+    function showNotification(message: string, subtitle = '') {
       const n = document.createElement('div');
       n.style.cssText = `position:fixed;top:-100px;right:20px;width:300px;background:rgba(0,0,0,.95);color:white;padding:16px 20px;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,.3);z-index:10000;border-left:4px solid var(--color-accent);animation:dropdownSlide 4s ease-in-out forwards;backdrop-filter:blur(10px)`;
       const titleEl = document.createElement('div');
@@ -152,8 +164,8 @@
       document.body.appendChild(btn);
     }
 
-    let keySequence = [];
-    document.addEventListener('keydown', e => {
+    let keySequence: string[] = [];
+    document.addEventListener('keydown', (e: KeyboardEvent) => {
       keySequence.push(e.key.toLowerCase());
       if (keySequence.length > 5) keySequence.shift();
       const seq = keySequence.join('');
@@ -169,10 +181,11 @@
     });
 
     let nameClicks = 0;
-    const nameEl = document.querySelector('[data-particle-target]') ?? document.querySelector('h1');
+    const nameEl = document.querySelector<HTMLElement>('[data-particle-target]')
+      ?? document.querySelector<HTMLElement>('h1');
     if (nameEl) {
       nameEl.style.cursor = 'pointer';
-      nameEl.addEventListener('click', e => {
+      nameEl.addEventListener('click', (e: MouseEvent) => {
         if (!particlesEnabled) return;
         nameClicks++;
         if (nameClicks >= 3) { createFirework(e.clientX, e.clientY); }
@@ -180,7 +193,7 @@
       });
     }
 
-    document.querySelectorAll('a').forEach(link => {
+    document.querySelectorAll<HTMLAnchorElement>('a').forEach(link => {
       link.addEventListener('click', e => {
         if (!particlesEnabled) return;
         createBurst(e.clientX, e.clientY, 20, {

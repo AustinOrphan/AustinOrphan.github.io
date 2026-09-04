@@ -35,30 +35,35 @@ const year = new Date().getFullYear();
 
 <script>
   (function() {
-    const backToTopBtn = document.querySelector('.footer-return');
+    const backToTopBtn = document.querySelector<HTMLElement>('.footer-return');
     if (backToTopBtn) {
       backToTopBtn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
     }
 
-    const footer = document.querySelector('.site-footer');
-    const contactSection = document.querySelector('#contact');
+    const footer = document.querySelector<HTMLElement>('.site-footer');
+    const contactSection = document.querySelector<HTMLElement>('#contact');
     if (footer && contactSection) {
-      footer.style.transition = 'transform 0.1s ease-out, opacity 0.1s ease-out';
-      footer.style.willChange = 'transform, opacity';
+      // Captured locally because the checker will not carry the narrowing from
+      // the guard above into the hoisted function declaration below.
+      const footerEl = footer;
+      const contactEl = contactSection;
+      footerEl.style.transition = 'transform 0.1s ease-out, opacity 0.1s ease-out';
+      footerEl.style.willChange = 'transform, opacity';
       let ticking = false;
 
       function updateFooterParallax() {
         const scrollPosition = window.pageYOffset + window.innerHeight;
-        const contactBottom = contactSection.offsetTop + contactSection.offsetHeight;
+        const contactBottom = contactEl.offsetTop + contactEl.offsetHeight;
         if (scrollPosition > contactBottom) {
           const progress = Math.min(1, (scrollPosition - contactBottom) / 120);
-          footer.style.transform = `translateY(${(1 - progress) * 30}px)`;
-          footer.style.opacity = progress;
-          footer.style.zIndex = '10000';
+          footerEl.style.transform = `translateY(${(1 - progress) * 30}px)`;
+          // style.opacity is a string; a bare number worked only by coercion.
+          footerEl.style.opacity = String(progress);
+          footerEl.style.zIndex = '10000';
         } else {
-          footer.style.transform = 'translateY(50px)';
-          footer.style.opacity = '0';
-          footer.style.zIndex = '-1';
+          footerEl.style.transform = 'translateY(50px)';
+          footerEl.style.opacity = '0';
+          footerEl.style.zIndex = '-1';
         }
         ticking = false;
       }
