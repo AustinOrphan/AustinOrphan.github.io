@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """build/glyphs.json -> build/OrphanDisplay-Regular.otf   (needs the fontforge Python module)"""
-import json, os, sys
+import argparse, json, os, sys
 import fontforge
 HERE = os.path.dirname(os.path.abspath(__file__))
-G = json.load(open(os.path.join(HERE, 'build', 'glyphs.json')))
+ap = argparse.ArgumentParser(); ap.add_argument('--in', dest='inp', default=os.path.join(HERE, 'build', 'glyphs.json'))
+ap.add_argument('--out', default=os.path.join(HERE, 'build', 'OrphanDisplay-Regular.otf')); args = ap.parse_args()
+G = json.load(open(args.inp))
 FAMILY = "Orphan Display"
 f = fontforge.font()
 f.em = G['upm']; f.ascent = G['ascent']; f.descent = G['descent']
@@ -36,6 +38,6 @@ for name, g in list(G['glyphs'].items()):
     if len(name) == 1 and 'A' <= name <= 'Z':
         lc = f.createChar(ord(name.lower()), name.lower())
         lc.addReference(name); lc.width = g['adv']
-out = os.path.join(HERE, 'build', 'OrphanDisplay-Regular.otf')
+out = args.out
 f.generate(out)
 print(f"  wrote {out}: {sum(1 for _ in f.glyphs())} glyphs")
