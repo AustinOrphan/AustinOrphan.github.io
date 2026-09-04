@@ -22,7 +22,7 @@ f.os2_winascent = G['ascent']; f.os2_windescent = G['descent']
 f.os2_capheight = G['cap']; f.os2_xheight = G['cap']          # unicase: the x-height is the cap height
 f.os2_use_typo_metrics = True
 for name, g in G['glyphs'].items():
-    ch = f.createChar(g['cp'], name)
+    ch = f.createChar(g['cp'] if g['cp'] >= 0 else -1, name)   # cp -1: unencoded alternate
     pen = ch.glyphPen()
     for c in g['contours']:
         pen.moveTo(tuple(c['start']))
