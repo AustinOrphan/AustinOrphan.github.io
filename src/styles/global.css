@@ -21,10 +21,11 @@
       9.1 Projects Section
       9.2 About Section
       9.3 Contact Section
-   10. Footer
-       10.1 Footer Layout
+   10. Footer (shared by the home page and the blog)
+       10.1 Footer Layout & Fixed/Static Variants
        10.2 Footer Social Links
        10.3 Back to Top Button
+       10.4 Post Navigation
    11. Special Modes
        11.1 8-Bit Mode
        11.2 8-Bit Animations
@@ -1628,11 +1629,22 @@ a {
    10. Footer
    ========================================================================== */
 
-/* 10.1 Footer Layout */
+/* 10.1 Footer Layout
+
+   One footer serves the whole site (src/components/Footer.astro). Everything
+   from .footer-nav down is shared verbatim between the home page and the blog;
+   the two --fixed / --static modifiers below carry the only real difference,
+   which is how the bar is positioned. */
 .site-footer {
     margin-top: 0;
     padding: 15px 0 10px;
     background: transparent;
+}
+
+/* The home page's bar: pinned to the viewport bottom and hidden until the
+   inline script in Footer.astro parallax-reveals it past #contact. Content
+   has to reserve room for it, which is what body:not(.blog) does below. */
+.site-footer--fixed {
     position: fixed;
     bottom: 0;
     left: 0;
@@ -1642,6 +1654,32 @@ a {
     opacity: 0;
     transition: none; /* Remove transition for direct scroll control */
     will-change: transform, opacity; /* Optimize for animations */
+}
+
+/* The blog's: in normal flow at the end of the document. Blog pages have no
+   #contact to key a reveal to, and a long post reads badly scrolling under a
+   permanent bar. The column matches .blog-post / .blog-page — 720px plus a
+   2rem gutter — so the mark and the copyright line up with the body text
+   above them.
+
+   `width: 100%` is load-bearing: body.blog is a column flexbox, and auto
+   horizontal margins on a flex item override the default stretch, so without
+   an explicit width the footer shrink-wraps to its content (562px on desktop,
+   193px on mobile) instead of centring a full-width column. */
+.site-footer--static {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 784px; /* the 720px text column of .blog-page plus its gutters */
+    margin: 3rem auto 0;
+    padding: 0 2rem 4rem;
+}
+
+/* .footer-top and .footer-content carry their own gutters for the full-bleed
+   fixed bar; inside the static column that would double up. */
+.site-footer--static .footer-top,
+.site-footer--static .footer-content {
+    padding-left: 0;
+    padding-right: 0;
 }
 
 .footer-top {
@@ -1775,6 +1813,46 @@ a {
 
 .footer-return:hover i {
     transform: translateY(-1px);
+}
+
+/* 10.4 Post Navigation
+
+   Only rendered when a page passes prevPost / nextPost, so in practice only on
+   blog posts. It sits above the Top pill: the article ends, you continue to
+   the next post or go back up, and the rule then closes the page off. */
+.footer-nav {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 20px;
+}
+
+.footer-nav-prev,
+.footer-nav-next {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    max-width: 45%;
+    text-decoration: none;
+    transition: opacity 0.2s;
+}
+
+.footer-nav-prev { align-items: flex-start; }
+.footer-nav-next { align-items: flex-end; }
+
+.footer-nav-prev:hover,
+.footer-nav-next:hover { opacity: 0.75; }
+
+.footer-nav-label {
+    font-family: "Comfortaa", cursive;
+    font-size: 0.75rem;
+    color: rgba(var(--color-primary-rgb), 0.45);
+}
+
+.footer-nav-title {
+    font-family: "Anta", sans-serif;
+    font-size: 0.9rem;
+    color: var(--color-accent);
 }
 
 /* ==========================================================================
@@ -2688,8 +2766,29 @@ a {
        time the footer is on screen the bar has scrolled thousands of pixels
        away. Verified with elementFromPoint that every footer control still
        hit-tests correctly with the padding gone. */
-    .site-footer {
+    .site-footer--fixed {
         padding: 10px 0 28px 0;
+    }
+
+    /* The static footer keeps its own gutter here — .blog-page / .blog-post
+       hold 2rem until 600px — and just tightens vertically. */
+    .site-footer--static {
+        margin-top: 2rem;
+        padding-bottom: 2.5rem;
+    }
+
+    /* Two stacked columns rather than a squeezed pair of one-line links. */
+    .footer-nav {
+        flex-direction: column;
+        gap: 1rem;
+        margin-bottom: 16px;
+    }
+
+    .footer-nav-prev,
+    .footer-nav-next {
+        max-width: 100%;
+        align-items: center;
+        text-align: center;
     }
 
     /* Even out the row rhythm. It ran 13 / 16 / 10 / 10 because .footer-top and
@@ -3048,81 +3147,7 @@ body.blog {
 .blog-site-nav a:hover { opacity: 0.75; }
 .blog-site-nav .nav-sep { color: rgba(var(--color-primary-rgb), 0.25); }
 
-/* Blog footer */
-.blog-footer {
-  border-top: 1px solid rgba(var(--color-accent-rgb), 0.2);
-  margin-top: 3rem;
-  padding: 2rem;
-  max-width: 720px;
-  margin-left: auto;
-  margin-right: auto;
-  box-sizing: border-box;
-}
-
-.blog-footer-inner {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1rem;
-}
-
-.blog-footer-nav {
-  display: flex;
-  justify-content: space-between;
-  width: 100%;
-  gap: 1rem;
-}
-
-.blog-footer-prev,
-.blog-footer-next {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-  width: auto;
-  max-width: 45%;
-  text-decoration: none;
-  transition: opacity 0.2s;
-}
-.blog-footer-prev { align-items: flex-start; }
-.blog-footer-next { align-items: flex-end; }
-.blog-footer-prev:hover,
-.blog-footer-next:hover { opacity: 0.75; }
-
-.blog-footer-nav-label {
-  font-family: 'Comfortaa', cursive;
-  font-size: 0.75rem;
-  color: rgba(var(--color-primary-rgb), 0.45);
-}
-
-.blog-footer-nav-title {
-  font-family: 'Anta', sans-serif;
-  font-size: 0.9rem;
-  color: var(--color-accent);
-}
-
-.blog-footer-profiles {
-  display: flex;
-  gap: 1.25rem;
-}
-
-.blog-footer-profiles a {
-  color: var(--color-accent);
-  font-size: 1.4rem;
-  display: flex;
-  width: auto;
-  height: auto;
-  align-items: center;
-  justify-content: center;
-  transition: color 0.2s;
-}
-.blog-footer-profiles a:hover { color: var(--color-secondary); }
-
-.blog-footer-copy {
-  color: rgba(var(--color-primary-rgb), 0.4);
-  font-family: 'Comfortaa', cursive;
-  font-size: 0.8rem;
-  margin: 0;
-}
+/* The blog's footer is the site footer in its static variant — see 10.1. */
 
 @media screen and (min-width: 600px) {
   .blog-page-title,
@@ -3143,6 +3168,11 @@ body.blog {
   .blog-page,
   .blog-post {
     padding: 5.5rem 1rem 1.5rem;
+  }
+  /* Follow the body column down to its 1rem gutter. */
+  .site-footer--static {
+    padding-left: 1rem;
+    padding-right: 1rem;
   }
   .post-card {
     padding: 1rem;
