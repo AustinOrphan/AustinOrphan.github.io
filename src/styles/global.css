@@ -539,6 +539,16 @@ a {
     opacity: 0;
 }
 
+/* Holds the reveal's end state after the script drops the filling animation.
+   The entrance animation is applied with fill: forwards, and a filling
+   animation outranks inline style, so nothing the scroll handler wrote to this
+   element could ever paint. The script clears the animation once it has
+   finished and adds this class; without it the bar snaps back to the
+   opacity: 0 above. */
+#linkBar.is-revealed {
+    opacity: 1;
+}
+
 /* The global `a` reset (width/height: 100%) gives every link in the bar a flex
    basis of the whole bar. It only looks right today because min-width: auto
    floors each item at its icon's size; the moment anything shrinks, the items
