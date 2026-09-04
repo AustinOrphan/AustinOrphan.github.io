@@ -1645,12 +1645,12 @@ a {
 }
 
 /* 10.2 Footer Social Links */
-.footer-social {
+.footer-profiles {
     display: flex;
     gap: 15px;
 }
 
-.footer-social-link {
+.footer-profile-link {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1666,7 +1666,7 @@ a {
     overflow: hidden;
 }
 
-.footer-social-link::before {
+.footer-profile-link::before {
     content: '';
     position: absolute;
     top: 50%;
@@ -1680,19 +1680,19 @@ a {
     z-index: -1;
 }
 
-.footer-social-link:hover::before {
+.footer-profile-link:hover::before {
     width: 100%;
     height: 100%;
 }
 
-.footer-social-link:hover {
+.footer-profile-link:hover {
     color: var(--color-background);
     transform: translateY(-2px);
     box-shadow: 0 5px 15px rgba(var(--color-secondary-rgb), 0.3);
 }
 
 /* 10.3 Back to Top Button */
-.back-to-top {
+.footer-return {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -1708,19 +1708,19 @@ a {
     animation: bounceUp 3s ease-in-out infinite;
 }
 
-.back-to-top:hover {
+.footer-return:hover {
     background: var(--color-accent);
     color: var(--color-background);
     transform: translateY(-2px);
     box-shadow: 0 5px 15px rgba(var(--color-accent-rgb), 0.3);
 }
 
-.back-to-top i {
+.footer-return i {
     font-size: 16px;
     transition: transform 0.3s ease;
 }
 
-.back-to-top:hover i {
+.footer-return:hover i {
     transform: translateY(-1px);
 }
 
@@ -2014,7 +2014,7 @@ a {
     animation: pixelBob 1s ease-in-out infinite !important;
 }
 
-.pixel-mode .back-to-top {
+.pixel-mode .footer-return {
     background: var(--pixel-yellow) !important;
     color: var(--pixel-bg) !important;
     border: 3px solid var(--pixel-red) !important;
@@ -2023,7 +2023,7 @@ a {
 }
 
 /* Back to top arrow - Pixel style */
-.pixel-mode .back-to-top i {
+.pixel-mode .footer-return i {
     font-size: 0 !important;
     position: relative;
     display: inline-block;
@@ -2031,7 +2031,7 @@ a {
     height: 12px;
 }
 
-.pixel-mode .back-to-top i::before {
+.pixel-mode .footer-return i::before {
     content: '';
     position: absolute;
     top: 50%;
@@ -2044,20 +2044,20 @@ a {
     border-bottom: 8px solid var(--pixel-bg);
 }
 
-.pixel-mode .back-to-top span {
+.pixel-mode .footer-return span {
     font-family: 'Press Start 2P', monospace !important;
     font-size: 8px !important;
 }
 
 /* Footer social icons - reuse main icon styles */
-.pixel-mode .footer-social-link {
+.pixel-mode .footer-profile-link {
     background: var(--pixel-secondary) !important;
     border: 2px solid var(--pixel-white) !important;
     font-size: 0 !important;
     position: relative;
 }
 
-.pixel-mode .footer-social-link::before {
+.pixel-mode .footer-profile-link::before {
     content: '';
     position: absolute;
     top: 50%;
@@ -2068,7 +2068,7 @@ a {
 }
 
 /* Reuse icon styles for footer */
-.pixel-mode .footer-social-link .ph-github-logo::before {
+.pixel-mode .footer-profile-link .ph-github-logo::before {
     font-family: 'VT323', monospace;
     content: 'G';
     font-size: 16px;
@@ -2077,7 +2077,7 @@ a {
     height: auto;
 }
 
-.pixel-mode .footer-social-link .ph-linkedin-logo::before {
+.pixel-mode .footer-profile-link .ph-linkedin-logo::before {
     font-family: 'VT323', monospace;
     content: 'L';
     font-size: 16px;
@@ -2086,7 +2086,7 @@ a {
     height: auto;
 }
 
-.pixel-mode .footer-social-link .ph-envelope-simple::before {
+.pixel-mode .footer-profile-link .ph-envelope-simple::before {
     font-family: 'VT323', monospace;
     content: '@';
     font-size: 16px;
@@ -2527,7 +2527,7 @@ a {
         text-align: center;
     }
     
-    .footer-social {
+    .footer-profiles {
         justify-content: center;
     }
 
@@ -2535,8 +2535,13 @@ a {
         padding: 10px 0 135px 0;
     }
 
+    /* Must clear the fixed footer's full height, which is 326px in this block
+       (10 top pad + 34 return pill + 10 + 1 rule + 15 + 44 mark + 10 + 35
+       profiles + 10 + 22 copyright + 135 bottom pad). It reserved 280px, so the
+       last 46px of page content sat inside the footer's top band and the SEND
+       MESSAGE button's border cut across the return pill. */
     body:not(.blog) {
-        padding-bottom: 280px; /* Ensure content doesn't overlap footer */
+        padding-bottom: 346px;
     }
 }
 
@@ -2923,12 +2928,12 @@ body.blog {
   color: var(--color-accent);
 }
 
-.blog-footer-social {
+.blog-footer-profiles {
   display: flex;
   gap: 1.25rem;
 }
 
-.blog-footer-social a {
+.blog-footer-profiles a {
   color: var(--color-accent);
   font-size: 1.4rem;
   display: flex;
@@ -2938,7 +2943,7 @@ body.blog {
   justify-content: center;
   transition: color 0.2s;
 }
-.blog-footer-social a:hover { color: var(--color-secondary); }
+.blog-footer-profiles a:hover { color: var(--color-secondary); }
 
 .blog-footer-copy {
   color: rgba(var(--color-primary-rgb), 0.4);
