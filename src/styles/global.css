@@ -37,6 +37,7 @@
    14. Site Logo
        14.1 Blog Nav
        14.2 Footer
+       14.3 Hero Backdrop
    ========================================================================== */
 
 /* ==========================================================================
@@ -3006,6 +3007,127 @@ body.blog {
 @media (max-width: 768px) {
     .footer-left .footer-logo {
         margin: 0 auto;
+    }
+}
+
+/* 14.3 Hero backdrop: the mark, oversized and faint, behind the wordmark.
+
+   It lives inside .hero-section, which is `overflow: hidden`. That crop is what
+   sliced the mark in half against the top of the About section when the
+   backdrop lagged downward behind the scroll: a mark this size sits only
+   (100vh - 92vh) / 2 = 4vh clear of the hero's bottom edge, so any downward
+   drift crosses it almost immediately.
+
+   Drifting upward instead means the mark leaves through the top of the viewport,
+   which nothing clips, and it is gone before the hero's lower edge is anywhere
+   near it. --backdrop-shift is written by the hero scroll handler. */
+.hero-logo-backdrop {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, calc(-50% + var(--backdrop-shift, 0px)));
+    width: min(92vh, 88vw);
+    height: min(92vh, 88vw);
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0;
+    will-change: transform, opacity;
+}
+
+.hero-logo-backdrop .site-logo {
+    width: 100%;
+    height: 100%;
+}
+
+/* Keep the wordmark and link bar above the backdrop. */
+.hero-section .page-wrapper {
+    position: relative;
+    z-index: 1;
+}
+
+/* The swell. Each one runs 40s and climbs in two stages, with a beat at the top:
+
+     0s   2s at zero
+     2s   4s up to a 5% shelf
+     6s   4s held on the shelf
+    10s   20s up to the peak
+    30s   2s held at the peak
+    32s   8s back down to zero
+
+   The shelf establishes the mark quietly before the long climb, the hold at the
+   top lets the peak land, and the exit is quick relative to the entry. Going
+   fully to zero rather than resting on a floor is what makes the tint change
+   possible, since the mark is completely dark for those first 2 seconds.
+
+   Brightness runs on a 4-swell loop (160s): three swells peak at 15% and the
+   fourth at 30%. Each swell's stage marks are 2s, 6s, 10s, 30s, 32s and 40s,
+   expressed here against the 160s whole. */
+@keyframes heroLogoBreathe {
+    0%      { opacity: 0; }
+    1.25%   { opacity: 0; }
+    3.75%   { opacity: 0.05; }
+    6.25%   { opacity: 0.05; }
+    18.75%  { opacity: 0.15; }
+    20%     { opacity: 0.15; }
+    25%     { opacity: 0; }
+
+    26.25%  { opacity: 0; }
+    28.75%  { opacity: 0.05; }
+    31.25%  { opacity: 0.05; }
+    43.75%  { opacity: 0.15; }
+    45%     { opacity: 0.15; }
+    50%     { opacity: 0; }
+
+    51.25%  { opacity: 0; }
+    53.75%  { opacity: 0.05; }
+    56.25%  { opacity: 0.05; }
+    68.75%  { opacity: 0.15; }
+    70%     { opacity: 0.15; }
+    75%     { opacity: 0; }
+
+    76.25%  { opacity: 0; }
+    78.75%  { opacity: 0.05; }
+    81.25%  { opacity: 0.05; }
+    93.75%  { opacity: 0.30; }
+    95%     { opacity: 0.30; }
+    100%    { opacity: 0; }
+}
+
+/* Tint runs on a 3-swell loop (120s) through the three colours the mark already
+   uses. Each colour is held flat across its swell and crossfades inside the next
+   swell's 2s at zero opacity, so the change is never seen. The crossfade takes
+   1.8s of that 2s window rather than all of it: at exactly 2s the brightness loop
+   starts lifting off zero, and finishing the colour early leaves 200ms of margin
+   instead of having the two land on the same instant.
+
+   4 swells against 3 gives a 480s super-period, which means the 30% swell
+   arrives in a different colour each time it comes round. */
+@keyframes heroLogoTint {
+    0%      { fill: var(--color-secondary); }
+    1.5%    { fill: var(--color-primary); }
+    33.333% { fill: var(--color-primary); }
+    34.833% { fill: var(--color-accent); }
+    66.667% { fill: var(--color-accent); }
+    68.167% { fill: var(--color-secondary); }
+    100%    { fill: var(--color-secondary); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .hero-logo-backdrop {
+        animation: heroLogoBreathe 160s ease-in-out infinite;
+    }
+
+    .hero-logo-backdrop .site-logo-mark {
+        animation: heroLogoTint 120s linear infinite;
+    }
+}
+
+/* No breathing and no drift for anyone who asked for less motion. */
+@media (prefers-reduced-motion: reduce) {
+    .hero-logo-backdrop {
+        animation: none;
+        transform: translate(-50%, -50%);
+        opacity: 0.08;
     }
 }
 
