@@ -2638,8 +2638,26 @@ a {
         justify-content: center;
     }
 
+    /* 135px of bottom padding left a void as tall as the footer's own content
+       below the copyright. It was not protecting anything: #linkBar is
+       hero-anchored, because the hero's breathe animation gives it a transform
+       and so makes it the containing block for fixed descendants, so by the
+       time the footer is on screen the bar has scrolled thousands of pixels
+       away. Verified with elementFromPoint that every footer control still
+       hit-tests correctly with the padding gone. */
     .site-footer {
-        padding: 10px 0 135px 0;
+        padding: 10px 0 28px 0;
+    }
+
+    /* Even out the row rhythm. It ran 13 / 16 / 10 / 10 because .footer-top and
+       .footer-decoration carried their own margins while .footer-content used a
+       10px grid gap. */
+    .footer-top {
+        margin-bottom: 10px;
+    }
+
+    .footer-decoration {
+        margin: 0 0 10px;
     }
 
     /* Must clear the fixed footer's full height, which is 326px in this block
@@ -2647,8 +2665,12 @@ a {
        profiles + 10 + 22 copyright + 135 bottom pad). It reserved 280px, so the
        last 46px of page content sat inside the footer's top band and the SEND
        MESSAGE button's border cut across the return pill. */
+    /* Must clear the fixed footer's full height, which is 214px after the
+       padding above. This leaves 46px of slack. These two numbers have to move
+       together: under-reserving is what let page content sit inside the footer
+       and put the SEND MESSAGE border through the Top pill. */
     body:not(.blog) {
-        padding-bottom: 346px;
+        padding-bottom: 260px;
     }
 }
 
