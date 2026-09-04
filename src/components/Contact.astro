@@ -57,55 +57,61 @@
 
 <script>
   (function() {
-    const form = document.querySelector('.contact-form');
+    const form = document.querySelector<HTMLFormElement>('.contact-form');
     const statusDiv = document.getElementById('form-status');
+    // Everything below assumes both exist. Bail rather than throw on a page
+    // that does not have the form.
+    if (!form || !statusDiv) return;
+    // Captured so the checker keeps the narrowing inside the hoisted functions
+    // below, the same reason Footer.astro does it.
+    const statusEl = statusDiv;
     if (!form) return;
-    let statusTimeout = null;
+    let statusTimeout: ReturnType<typeof setTimeout> | null = null;
 
-    function validateName(v) { return v.trim().length >= 2; }
-    function validateEmail(v) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim()); }
-    function validateMessage(v) { return v.trim().length >= 10; }
+    function validateName(v: string) { return v.trim().length >= 2; }
+    function validateEmail(v: string) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim()); }
+    function validateMessage(v: string) { return v.trim().length >= 10; }
 
-    function showError(id, msg) {
-      const err = document.getElementById(id + '-error');
-      const field = document.getElementById(id);
+    function showError(id: string, msg: string) {
+      const err = document.getElementById(id + '-error') as HTMLElement | null;
+      const field = document.getElementById(id) as HTMLInputElement | HTMLTextAreaElement | null;
       if (err) { err.textContent = msg; err.style.display = 'block'; }
       if (field) field.classList.add('error');
     }
-    function clearError(id) {
-      const err = document.getElementById(id + '-error');
-      const field = document.getElementById(id);
+    function clearError(id: string) {
+      const err = document.getElementById(id + '-error') as HTMLElement | null;
+      const field = document.getElementById(id) as HTMLInputElement | HTMLTextAreaElement | null;
       if (err) { err.textContent = ''; err.style.display = 'none'; }
       if (field) field.classList.remove('error');
     }
-    function showStatus(msg, type) {
-      statusDiv.textContent = msg;
-      statusDiv.className = 'form-status ' + type;
-      statusDiv.style.display = 'block';
+    function showStatus(msg: string, type: string) {
+      statusEl.textContent = msg;
+      statusEl.className = 'form-status ' + type;
+      statusEl.style.display = 'block';
       if (type === 'success') {
-        clearTimeout(statusTimeout);
-        statusTimeout = setTimeout(() => { statusDiv.style.display = 'none'; }, 5000);
+        if (statusTimeout) clearTimeout(statusTimeout);
+        statusTimeout = setTimeout(() => { statusEl.style.display = 'none'; }, 5000);
       }
     }
 
-    document.getElementById('name')?.addEventListener('blur', function() {
+    document.getElementById('name')?.addEventListener('blur', function(this: HTMLInputElement | HTMLTextAreaElement) {
       validateName(this.value) ? clearError('name') : showError('name', 'Name must be at least 2 characters long');
     });
-    document.getElementById('email')?.addEventListener('blur', function() {
+    document.getElementById('email')?.addEventListener('blur', function(this: HTMLInputElement | HTMLTextAreaElement) {
       validateEmail(this.value) ? clearError('email') : showError('email', 'Please enter a valid email address');
     });
-    document.getElementById('message')?.addEventListener('blur', function() {
+    document.getElementById('message')?.addEventListener('blur', function(this: HTMLInputElement | HTMLTextAreaElement) {
       validateMessage(this.value) ? clearError('message') : showError('message', 'Message must be at least 10 characters long');
     });
 
     form.addEventListener('submit', function(e) {
       e.preventDefault();
-      clearTimeout(statusTimeout);
-      statusDiv.style.display = 'none';
+      if (statusTimeout) clearTimeout(statusTimeout);
+      statusEl.style.display = 'none';
       const data = new FormData(form);
-      const name = data.get('name');
-      const email = data.get('email');
-      const message = data.get('message');
+      const name = String(data.get('name') ?? '');
+      const email = String(data.get('email') ?? '');
+      const message = String(data.get('message') ?? '');
       let valid = true;
 
       if (!validateName(name)) { showError('name', 'Name must be at least 2 characters long'); valid = false; } else clearError('name');
@@ -113,7 +119,8 @@
       if (!validateMessage(message)) { showError('message', 'Message must be at least 10 characters long'); valid = false; } else clearError('message');
       if (!valid) { showStatus('Please fix the errors above and try again.', 'error'); return; }
 
-      const btn = form.querySelector('.submit-btn');
+      const btn = form.querySelector<HTMLButtonElement>('.submit-btn');
+      if (!btn) return;
       const orig = btn.innerHTML;
       btn.innerHTML = '<i class="ph-duotone ph-spinner"></i> Sending...';
       btn.disabled = true;
