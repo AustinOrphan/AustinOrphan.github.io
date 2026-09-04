@@ -36,6 +36,7 @@
        13.4 Large Desktop (1024px+)
    14. Site Logo
        14.1 Blog Nav
+       14.2 Footer
    ========================================================================== */
 
 /* ==========================================================================
@@ -2993,6 +2994,19 @@ body.blog {
 /* 14.1 Blog nav */
 .blog-site-nav .site-logo {
     margin-right: 10px;
+}
+
+/* 14.2 Footer: the mark takes the left cell of the 1fr auto 1fr grid and the
+   copyright moves right, so the row reads mark / social / copyright. */
+.footer-left .footer-logo {
+    margin-right: auto;
+}
+
+/* Below 768px the footer collapses to a single centred column. */
+@media (max-width: 768px) {
+    .footer-left .footer-logo {
+        margin: 0 auto;
+    }
 }
 
 /* The global `a` reset sets width/height 100%. As flex children of the nav that

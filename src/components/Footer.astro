@@ -1,4 +1,5 @@
 ---
+import Logo from './Logo.astro';
 const year = new Date().getFullYear();
 ---
 <footer class="site-footer">
@@ -12,8 +13,12 @@ const year = new Date().getFullYear();
         <div class="decoration-line-full"></div>
     </div>
     <div class="footer-content">
+        <!-- Mark left, copyright right. Two alternatives were rendered and kept
+             in mind: copyright left with the mark right (the original grid,
+             where the mark reads as a corner afterthought), and this same
+             arrangement with the mark at 34px instead of 44px. -->
         <div class="footer-left">
-            <p class="copyright">© {year} Austin Orphan</p>
+            <Logo variant="hero" size={44} class="footer-logo" />
         </div>
         <div class="footer-center">
             <div class="footer-social">
@@ -22,7 +27,9 @@ const year = new Date().getFullYear();
                 <a href="mailto:AustinGOrphan@gmail.com" aria-label="Email" class="footer-social-link"><i class="ph-duotone ph-envelope-simple"></i></a>
             </div>
         </div>
-        <div class="footer-right"></div>
+        <div class="footer-right">
+            <p class="copyright">© {year} Austin Orphan</p>
+        </div>
     </div>
 </footer>
 
