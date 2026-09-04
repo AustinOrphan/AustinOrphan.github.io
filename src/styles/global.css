@@ -34,6 +34,8 @@
        13.2 Tablet Styles (600px - 768px)
        13.3 Desktop Styles (768px+)
        13.4 Large Desktop (1024px+)
+   14. Site Logo
+       14.1 Blog Nav
    ========================================================================== */
 
 /* ==========================================================================
@@ -2959,4 +2961,52 @@ body.blog {
   .post-card {
     padding: 1rem;
   }
+}
+
+/* ==========================================================================
+   14. Site Logo
+   ========================================================================== */
+
+/* The mark, in the same two treatments the wordmark uses. "hero" mirrors the
+   600px+ h1: off-white fill, a red outline painted UNDER the fill so only its
+   outer edge shows, and a blue shadow at the same offset. "flat" is a single
+   accent fill for sizes where that outline would go sub-pixel. */
+.site-logo {
+    display: block;
+    flex: 0 0 auto;
+}
+
+.site-logo-hero .site-logo-mark {
+    fill: var(--color-primary);
+    stroke: var(--color-secondary);
+}
+
+.site-logo-hero .site-logo-shadow {
+    fill: var(--color-accent);
+}
+
+.site-logo-flat .site-logo-mark {
+    fill: var(--color-accent);
+    stroke: none;
+}
+
+/* 14.1 Blog nav */
+.blog-site-nav .site-logo {
+    margin-right: 10px;
+}
+
+/* The global `a` reset sets width/height 100%. As flex children of the nav that
+   makes both links grow to fill the bar, which reads as a spread-out navbar
+   rather than the breadcrumb the 0.5rem gap and "/" separator intend. Sizing
+   them to their content also stops the name wrapping once the mark sits beside
+   it. */
+.blog-site-nav a {
+    width: auto;
+    height: auto;
+}
+
+.blog-nav-home {
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
 }

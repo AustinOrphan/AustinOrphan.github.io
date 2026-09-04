@@ -1,4 +1,5 @@
 ---
+import Logo from '../../components/Logo.astro';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import BlogFooter from '../../components/BlogFooter.astro';
 import { getCollection } from 'astro:content';
@@ -9,7 +10,7 @@ const posts = allPosts.sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.
 ---
 <BaseLayout title="Blog — Austin Orphan" description="Thoughts, projects, and technical notes from Austin Orphan." bodyClass="blog">
   <header class="blog-site-nav">
-    <a href="/">Austin Orphan</a>
+    <a href="/" class="blog-nav-home"><Logo variant="hero" size={26} />Austin Orphan</a>
     <span class="nav-sep">/</span>
     <a href="/blog/">Blog</a>
   </header>
