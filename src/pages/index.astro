@@ -7,10 +7,12 @@ import Footer from '../components/Footer.astro';
 import KonamiEgg from '../components/KonamiEgg.astro';
 import ParticleSystem from '../components/ParticleSystem.astro';
 import ProjectsMenu from '../components/ProjectsMenu.astro';
+import Logo from '../components/Logo.astro';
 ---
 <BaseLayout>
   <!-- Hero Section -->
   <section id="hero" class="hero-section">
+    <div class="hero-logo-backdrop" aria-hidden="true"><Logo variant="flat" /></div>
     <div class="page-wrapper">
       <div class="content-wrapper">
         <h1 data-particle-target>Austin Orphan</h1>
@@ -107,6 +109,8 @@ import ProjectsMenu from '../components/ProjectsMenu.astro';
 
       const heroContent = document.querySelector('.content-wrapper');
       const linkBar = document.querySelector('#linkBar');
+      const heroBackdrop = document.querySelector('.hero-logo-backdrop');
+      const REDUCED_MQ = window.matchMedia('(prefers-reduced-motion: reduce)');
 
       let ticking = false;
       function updateOnScroll() {
@@ -115,6 +119,11 @@ import ProjectsMenu from '../components/ProjectsMenu.astro';
         calcScrollSpeed();
         if (scrolled < heroHeight) {
           if (heroContent && isDesktop) heroContent.style.transform = `translateY(${scrolled * 0.25}px)`;
+          // Negative: the backdrop leads the scroll and exits through the top of
+          // the viewport, rather than lagging down into the hero's bottom crop.
+          if (heroBackdrop && !REDUCED_MQ.matches) {
+            heroBackdrop.style.setProperty('--backdrop-shift', `${-scrolled * 0.25}px`);
+          }
           if (linkBar) {
             if (isDesktop) {
               linkBar.style.transform = `translateY(${scrolled * 0.1}px)`;
@@ -124,6 +133,7 @@ import ProjectsMenu from '../components/ProjectsMenu.astro';
           }
         } else {
           if (heroContent && isDesktop) heroContent.style.transform = '';
+          if (heroBackdrop) heroBackdrop.style.removeProperty('--backdrop-shift');
           if (linkBar) {
             if (isDesktop) linkBar.style.transform = '';
             else linkBar.style.opacity = '0';

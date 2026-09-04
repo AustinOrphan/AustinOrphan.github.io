@@ -8,7 +8,8 @@
     "dev": "npm run sync && astro dev",
     "build": "npm run sync && astro build",
     "preview": "astro preview",
-    "check": "npm run sync && astro check"
+    "check": "npm run sync && astro check",
+    "plot:backdrop": "node scripts/plot-hero-backdrop-curve.mjs"
   },
   "dependencies": {
     "@astrojs/markdown-remark": "^7.2.4",
