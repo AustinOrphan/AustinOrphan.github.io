@@ -149,9 +149,14 @@ live in the "11. Special Modes" section of `global.css`.
 
 ## Known Issues
 
-- **Type errors:** `npm run check` reports ~155 pre-existing DOM typing errors,
-  mostly `Property 'style' does not exist on type 'Element'` in
-  `src/pages/index.astro`. They do not affect the build.
+None outstanding. `npm run check` is clean: 0 errors, 0 warnings.
+
+It previously reported ~155 DOM typing errors, mostly `Property 'style' does
+not exist on type 'Element'`. Those are fixed: element queries are typed with
+`document.querySelector<HTMLElement>(...)`, the `Particle` class declares its
+fields, and event handlers are annotated. Keep it at zero. The inline
+`<script>` blocks in `.astro` files are TypeScript, so generics and type
+annotations work there.
 
 ## Sibling Pages Sites
 
