@@ -440,11 +440,18 @@ a {
 }
 
 /* Hero-specific page wrapper positioning */
+/* height:100vh here used to prop the panel open past .hero-section's
+   min-height:100dvh, so on iOS the hero stayed a full address-bar taller than
+   the visible screen: the link bar was pushed flat against the fold with a
+   couple of pixels clipped, and ~100px of dead scroll sat under the hero.
+   Stretching instead leaves the dvh on .hero-section as the only height
+   declaration, so the two cannot drift apart again. */
 .hero-section .page-wrapper {
     justify-content: flex-start;
-    padding-top: 25vh;
+    padding-top: 25dvh;
     min-height: auto;
-    height: 100vh;
+    height: auto;
+    align-self: stretch;
     box-sizing: border-box;
 }
 
@@ -3021,13 +3028,25 @@ body.blog {
    Drifting upward instead means the mark leaves through the top of the viewport,
    which nothing clips, and it is gone before the hero's lower edge is anywhere
    near it. --backdrop-shift is written by the hero scroll handler. */
+/* Anchored to the top of the hero content, not the middle of the hero.
+   Centring on the hero worked only because the mark happened to be big enough
+   to span the wordmark; on a narrow tall phone it is sized by 88vw instead, so
+   it shrank below the wordmark and read as a separate floating blob. Measured
+   at 402x874 the mark's centre sat 174px below the wordmark's and their boxes
+   did not overlap at all.
+
+   The 27.174% is not a magic number: it is 25/92, the content's top offset
+   divided by the mark's size, which is exactly the shift that reproduces the
+   old desktop composition. Desktop therefore lands bit-identical, while phones
+   move up to sit behind the wordmark. Both terms resolve against the same
+   dvh, so nothing drifts when the address bar appears. */
 .hero-logo-backdrop {
     position: absolute;
-    top: 50%;
+    top: 25dvh;
     left: 50%;
-    transform: translate(-50%, calc(-50% + var(--backdrop-shift, 0px)));
-    width: min(92vh, 88vw);
-    height: min(92vh, 88vw);
+    transform: translate(-50%, calc(-50% + 27.174% + var(--backdrop-shift, 0px)));
+    width: min(92dvh, 88vw);
+    height: min(92dvh, 88vw);
     pointer-events: none;
     z-index: 0;
     opacity: 0;
@@ -3126,7 +3145,9 @@ body.blog {
 @media (prefers-reduced-motion: reduce) {
     .hero-logo-backdrop {
         animation: none;
-        transform: translate(-50%, -50%);
+        /* Must repeat the anchor from above. A bare translate(-50%, -50%) here
+           would drop the 27.174% and lift the mark above the wordmark. */
+        transform: translate(-50%, calc(-50% + 27.174%));
         opacity: 0.08;
     }
 }
