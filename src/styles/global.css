@@ -442,11 +442,22 @@ a {
         var(--linkbar-bottom) + var(--linkbar-height) + 28px + 51px
         - var(--hero-drop)
     );
+    /* The room the content actually has: top of the screen to top of the link
+       bar, after the bottom furniture takes its cut. Measuring against this
+       rather than raw viewport height means the drop reacts to a taller
+       home-indicator inset or a larger touch target on its own. */
+    --hero-space: calc(100dvh - var(--linkbar-bottom) - var(--linkbar-height));
     /* How far the content sits below the evenly-balanced point. Centring in the
        space above the bottom cluster leaves the block reading high on a large
-       phone; 50px is the largest drop that still clears the scroll arrow at
-       200% page zoom on a 320px-wide screen. */
-    --hero-drop: 50px;
+       phone, but a flat subtraction is regressive: it takes the same pixels
+       from the screens with none to spare. Taking a share of the surplus floors
+       the drop at zero on a small phone, which keeps today's geometry there and
+       actually gains arrow clearance, while a large handset gets the full drop
+       into the optical-centre band.
+
+       Measured: 43.6% block centre on a 16 Pro Max, 30.7% on an SE, and the
+       arrow gap goes 107px to 132px on the SE rather than shrinking. */
+    --hero-drop: clamp(0px, (var(--hero-space) - 450px) * 0.45, 120px);
     /* Where the mark's centre lands, and how far below that anchor it sits as a
        share of its own height. Overridden together below 600px. */
     --backdrop-anchor: 25dvh;
