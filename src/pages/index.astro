@@ -105,12 +105,52 @@ import Logo from '../components/Logo.astro';
 
       const DESKTOP_MQ = window.matchMedia('(min-width: 600px)');
       let isDesktop = DESKTOP_MQ.matches;
-      DESKTOP_MQ.addEventListener('change', e => { isDesktop = e.matches; });
 
       const heroContent = document.querySelector('.content-wrapper');
       const linkBar = document.querySelector('#linkBar');
       const heroBackdrop = document.querySelector('.hero-logo-backdrop');
+      const heroSection = document.querySelector('.hero-section');
       const REDUCED_MQ = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+      // .hero-section is overflow: hidden, the crop that keeps the oversized
+      // backdrop mark in check. On a wide-but-short viewport, which is every
+      // landscape phone, the link bar clears the hero's bottom edge by as
+      // little as 10px, so an unbounded parallax pushes the icons straight
+      // through that crop and slices them off. Measure the real headroom and
+      // never drift past it. Measured with the transform cleared so the value
+      // does not depend on the current scroll position.
+      let heroSlack = 0;
+      function measureHeroSlack() {
+        if (!heroSection || !heroContent || !linkBar) return;
+        const previous = heroContent.style.transform;
+        heroContent.style.transform = 'none';
+        heroSlack = Math.max(0,
+          heroSection.getBoundingClientRect().bottom
+            - linkBar.getBoundingClientRect().bottom - 6);
+        heroContent.style.transform = previous;
+      }
+
+      // Both branches below write inline styles the other never clears, and the
+      // reset is itself gated on isDesktop, so nothing unwinds them when the
+      // breakpoint flips. A .content-wrapper transform left over from landscape
+      // is not merely a 40px nudge: a non-none transform makes the wrapper the
+      // containing block for fixed descendants, and #linkBar is fixed below
+      // 600px, so its `bottom` starts resolving against a 130px box instead of
+      // the hero and the pill jumps some 415px up the page, landing on top of
+      // the wordmark.
+      DESKTOP_MQ.addEventListener('change', e => {
+        isDesktop = e.matches;
+        if (heroContent) heroContent.style.transform = '';
+        if (linkBar) {
+          linkBar.style.transform = '';
+          linkBar.style.opacity = '';
+        }
+        measureHeroSlack();
+        updateOnScroll();
+      });
+
+      measureHeroSlack();
+      window.addEventListener('resize', measureHeroSlack);
 
       let ticking = false;
       function updateOnScroll() {
@@ -118,7 +158,10 @@ import Logo from '../components/Logo.astro';
         const heroHeight = window.innerHeight;
         calcScrollSpeed();
         if (scrolled < heroHeight) {
-          if (heroContent && isDesktop) heroContent.style.transform = `translateY(${scrolled * 0.25}px)`;
+          if (heroContent && isDesktop) {
+            heroContent.style.transform =
+              `translateY(${Math.min(scrolled * 0.25, heroSlack)}px)`;
+          }
           // Negative: the backdrop leads the scroll and exits through the top of
           // the viewport, rather than lagging down into the hero's bottom crop.
           if (heroBackdrop && !REDUCED_MQ.matches) {
@@ -132,7 +175,7 @@ import Logo from '../components/Logo.astro';
             }
           }
         } else {
-          if (heroContent && isDesktop) heroContent.style.transform = '';
+          if (heroContent) heroContent.style.transform = '';
           if (heroBackdrop) heroBackdrop.style.removeProperty('--backdrop-shift');
           if (linkBar) {
             if (isDesktop) linkBar.style.transform = '';
