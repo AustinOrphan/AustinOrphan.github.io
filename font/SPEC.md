@@ -133,12 +133,31 @@ round weight, which is the conventional optical relationship.
 **D4. The O is built from its fitted circles**, not from the node-split source
 path. Identical within 0.01 pt, without the boolean scars.
 
-**D5. The bar is carried verbatim**, all 18 cubics, hooks included, through
-the same rotation and scale as the polygon. The isolated A is exactly
-polygon ∪ bar. Consequence: the hooks overhang the feet by 104 units on the
-left and 105 on the right, giving the A an advance of 847 units, wide for a
-capital. That width *is* the letter as drawn; a compact alternate is possible
-later but is not this A.
+**D5. The bar's hooks return to the legs.** In the mark each hook's return
+stroke ends where it meets the ring, enclosing a small eye. Carried verbatim
+without the ring, the hooks end in space and overhang the feet by 104 and 105
+units (advance 847). The user's direction was that the hooks should follow
+their trajectory back to the legs. Two constructions were built and compared
+(`measure/evidence/hook-options*.png`):
+
+- *Continue each return straight along its end tangent until it meets the
+  leg.* The returns are straight where they end (end radii of curvature 1080
+  and 8142 units), so this is the literal reading. On the left it lands after
+  91 units and reads well; on the right the mark's hook sits much farther from
+  its leg and the continuation is a 201-unit hairline across the counter,
+  a stroke the mark has no vocabulary for. Rejected for that reason.
+- *Slide each hook inward along the bar's own arc until its return's end face
+  touches its leg's outer edge*, then rebuild the bar between the hooks as arcs
+  of the original radii (1778 top, 2369 bottom, in font units) through the
+  moved junctions, and carry the return the last few units into the leg's
+  centre-line. This applies the mark's own construction, the return landing
+  on the nearest structure, with the leg standing in for the ring. The hooks
+  themselves are untouched. **Adopted.** Slides: left 92 units (a rotation of
+  2.23° about the bottom arc's centre), right 189 units (4.57°); tails 20 and
+  16 units. The A's advance becomes 661.
+
+The verbatim bar is kept as the unencoded alternate `A.open` (advance 847).
+Switching the default back is one argument in `build_A`.
 
 **D6. Typographic constants** (`lib/metrics.py`), which the mark cannot
 supply: em 1000; cap 700; round overshoot 10; point overshoot 16; side bearing
@@ -158,14 +177,14 @@ largest scope decision in the face and the easiest to revisit.
 | O inner radius | 326.81 |
 | O counter offset | 19.83 units toward 45.07° |
 | O stroke, thick / mean / thin | 53.0 / 33.2 / 13.4 |
-| A apex | (423.4, 716) |
-| A feet tips | (143.8, 0) and (701.9, 0) |
+| A apex | (342, 716) |
+| A feet tips | (63, 0) and (621, 0) |
 | A leg angles | 68.71° and 111.29° |
 | A left leg width, foot → apex | 39.5 → 27.1 |
 | A right leg width, foot → apex | 37.2 → 25.5 |
 | A foot cuts | +21.8° and −19.4° from horizontal |
-| A bar | verbatim; box 40 … 807 × 179 … 499 |
-| A advance | 847 |
+| A bar | source Béziers, hooks slid inward per D5; box 40 … 543 × 222 … 454 |
+| A advance | 661 (A.open, verbatim bar: 847) |
 | O advance | 800 |
 
 ## 5. Rules for every other glyph

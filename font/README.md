@@ -30,12 +30,20 @@ python3 -m venv font/venv && font/venv/bin/pip install -r font/requirements.txt
 font/venv/bin/python font/measure/extract_ai.py   # source/*.ai -> source/ai_objects.json
 font/venv/bin/python font/build_glyphs.py         # -> build/glyphs.json
 python3 font/compile_font.py                      # -> build/OrphanDisplay-Regular.otf
-font/venv/bin/python font/proof.py                # -> build/proof.svg, build/overlay.svg
+font/venv/bin/python font/proof.py --overlay      # -> build/proof.svg, build/overlay.svg
 node font/measure/rasterize.mjs font/build/proof.svg font/build/overlay.svg
 ```
 
 `rasterize.mjs` renders SVG through a Chrome listening on `CDP_PORT`
 (default 9222); start one with `--remote-debugging-port=9222 --headless`.
+
+To work on one glyph module at a time, every step takes an input/output pair:
+
+```bash
+font/venv/bin/python font/build_glyphs.py --only core,set_round --out font/build/set_round.json
+python3 font/compile_font.py --in font/build/set_round.json --out font/build/set_round.otf
+font/venv/bin/python font/proof.py --in font/build/set_round.json --out font/build/proof_round.svg
+```
 
 ## Verifying
 
