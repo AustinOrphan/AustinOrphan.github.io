@@ -435,6 +435,16 @@ a {
     --linkbar-bottom: max(64px, calc(env(safe-area-inset-bottom) + 30px));
     /* The pill's drawn height: the touch target plus its padding and border. */
     --linkbar-height: calc(var(--linkbar-target) + 26px);
+    /* The bottom cluster: link bar offset, its height, the 28px arrow gap and
+       the arrow itself. Reserved by the wrapper below and used to place the
+       backdrop, so the mark tracks the content instead of being pinned. */
+    --hero-bottom-reserve: calc(
+        var(--linkbar-bottom) + var(--linkbar-height) + 28px + 51px
+    );
+    /* Where the mark's centre lands, and how far below that anchor it sits as a
+       share of its own height. Overridden together below 600px. */
+    --backdrop-anchor: 25dvh;
+    --backdrop-offset: 27.174%;
     min-height: 100vh;
     min-height: 100dvh;
     display: flex;
@@ -2297,10 +2307,20 @@ a {
     .hero-section .page-wrapper {
         justify-content: center;
         padding-top: 0;
-        /* link bar offset + its height + the 28px arrow gap + the arrow itself */
-        padding-bottom: calc(
-            var(--linkbar-bottom) + var(--linkbar-height) + 28px + 51px
-        );
+        padding-bottom: var(--hero-bottom-reserve);
+    }
+
+    /* The content is no longer pinned at 25dvh here, it is centred in what is
+       left above the bottom cluster. Anchoring the mark to a flat 25dvh left it
+       standing still while the wordmark moved: measured across the candidate
+       positions the mark's centre stayed at 323px while the wordmark's swung
+       113px, putting the offset anywhere from +22% to -23% of the mark's height
+       against desktop's +13%. Anchoring to the same centre makes it follow.
+       8% is desktop's own mark-to-block relationship, which measures 7.5% at
+       1440x900, 5.3% at 1920 and 11.5% at 1024. */
+    .hero-section {
+        --backdrop-anchor: calc((100dvh - var(--hero-bottom-reserve)) / 2);
+        --backdrop-offset: 8%;
     }
 }
 
@@ -3085,9 +3105,9 @@ body.blog {
    dvh, so nothing drifts when the address bar appears. */
 .hero-logo-backdrop {
     position: absolute;
-    top: 25dvh;
+    top: var(--backdrop-anchor);
     left: 50%;
-    transform: translate(-50%, calc(-50% + 27.174% + var(--backdrop-shift, 0px)));
+    transform: translate(-50%, calc(-50% + var(--backdrop-offset) + var(--backdrop-shift, 0px)));
     width: min(92dvh, 88vw);
     height: min(92dvh, 88vw);
     pointer-events: none;
@@ -3188,9 +3208,9 @@ body.blog {
 @media (prefers-reduced-motion: reduce) {
     .hero-logo-backdrop {
         animation: none;
-        /* Must repeat the anchor from above. A bare translate(-50%, -50%) here
-           would drop the 27.174% and lift the mark above the wordmark. */
-        transform: translate(-50%, calc(-50% + 27.174%));
+        /* Must repeat the anchor offset. A bare translate(-50%, -50%) here would
+           drop it and lift the mark above the wordmark. */
+        transform: translate(-50%, calc(-50% + var(--backdrop-offset)));
         opacity: 0.08;
     }
 }
