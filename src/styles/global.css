@@ -539,6 +539,16 @@ a {
     opacity: 0;
 }
 
+/* Holds the reveal's end state after the script drops the filling animation.
+   The entrance animation is applied with fill: forwards, and a filling
+   animation outranks inline style, so nothing the scroll handler wrote to this
+   element could ever paint. The script clears the animation once it has
+   finished and adds this class; without it the bar snaps back to the
+   opacity: 0 above. */
+#linkBar.is-revealed {
+    opacity: 1;
+}
+
 /* The global `a` reset (width/height: 100%) gives every link in the bar a flex
    basis of the whole bar. It only looks right today because min-width: auto
    floors each item at its icon's size; the moment anything shrinks, the items
@@ -832,6 +842,10 @@ a {
 
 /* 8.1 Section Navigation */
 .section-nav {
+    /* One edge offset shared by every tier. It resolves to 8px today, because
+       env() reads 0 without viewport-fit=cover in the viewport meta, and picks
+       up a real notch automatically the day that is turned on. */
+    --nav-edge: max(8px, env(safe-area-inset-right, 0px));
     position: fixed;
     right: -80px;
     top: 50%;
@@ -846,17 +860,21 @@ a {
 }
 
 .section-nav:hover {
-    right: 20px;
+    right: var(--nav-edge);
 }
 
 .section-nav.show-on-scroll {
-    right: 20px;
+    right: var(--nav-edge);
 }
 
+/* Anchored to the nav rather than to a 60px number that only happened to land
+   near the buttons. The rule sits inside .section-nav's transform-induced
+   containing block regardless, so it may as well say so. */
 .section-nav::before {
     content: '';
-    position: fixed;
-    right: 60px;
+    position: absolute;
+    left: -8px;
+    right: auto;
     top: 0;
     bottom: 0;
     width: 1px;
@@ -864,6 +882,16 @@ a {
     opacity: 0.4;
     animation: verticalGlow 4s ease-in-out infinite;
     z-index: 99;
+}
+
+/* The circles are 32-34px, under the 44px touch minimum. Grow the hit area
+   without touching the visual size. The 6px vertical margins mean neighbouring
+   targets abut exactly rather than overlapping, so no button steals another's
+   taps. */
+.section-nav a::after {
+    content: '';
+    position: absolute;
+    inset: -6px;
 }
 
 .section-nav a {
@@ -3315,4 +3343,24 @@ body.blog {
     display: inline-flex;
     align-items: center;
     white-space: nowrap;
+}
+
+/* Landscape phones only. The rail sits 26px in from the layout viewport, and
+   iOS adds its own 44-59px letterbox over the notch on top of that, because the
+   viewport meta has no viewport-fit=cover. The physical gap from the glass is
+   therefore about 70px, roughly 8% of the screen width, which reads as the nav
+   floating in mid-air.
+
+   Trimming the page's own share to 14px is what this file can do. Removing the
+   letterbox needs viewport-fit=cover in BaseLayout's viewport meta, which is a
+   larger change: it lets content run under the notch everywhere and makes the
+   three existing env() calls in this file live for the first time. Worth doing
+   deliberately, not as a side effect of this.
+
+   Scoped to short viewports so iPad portrait keeps its 20px. */
+@media screen and (min-width: 600px) and (max-width: 1023.98px) and (max-height: 520px) {
+    .section-nav:hover,
+    .section-nav.show-on-scroll {
+        right: var(--nav-edge);
+    }
 }
