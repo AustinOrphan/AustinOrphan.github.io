@@ -2322,6 +2322,26 @@ a {
         --backdrop-anchor: calc((100dvh - var(--hero-bottom-reserve)) / 2);
         --backdrop-offset: 8%;
     }
+
+    /* Give the phone wordmark the same treatment as 600px+: off-white fill, a
+       red outline painted under it so only the outer edge shows, and a blue
+       shadow at the same offset. The base h1 rule used two offset shadows and
+       no outline, which read as a softer, different mark.
+
+       .28vw rather than desktop's .2vw because the phone h1 is 14vw against
+       desktop's 10vw. Both land on exactly 2% of the font size, which is what
+       makes the two read as the same treatment rather than a fainter cousin;
+       a literal .2vw here would be 1.43%. At 320px wide that is a 0.9px stroke,
+       2.7 device pixels at 3x, so it still holds up on the smallest phones.
+
+       Scoped to .hero-section on purpose. The bare h1 rule is also inherited by
+       .blog-post-title and .blog-page-title, which are far smaller, and a 2%
+       stroke on a 25px title would be a heavy outline nobody asked for. */
+    .hero-section h1 {
+        text-shadow: .28vw .28vw 0 var(--color-accent);
+        -webkit-text-stroke-width: .28vw;
+        -webkit-text-stroke-color: var(--color-secondary);
+    }
 }
 
 /* 13.2 Tablet Styles (600px - 768px) */
