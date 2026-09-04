@@ -428,6 +428,13 @@ a {
 
 /* 7.1 Hero Layout */
 .hero-section {
+    /* Shared by #linkBar and .scroll-indicator so the two stay a fixed distance
+       apart. The arrow used to carry its own bottom: 200px, which silently
+       drifted the moment the bar's offset changed. */
+    --linkbar-target: clamp(44px, 13vw, 56px);
+    --linkbar-bottom: max(64px, calc(env(safe-area-inset-bottom) + 30px));
+    /* The pill's drawn height: the touch target plus its padding and border. */
+    --linkbar-height: calc(var(--linkbar-target) + 26px);
     min-height: 100vh;
     min-height: 100dvh;
     display: flex;
@@ -478,7 +485,6 @@ a {
        overflowing it, and the targets never go below the 44px Apple/Google
        minimum (WCAG 2.5.8 asks 24px). Deliberately px/vw rather than rem/em:
        these must not grow back past the screen edge at 200% text zoom. */
-    --linkbar-target: clamp(44px, 13vw, 56px);
     --linkbar-glyph: clamp(22px, 6vw, 26px);
     --linkbar-gap: clamp(4px, 1.3vw, 12px);
     /* border-box so max-width caps the pill that is actually drawn. With the
@@ -495,7 +501,10 @@ a {
        This is a backstop -- the sizing above already fits well inside it. */
     max-width: calc(100% - 12px - env(safe-area-inset-left) - env(safe-area-inset-right));
     position: fixed;
-    bottom: max(100px, calc(env(safe-area-inset-bottom) + 50px));
+    /* 100px of clearance read as dead space on a phone, where the browser's
+       own bottom bar already sits below the pill. The safe-area term still
+       wins on a home-indicator device, so the bar never lands under it. */
+    bottom: var(--linkbar-bottom);
     left: 0;
     right: 0;
     /* Ensure proper spacing between touch targets */
@@ -2263,6 +2272,35 @@ a {
     #linkBar {
         --linkbar-target: max(36px, 13vw);
         --linkbar-glyph: max(18px, 6vw);
+    }
+}
+
+/* Below the desktop breakpoint the hero content is pinned at 25dvh while the
+   arrow and link bar are anchored to the bottom, so the slack all collects in
+   one place: 293px of nothing between the tagline and the arrow on a large
+   phone against 217px above the wordmark. Reserving the bottom cluster as
+   padding and centring in what is left splits that slack evenly instead, at
+   every screen size, with no per-device tuning.
+
+   Scoped below 600px on purpose: that is where #linkBar is position:fixed and
+   bottom-anchored. At 600px and up it becomes position:relative with
+   bottom:auto and sits in the flow, so reserving space for it would double
+   count. Tablet and desktop are deliberately untouched. */
+@media screen and (max-width: 599.98px) {
+    /* Sit a fixed 28px above the link bar rather than at a hardcoded offset, so
+       the two move together. At a flat 200px the arrow drifted between 59px and
+       69px of clearance depending on the screen. */
+    .scroll-indicator {
+        bottom: calc(var(--linkbar-bottom) + var(--linkbar-height) + 28px);
+    }
+
+    .hero-section .page-wrapper {
+        justify-content: center;
+        padding-top: 0;
+        /* link bar offset + its height + the 28px arrow gap + the arrow itself */
+        padding-bottom: calc(
+            var(--linkbar-bottom) + var(--linkbar-height) + 28px + 51px
+        );
     }
 }
 
