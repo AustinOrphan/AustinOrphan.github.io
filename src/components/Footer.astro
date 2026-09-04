@@ -4,7 +4,7 @@ const year = new Date().getFullYear();
 ---
 <footer class="site-footer">
     <div class="footer-top">
-        <button class="back-to-top" aria-label="Back to top">
+        <button class="footer-return" aria-label="Back to top">
             <i class="ph-duotone ph-arrow-up"></i>
             <span>Top</span>
         </button>
@@ -21,10 +21,10 @@ const year = new Date().getFullYear();
             <Logo variant="hero" size={44} class="footer-logo" />
         </div>
         <div class="footer-center">
-            <div class="footer-social">
-                <a href="https://github.com/austinorphan" target="_blank" rel="noopener noreferrer" aria-label="GitHub" class="footer-social-link"><i class="ph-duotone ph-github-logo"></i></a>
-                <a href="https://www.linkedin.com/in/austinorphan/" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn" class="footer-social-link"><i class="ph-duotone ph-linkedin-logo"></i></a>
-                <a href="mailto:AustinGOrphan@gmail.com" aria-label="Email" class="footer-social-link"><i class="ph-duotone ph-envelope-simple"></i></a>
+            <div class="footer-profiles">
+                <a href="https://github.com/austinorphan" target="_blank" rel="noopener noreferrer" aria-label="GitHub" class="footer-profile-link"><i class="ph-duotone ph-github-logo"></i></a>
+                <a href="https://www.linkedin.com/in/austinorphan/" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn" class="footer-profile-link"><i class="ph-duotone ph-linkedin-logo"></i></a>
+                <a href="mailto:AustinGOrphan@gmail.com" aria-label="Email" class="footer-profile-link"><i class="ph-duotone ph-envelope-simple"></i></a>
             </div>
         </div>
         <div class="footer-right">
@@ -35,7 +35,7 @@ const year = new Date().getFullYear();
 
 <script>
   (function() {
-    const backToTopBtn = document.querySelector('.back-to-top');
+    const backToTopBtn = document.querySelector('.footer-return');
     if (backToTopBtn) {
       backToTopBtn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
     }
