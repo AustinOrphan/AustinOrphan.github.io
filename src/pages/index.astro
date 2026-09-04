@@ -119,15 +119,19 @@ import Logo from '../components/Logo.astro';
       // through that crop and slices them off. Measure the real headroom and
       // never drift past it. Measured with the transform cleared so the value
       // does not depend on the current scroll position.
+      // offsetTop and offsetHeight are used rather than getBoundingClientRect
+      // because they ignore transforms. The bar starts under the entrance
+      // animation's translateY(50px) scale(0.95), so a rect-based measurement
+      // taken at load reads 50px short and clamps the slack to zero, which
+      // silently kills the parallax instead of bounding it.
       let heroSlack = 0;
       function measureHeroSlack() {
-        if (!heroSection || !heroContent || !linkBar) return;
-        const previous = heroContent.style.transform;
-        heroContent.style.transform = 'none';
-        heroSlack = Math.max(0,
-          heroSection.getBoundingClientRect().bottom
-            - linkBar.getBoundingClientRect().bottom - 6);
-        heroContent.style.transform = previous;
+        if (!heroSection || !linkBar) return;
+        let barBottom = linkBar.offsetHeight;
+        for (let node = linkBar; node && node !== heroSection; node = node.offsetParent) {
+          barBottom += node.offsetTop;
+        }
+        heroSlack = Math.max(0, heroSection.offsetHeight - barBottom - 6);
       }
 
       // Both branches below write inline styles the other never clears, and the
@@ -144,6 +148,7 @@ import Logo from '../components/Logo.astro';
         if (linkBar) {
           linkBar.style.transform = '';
           linkBar.style.opacity = '';
+          linkBar.style.pointerEvents = '';
         }
         measureHeroSlack();
         updateOnScroll();
@@ -151,6 +156,17 @@ import Logo from '../components/Logo.astro';
 
       measureHeroSlack();
       window.addEventListener('resize', measureHeroSlack);
+
+      // The entrance animations below are applied with fill: forwards, and a
+      // filling animation outranks inline style in the cascade. That silently
+      // killed everything the scroll handler writes to this element: the mobile
+      // fade-out never faded and the desktop lag never lagged. Hand the end
+      // state to a class once the reveal finishes, so inline styles win again.
+      linkBar?.addEventListener('animationend', () => {
+        linkBar.style.animation = 'none';
+        linkBar.classList.add('is-revealed');
+        measureHeroSlack();
+      });
 
       let ticking = false;
       function updateOnScroll() {
@@ -167,19 +183,23 @@ import Logo from '../components/Logo.astro';
           if (heroBackdrop && !REDUCED_MQ.matches) {
             heroBackdrop.style.setProperty('--backdrop-shift', `${-scrolled * 0.25}px`);
           }
-          if (linkBar) {
-            if (isDesktop) {
-              linkBar.style.transform = `translateY(${scrolled * 0.1}px)`;
-            } else {
-              linkBar.style.opacity = Math.max(0, 1 - scrolled / heroHeight);
-            }
+          // Desktop had a translateY(scrolled * 0.1) here. It never ran, for the
+          // same fill: forwards reason, and switching it on now would change a
+          // look nobody has complained about: it lags the bar to 0.64x the page
+          // against the rest of the hero content's 0.75x. Left off deliberately.
+          if (linkBar && !isDesktop) {
+            const faded = Math.max(0, 1 - scrolled / heroHeight);
+            linkBar.style.opacity = faded;
+            // Once it is mostly gone it must stop swallowing taps, or a nearly
+            // invisible bar sits over the About copy intercepting them.
+            linkBar.style.pointerEvents = faded < 0.15 ? 'none' : '';
           }
         } else {
           if (heroContent) heroContent.style.transform = '';
           if (heroBackdrop) heroBackdrop.style.removeProperty('--backdrop-shift');
-          if (linkBar) {
-            if (isDesktop) linkBar.style.transform = '';
-            else linkBar.style.opacity = '0';
+          if (linkBar && !isDesktop) {
+            linkBar.style.opacity = '0';
+            linkBar.style.pointerEvents = 'none';
           }
         }
         sectionNav?.classList.add('show-on-scroll');
