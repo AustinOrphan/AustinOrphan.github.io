@@ -64,13 +64,13 @@ import Logo from '../components/Logo.astro';
 
   <script>
     (function() {
-      const projectCards = document.querySelectorAll('.project-card');
-      const contactElements = document.querySelectorAll('.contact-method');
+      const projectCards = document.querySelectorAll<HTMLElement>('.project-card');
+      const contactElements = document.querySelectorAll<HTMLElement>('.contact-method');
 
       projectCards.forEach((el, i) => { el.classList.add('scroll-reveal'); el.style.transitionDelay = `${i * 0.1}s`; });
       // Stagger within each about block, so the longer experience list doesn't trail off
       const aboutElements = ['.detail-section', '.skill-category', '.experience-item'].flatMap(sel => {
-        const els = Array.from(document.querySelectorAll(sel));
+        const els = Array.from(document.querySelectorAll<HTMLElement>(sel));
         els.forEach((el, i) => {
           el.classList.add('scroll-reveal');
           el.style.transitionDelay = `${Math.min(i, 4) * 0.08}s`;
@@ -81,7 +81,7 @@ import Logo from '../components/Logo.astro';
 
       let lastScrollY = window.pageYOffset;
       let scrollSpeed = 0;
-      let speedTimeout;
+      let speedTimeout: ReturnType<typeof setTimeout>;
 
       function calcScrollSpeed() {
         const cur = window.pageYOffset;
@@ -106,10 +106,10 @@ import Logo from '../components/Logo.astro';
       const DESKTOP_MQ = window.matchMedia('(min-width: 600px)');
       let isDesktop = DESKTOP_MQ.matches;
 
-      const heroContent = document.querySelector('.content-wrapper');
-      const linkBar = document.querySelector('#linkBar');
-      const heroBackdrop = document.querySelector('.hero-logo-backdrop');
-      const heroSection = document.querySelector('.hero-section');
+      const heroContent = document.querySelector<HTMLElement>('.content-wrapper');
+      const linkBar = document.querySelector<HTMLElement>('#linkBar');
+      const heroBackdrop = document.querySelector<HTMLElement>('.hero-logo-backdrop');
+      const heroSection = document.querySelector<HTMLElement>('.hero-section');
       const REDUCED_MQ = window.matchMedia('(prefers-reduced-motion: reduce)');
 
       // .hero-section is overflow: hidden, the crop that keeps the oversized
@@ -128,7 +128,9 @@ import Logo from '../components/Logo.astro';
       function measureHeroSlack() {
         if (!heroSection || !linkBar) return;
         let barBottom = linkBar.offsetHeight;
-        for (let node = linkBar; node && node !== heroSection; node = node.offsetParent) {
+        for (let node: HTMLElement | null = linkBar;
+             node && node !== heroSection;
+             node = node.offsetParent as HTMLElement | null) {
           barBottom += node.offsetTop;
         }
         heroSlack = Math.max(0, heroSection.offsetHeight - barBottom - 6);
@@ -189,7 +191,7 @@ import Logo from '../components/Logo.astro';
           // against the rest of the hero content's 0.75x. Left off deliberately.
           if (linkBar && !isDesktop) {
             const faded = Math.max(0, 1 - scrolled / heroHeight);
-            linkBar.style.opacity = faded;
+            linkBar.style.opacity = String(faded);
             // Once it is mostly gone it must stop swallowing taps, or a nearly
             // invisible bar sits over the About copy intercepting them.
             linkBar.style.pointerEvents = faded < 0.15 ? 'none' : '';
@@ -213,8 +215,8 @@ import Logo from '../components/Logo.astro';
       }, { passive: true });
 
       setTimeout(() => {
-        const h1 = document.querySelector('h1');
-        const cbar = document.querySelector('#cbar');
+        const h1 = document.querySelector<HTMLElement>('h1');
+        const cbar = document.querySelector<HTMLElement>('#cbar');
         if (h1) h1.style.animation = 'slideInScale 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards';
         if (cbar) cbar.style.animation = 'slideInScale 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.2s forwards';
         if (linkBar) {
@@ -240,10 +242,10 @@ import Logo from '../components/Logo.astro';
       }
       setTimeout(triggerRandomFlash, 3000);
 
-      const sections = document.querySelectorAll('section[id]');
-      const navLinks = document.querySelectorAll('.section-nav a');
-      const sectionNav = document.querySelector('.section-nav');
-      let scrollTimeout;
+      const sections = document.querySelectorAll<HTMLElement>('section[id]');
+      const navLinks = document.querySelectorAll<HTMLAnchorElement>('.section-nav a');
+      const sectionNav = document.querySelector<HTMLElement>('.section-nav');
+      let scrollTimeout: ReturnType<typeof setTimeout>;
 
       function updateActiveSection() {
         const pos = window.scrollY + window.innerHeight / 2;
@@ -255,7 +257,7 @@ import Logo from '../components/Logo.astro';
         });
       }
 
-      document.addEventListener('mousemove', e => {
+      document.addEventListener('mousemove', (e: MouseEvent) => {
         if (window.innerWidth - e.clientX <= 80) {
           sectionNav?.classList.add('show-on-scroll');
         } else if (!sectionNav?.matches(':hover')) {

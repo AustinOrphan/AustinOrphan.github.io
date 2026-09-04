@@ -115,9 +115,12 @@ const jsonLd = JSON.stringify(personSchema).replace(/</g, '\\u003c');
 
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-GL8J5KLG7C"></script>
   <script>
+    // Google's own snippet, kept verbatim in shape. The declaration just tells
+    // the checker about the globals it creates.
+    declare global { interface Window { dataLayer: unknown[] } }
     const GA_ID = 'G-GL8J5KLG7C';
     window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
+    function gtag(...args: unknown[]) { window.dataLayer.push(args); }
     gtag('js', new Date());
     gtag('config', GA_ID, {
       page_title: document.title,
