@@ -428,6 +428,29 @@ a {
 
 /* 7.1 Hero Layout */
 .hero-section {
+    /* Shared by #linkBar and .scroll-indicator so the two stay a fixed distance
+       apart. The arrow used to carry its own bottom: 200px, which silently
+       drifted the moment the bar's offset changed. */
+    --linkbar-target: clamp(44px, 13vw, 56px);
+    --linkbar-bottom: max(64px, calc(env(safe-area-inset-bottom) + 30px));
+    /* The pill's drawn height: the touch target plus its padding and border. */
+    --linkbar-height: calc(var(--linkbar-target) + 26px);
+    /* The bottom cluster: link bar offset, its height, the 28px arrow gap and
+       the arrow itself. Reserved by the wrapper below and used to place the
+       backdrop, so the mark tracks the content instead of being pinned. */
+    --hero-bottom-reserve: calc(
+        var(--linkbar-bottom) + var(--linkbar-height) + 28px + 51px
+        - var(--hero-drop)
+    );
+    /* How far the content sits below the evenly-balanced point. Centring in the
+       space above the bottom cluster leaves the block reading high on a large
+       phone; 50px is the largest drop that still clears the scroll arrow at
+       200% page zoom on a 320px-wide screen. */
+    --hero-drop: 50px;
+    /* Where the mark's centre lands, and how far below that anchor it sits as a
+       share of its own height. Overridden together below 600px. */
+    --backdrop-anchor: 25dvh;
+    --backdrop-offset: 27.174%;
     min-height: 100vh;
     min-height: 100dvh;
     display: flex;
@@ -478,7 +501,6 @@ a {
        overflowing it, and the targets never go below the 44px Apple/Google
        minimum (WCAG 2.5.8 asks 24px). Deliberately px/vw rather than rem/em:
        these must not grow back past the screen edge at 200% text zoom. */
-    --linkbar-target: clamp(44px, 13vw, 56px);
     --linkbar-glyph: clamp(22px, 6vw, 26px);
     --linkbar-gap: clamp(4px, 1.3vw, 12px);
     /* border-box so max-width caps the pill that is actually drawn. With the
@@ -495,7 +517,10 @@ a {
        This is a backstop -- the sizing above already fits well inside it. */
     max-width: calc(100% - 12px - env(safe-area-inset-left) - env(safe-area-inset-right));
     position: fixed;
-    bottom: max(100px, calc(env(safe-area-inset-bottom) + 50px));
+    /* 100px of clearance read as dead space on a phone, where the browser's
+       own bottom bar already sits below the pill. The safe-area term still
+       wins on a home-indicator device, so the bar never lands under it. */
+    bottom: var(--linkbar-bottom);
     left: 0;
     right: 0;
     /* Ensure proper spacing between touch targets */
@@ -2266,6 +2291,88 @@ a {
     }
 }
 
+/* Below the desktop breakpoint the hero content is pinned at 25dvh while the
+   arrow and link bar are anchored to the bottom, so the slack all collects in
+   one place: 293px of nothing between the tagline and the arrow on a large
+   phone against 217px above the wordmark. Reserving the bottom cluster as
+   padding and centring in what is left splits that slack evenly instead, at
+   every screen size, with no per-device tuning.
+
+   Scoped below 600px on purpose: that is where #linkBar is position:fixed and
+   bottom-anchored. At 600px and up it becomes position:relative with
+   bottom:auto and sits in the flow, so reserving space for it would double
+   count. Tablet and desktop are deliberately untouched. */
+@media screen and (max-width: 599.98px) {
+    /* Sit a fixed 28px above the link bar rather than at a hardcoded offset, so
+       the two move together. At a flat 200px the arrow drifted between 59px and
+       69px of clearance depending on the screen. */
+    .scroll-indicator {
+        bottom: calc(var(--linkbar-bottom) + var(--linkbar-height) + 28px);
+    }
+
+    .hero-section .page-wrapper {
+        justify-content: center;
+        padding-top: 0;
+        padding-bottom: var(--hero-bottom-reserve);
+    }
+
+    /* The content is no longer pinned at 25dvh here, it is centred in what is
+       left above the bottom cluster. Anchoring the mark to a flat 25dvh left it
+       standing still while the wordmark moved: measured across the candidate
+       positions the mark's centre stayed at 323px while the wordmark's swung
+       113px, putting the offset anywhere from +22% to -23% of the mark's height
+       against desktop's +13%. Anchoring to the same centre makes it follow.
+       8% is desktop's own mark-to-block relationship, which measures 7.5% at
+       1440x900, 5.3% at 1920 and 11.5% at 1024. */
+    .hero-section {
+        --backdrop-anchor: calc((100dvh - var(--hero-bottom-reserve)) / 2);
+        --backdrop-offset: 8%;
+    }
+
+    /* Short-viewport guard. Under about 520px of height there is not enough
+       room for the content, the arrow and the link bar at once, and the block
+       sinks into the bottom cluster. This is not hypothetical: today at 568x320
+       the wordmark is pinned to y=0 and overlaps the link bar by 5px, and iOS
+       page zoom at 200% collapses a 320px phone to 160x284.
+
+       The arrow goes rather than the content: it is a decorative anchor to
+       #about and the page still scrolls without it. Overriding the reserve
+       token rather than the wrapper's padding keeps the backdrop tracking. */
+    @media screen and (max-height: 520px) {
+        .hero-section {
+            --linkbar-bottom: max(14px, calc(env(safe-area-inset-bottom) + 10px));
+            --hero-drop: 0px;
+            --hero-bottom-reserve: calc(
+                var(--linkbar-bottom) + var(--linkbar-height) + 16px
+            );
+        }
+
+        .scroll-indicator {
+            display: none;
+        }
+    }
+
+    /* Give the phone wordmark the same treatment as 600px+: off-white fill, a
+       red outline painted under it so only the outer edge shows, and a blue
+       shadow at the same offset. The base h1 rule used two offset shadows and
+       no outline, which read as a softer, different mark.
+
+       .28vw rather than desktop's .2vw because the phone h1 is 14vw against
+       desktop's 10vw. Both land on exactly 2% of the font size, which is what
+       makes the two read as the same treatment rather than a fainter cousin;
+       a literal .2vw here would be 1.43%. At 320px wide that is a 0.9px stroke,
+       2.7 device pixels at 3x, so it still holds up on the smallest phones.
+
+       Scoped to .hero-section on purpose. The bare h1 rule is also inherited by
+       .blog-post-title and .blog-page-title, which are far smaller, and a 2%
+       stroke on a 25px title would be a heavy outline nobody asked for. */
+    .hero-section h1 {
+        text-shadow: .28vw .28vw 0 var(--color-accent);
+        -webkit-text-stroke-width: .28vw;
+        -webkit-text-stroke-color: var(--color-secondary);
+    }
+}
+
 /* 13.2 Tablet Styles (600px - 768px) */
 @media screen and (min-width: 600px) {
     h1 {
@@ -3047,9 +3154,9 @@ body.blog {
    dvh, so nothing drifts when the address bar appears. */
 .hero-logo-backdrop {
     position: absolute;
-    top: 25dvh;
+    top: var(--backdrop-anchor);
     left: 50%;
-    transform: translate(-50%, calc(-50% + 27.174% + var(--backdrop-shift, 0px)));
+    transform: translate(-50%, calc(-50% + var(--backdrop-offset) + var(--backdrop-shift, 0px)));
     width: min(92dvh, 88vw);
     height: min(92dvh, 88vw);
     pointer-events: none;
@@ -3150,9 +3257,9 @@ body.blog {
 @media (prefers-reduced-motion: reduce) {
     .hero-logo-backdrop {
         animation: none;
-        /* Must repeat the anchor from above. A bare translate(-50%, -50%) here
-           would drop the 27.174% and lift the mark above the wordmark. */
-        transform: translate(-50%, calc(-50% + 27.174%));
+        /* Must repeat the anchor offset. A bare translate(-50%, -50%) here would
+           drop it and lift the mark above the wordmark. */
+        transform: translate(-50%, calc(-50% + var(--backdrop-offset)));
         opacity: 0.08;
     }
 }
