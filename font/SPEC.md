@@ -219,7 +219,18 @@ lightness at the upper right: rounds by displacement, straights by taper,
 horizontals by tapering rightward. A glyph that breaks this direction is
 wrong.
 
-**R8. Spacing.** D6's side bearings by the shape of the extreme (stem: 60,
+**R8. Proportions.** Body widths (outer extreme to outer extreme) come
+from the two exemplars. The O's diameter, **720**, is the wide width: C, G, Q.
+The A's foot spread, **558**, is the medium width: H, N, U, V, X, Y, K, T, Z,
+D, B, P, R and the digits' bodies. Narrow letters take three quarters of
+medium, **420**: E, F, L, S, J. Every pointed construction (V, W, M, N, K, X,
+Y) uses the A's apex angle, 42.6°, with R2 widths; where that alone would push
+a letter's advance past 0.95 em (W), the vees are steepened only as far as
+needed and the deviation recorded in the glyph's notes. No advance exceeds the
+em. A glyph may depart from these widths only for a reason written in its
+notes.
+
+**R9. Spacing.** D6's side bearings by the shape of the extreme (stem: 60,
 round or point: 40). Kerning is out of scope until the set is complete.
 
 ## 6. What is deliberately not in the face
