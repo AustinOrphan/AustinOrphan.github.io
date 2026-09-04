@@ -445,37 +445,75 @@ a {
 }
 
 /* Initial hidden state for hero elements only */
-.hero-section h1, #cbar, #linkBar {
+.hero-section h1, #cbar {
     opacity: 0;
     transform: translateY(50px) scale(0.95);
 }
 
+/* #linkBar is deliberately not in that list. On mobile it is revealed by
+   `fadeInOnly`, which animates opacity and nothing else, so a transform here
+   is never cleared: the bar sat at 95% scale forever (shrinking every touch
+   target by 5%) and 50px below where `bottom` placed it. It starts hidden via
+   the `opacity: 0` in its own rule below, and `bottom` now carries the 50px so
+   the rendered position is unchanged. Desktop (600px+) sets `transform: none`
+   itself and reveals with `slideInScale`. */
+
 /* 7.2 Link Bar (Mobile & Desktop) */
 #linkBar {
+    /* Mobile sizing budget. Six touch targets, five gaps, the horizontal
+       padding and the border all have to fit the viewport, and at 320px six
+       44x44 targets alone are 264px of it. Each part scales with the viewport
+       against a floor, so the bar shrinks with the screen instead of
+       overflowing it, and the targets never go below the 44px Apple/Google
+       minimum (WCAG 2.5.8 asks 24px). Deliberately px/vw rather than rem/em:
+       these must not grow back past the screen edge at 200% text zoom. */
+    --linkbar-target: clamp(44px, 13vw, 56px);
+    --linkbar-glyph: clamp(22px, 6vw, 26px);
+    --linkbar-gap: clamp(4px, 1.3vw, 12px);
+    /* border-box so max-width caps the pill that is actually drawn. With the
+       default content-box the 32px of padding and 2px of border sat outside
+       the cap and the bar rendered 34px wider than it was allowed to be. */
+    box-sizing: border-box;
     display: flex;
     justify-content: center;
     align-items: center;
     margin: 0 auto;
     width: fit-content;
-    max-width: 90vw;
+    /* 100% of the fixed containing block, unlike 90vw, excludes a classic
+       scrollbar; the safe-area insets keep it clear of a landscape notch.
+       This is a backstop -- the sizing above already fits well inside it. */
+    max-width: calc(100% - 12px - env(safe-area-inset-left) - env(safe-area-inset-right));
     position: fixed;
-    bottom: max(150px, calc(env(safe-area-inset-bottom) + 100px));
+    bottom: max(100px, calc(env(safe-area-inset-bottom) + 50px));
     left: 0;
     right: 0;
     /* Ensure proper spacing between touch targets */
-    gap: 12px;
+    gap: var(--linkbar-gap);
     z-index: 1000;
     /* Add backdrop for better visibility */
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     background: rgba(var(--color-background-rgb), 0.9);
-    padding: 12px 16px;
+    padding: 12px clamp(6px, 2vw, 16px);
     border-radius: 25px;
     border: 1px solid rgba(var(--color-primary-rgb), 0.2);
     transition: opacity 0.3s ease;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
     /* Start invisible on mobile */
     opacity: 0;
+}
+
+/* The global `a` reset (width/height: 100%) gives every link in the bar a flex
+   basis of the whole bar. It only looks right today because min-width: auto
+   floors each item at its icon's size; the moment anything shrinks, the items
+   size off that 100% basis instead. Size them from their icon instead, so the
+   budget above is the only thing deciding how wide the bar is. */
+#linkBar > a,
+#linkBar .projects-menu,
+#linkBar .projects-menu-trigger {
+    flex: 0 0 auto;
+    width: auto;
+    height: auto;
 }
 
 .divider {
@@ -485,12 +523,18 @@ a {
 
 .icon {
     color: var(--color-primary);
-    padding: 8px;
+    /* border-box so the declared size is the hit area that is actually laid
+       out: content-box plus 8px of padding made every 56px icon a 72px box,
+       which is what pushed six of them past the screen edge. Sized from the
+       link bar's budget (see #linkBar); desktop restores its own values in
+       the 600px+ block. */
+    box-sizing: border-box;
+    padding: 0;
     border-radius: 50%;
-    font-size: 28px;
+    font-size: var(--linkbar-glyph, 28px);
     /* Ensure proper touch targets for mobile */
-    width: 56px;
-    height: 56px;
+    width: var(--linkbar-target, 56px);
+    height: var(--linkbar-target, 56px);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -550,7 +594,10 @@ a {
 .projects-menu-list {
     position: absolute;
     bottom: calc(100% + 14px);
-    right: -14px;
+    /* Flush with the trigger's right edge on mobile. The desktop overhang
+       (-14px, restored in the 600px+ block) reaches past the pill's padding,
+       which on a phone is past the edge of the screen. */
+    right: 0;
     margin: 0;
     padding: 8px 10px;
     list-style: none;
@@ -580,7 +627,9 @@ a {
     content: '';
     position: absolute;
     bottom: -6px;
-    right: 60px;
+    /* Half a target in from the list's right edge, which mobile aligns with
+       the trigger's right edge, so the caret tracks the icon as it scales. */
+    right: calc(var(--linkbar-target, 56px) / 2 - 5.5px);
     width: 11px;
     height: 11px;
     background: rgba(var(--color-background-rgb), 0.97);
@@ -2193,6 +2242,19 @@ a {
 
 /* 13.1 Mobile Styles (< 600px) - Base styles defined above */
 
+/* Below 320px (the Galaxy Fold's cover screen and similar) six 44px targets
+   are 264px of a 268px allowance before a single gap or any padding, so the
+   44px floor is the one thing that can give. This is an explicit, deliberate
+   exception to the 44px Apple/Google guidance, taken only under 320px, where
+   the alternative is icons off the edge of the screen: at 280px the targets
+   land at 36.4px, still comfortably over the 24px WCAG 2.5.8 minimum. */
+@media screen and (max-width: 319.98px) {
+    #linkBar {
+        --linkbar-target: max(36px, 13vw);
+        --linkbar-glyph: max(18px, 6vw);
+    }
+}
+
 /* 13.2 Tablet Styles (600px - 768px) */
 @media screen and (min-width: 600px) {
     h1 {
@@ -2244,7 +2306,13 @@ a {
         opacity: 1;
     }
 
+    /* Desktop keeps the original icon box: a 56px content box plus 1vw of
+       padding each side. Restated because the mobile rules now set an
+       explicit box-sizing and a viewport-scaled width. */
     .icon {
+        box-sizing: content-box;
+        width: 56px;
+        height: 56px;
         padding: 1vw;
         margin: .5vw;
         font-size: 3.5vw;
@@ -2252,6 +2320,23 @@ a {
         /* Maintain minimum touch targets on desktop */
         min-width: 48px;
         min-height: 48px;
+    }
+
+    /* Grid items, so they stretch to their column exactly as the global `a`
+       reset had them; the mobile flex-item sizing must not reach here. */
+    #linkBar > a,
+    #linkBar .projects-menu-trigger {
+        width: 100%;
+        height: 100%;
+    }
+
+    /* There is room for the overhang and a fixed caret offset out here. */
+    .projects-menu-list {
+        right: -14px;
+    }
+
+    .projects-menu-list::after {
+        right: 60px;
     }
 
     /* Desktop icon animations inherit from mobile, no need to redefine */
