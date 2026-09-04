@@ -23,6 +23,14 @@ for tag pages — plus `src/pages/rss.xml.ts` for the feed.
 **Layouts:** `src/layouts/BaseLayout.astro` provides the shared shell (head,
 fonts, analytics, Phosphor icons). `BlogPost.astro` wraps individual posts.
 
+**Footer:** `src/components/Footer.astro` serves every page. Its `variant` prop
+picks the positioning: `"fixed"` (the default, home page) pins it to the
+viewport bottom and parallax-reveals it past `#contact`; `"static"` (all blog
+routes) puts it in normal flow at the end of the document, in the same 720px
+column as the body text. Everything below the gradient rule — mark, social
+links, copyright — is identical in both. Blog posts additionally pass
+`prevPost` / `nextPost` to render the post navigation above the rule.
+
 **CSS:** `src/styles/global.css` is the sole stylesheet (~2600 lines),
 organized by a numbered table of contents at the top of the file: font imports
 → variables → reset → animations → layout → typography → hero → nav → sections
@@ -142,6 +150,8 @@ live in the "11. Special Modes" section of `global.css`.
   `src/components/About.astro` and `src/pages/index.astro`
 - **Social links / hero icons:** edit `#linkBar` in `src/pages/index.astro` and
   the matching CSS in `global.css`
+- **Footer social links / copyright:** edit `src/components/Footer.astro` once;
+  it is shared by the home page and every blog route
 - **About / Projects / Contact content:** edit the component in
   `src/components/`
 - **Blog posts:** authored in the Obsidian vault, not here — see Blog

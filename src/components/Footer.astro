@@ -1,8 +1,42 @@
 ---
 import Logo from './Logo.astro';
+
+interface PostLink {
+  title: string;
+  id: string;
+}
+
+interface Props {
+  /* "fixed" is the home page's parallax-revealed bar, pinned to the viewport
+     bottom and faded in once the page scrolls past #contact. "static" is the
+     same footer in normal flow at the end of a blog document, where there is
+     no #contact to key a reveal to and a long post should not scroll
+     underneath a permanent bar. */
+  variant?: 'fixed' | 'static';
+  prevPost?: PostLink;
+  nextPost?: PostLink;
+}
+
+const { variant = 'fixed', prevPost, nextPost } = Astro.props;
 const year = new Date().getFullYear();
 ---
-<footer class="site-footer">
+<footer class:list={['site-footer', `site-footer--${variant}`]}>
+    {(prevPost || nextPost) && (
+        <nav class="footer-nav">
+            {prevPost ? (
+                <a href={`/blog/${prevPost.id}/`} class="footer-nav-prev">
+                    <span class="footer-nav-label">← Previous</span>
+                    <span class="footer-nav-title">{prevPost.title}</span>
+                </a>
+            ) : <span />}
+            {nextPost ? (
+                <a href={`/blog/${nextPost.id}/`} class="footer-nav-next">
+                    <span class="footer-nav-label">Next →</span>
+                    <span class="footer-nav-title">{nextPost.title}</span>
+                </a>
+            ) : <span />}
+        </nav>
+    )}
     <div class="footer-top">
         <button class="footer-return" aria-label="Back to top">
             <i class="ph-duotone ph-arrow-up"></i>
@@ -35,43 +69,43 @@ const year = new Date().getFullYear();
 
 <script>
   (function() {
-    const backToTopBtn = document.querySelector<HTMLElement>('.footer-return');
+    const backToTopBtn = document.querySelector('.footer-return');
     if (backToTopBtn) {
       backToTopBtn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
     }
 
-    const footer = document.querySelector<HTMLElement>('.site-footer');
+    // The parallax reveal belongs to the fixed variant alone. The static
+    // footer sits in normal flow and needs no scroll handling at all.
+    const footer = document.querySelector<HTMLElement>('.site-footer--fixed');
     const contactSection = document.querySelector<HTMLElement>('#contact');
     if (footer && contactSection) {
-      // Captured locally because the checker will not carry the narrowing from
-      // the guard above into the hoisted function declaration below.
-      const footerEl = footer;
-      const contactEl = contactSection;
-      footerEl.style.transition = 'transform 0.1s ease-out, opacity 0.1s ease-out';
-      footerEl.style.willChange = 'transform, opacity';
+      footer.style.transition = 'transform 0.1s ease-out, opacity 0.1s ease-out';
+      footer.style.willChange = 'transform, opacity';
       let ticking = false;
 
-      function updateFooterParallax() {
+      function updateFooterParallax(bar: HTMLElement, contact: HTMLElement) {
         const scrollPosition = window.pageYOffset + window.innerHeight;
-        const contactBottom = contactEl.offsetTop + contactEl.offsetHeight;
+        const contactBottom = contact.offsetTop + contact.offsetHeight;
         if (scrollPosition > contactBottom) {
           const progress = Math.min(1, (scrollPosition - contactBottom) / 120);
-          footerEl.style.transform = `translateY(${(1 - progress) * 30}px)`;
-          // style.opacity is a string; a bare number worked only by coercion.
-          footerEl.style.opacity = String(progress);
-          footerEl.style.zIndex = '10000';
+          bar.style.transform = `translateY(${(1 - progress) * 30}px)`;
+          bar.style.opacity = String(progress);
+          bar.style.zIndex = '10000';
         } else {
-          footerEl.style.transform = 'translateY(50px)';
-          footerEl.style.opacity = '0';
-          footerEl.style.zIndex = '-1';
+          bar.style.transform = 'translateY(50px)';
+          bar.style.opacity = '0';
+          bar.style.zIndex = '-1';
         }
         ticking = false;
       }
 
       window.addEventListener('scroll', () => {
-        if (!ticking) { requestAnimationFrame(updateFooterParallax); ticking = true; }
+        if (!ticking) {
+          requestAnimationFrame(() => updateFooterParallax(footer, contactSection));
+          ticking = true;
+        }
       }, { passive: true });
-      updateFooterParallax();
+      updateFooterParallax(footer, contactSection);
     }
   })();
 </script>

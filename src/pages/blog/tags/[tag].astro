@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '../../../layouts/BaseLayout.astro';
+import Footer from '../../../components/Footer.astro';
 import { getCollection } from 'astro:content';
 import { getReadingTime } from '../../../utils/reading-time';
 
@@ -60,4 +61,5 @@ const { posts, tag } = Astro.props;
 
     <a href="/blog/" class="rss-link">← all posts</a>
   </div>
+  <Footer variant="static" />
 </BaseLayout>
