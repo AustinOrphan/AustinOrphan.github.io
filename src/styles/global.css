@@ -440,7 +440,13 @@ a {
        backdrop, so the mark tracks the content instead of being pinned. */
     --hero-bottom-reserve: calc(
         var(--linkbar-bottom) + var(--linkbar-height) + 28px + 51px
+        - var(--hero-drop)
     );
+    /* How far the content sits below the evenly-balanced point. Centring in the
+       space above the bottom cluster leaves the block reading high on a large
+       phone; 50px is the largest drop that still clears the scroll arrow at
+       200% page zoom on a 320px-wide screen. */
+    --hero-drop: 50px;
     /* Where the mark's centre lands, and how far below that anchor it sits as a
        share of its own height. Overridden together below 600px. */
     --backdrop-anchor: 25dvh;
@@ -2321,6 +2327,29 @@ a {
     .hero-section {
         --backdrop-anchor: calc((100dvh - var(--hero-bottom-reserve)) / 2);
         --backdrop-offset: 8%;
+    }
+
+    /* Short-viewport guard. Under about 520px of height there is not enough
+       room for the content, the arrow and the link bar at once, and the block
+       sinks into the bottom cluster. This is not hypothetical: today at 568x320
+       the wordmark is pinned to y=0 and overlaps the link bar by 5px, and iOS
+       page zoom at 200% collapses a 320px phone to 160x284.
+
+       The arrow goes rather than the content: it is a decorative anchor to
+       #about and the page still scrolls without it. Overriding the reserve
+       token rather than the wrapper's padding keeps the backdrop tracking. */
+    @media screen and (max-height: 520px) {
+        .hero-section {
+            --linkbar-bottom: max(14px, calc(env(safe-area-inset-bottom) + 10px));
+            --hero-drop: 0px;
+            --hero-bottom-reserve: calc(
+                var(--linkbar-bottom) + var(--linkbar-height) + 16px
+            );
+        }
+
+        .scroll-indicator {
+            display: none;
+        }
     }
 
     /* Give the phone wordmark the same treatment as 600px+: off-white fill, a
