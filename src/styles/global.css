@@ -2347,9 +2347,6 @@ a {
             );
         }
 
-        .scroll-indicator {
-            display: none;
-        }
     }
 
     /* Give the phone wordmark the same treatment as 600px+: off-white fill, a
@@ -2370,6 +2367,24 @@ a {
         text-shadow: .28vw .28vw 0 var(--color-accent);
         -webkit-text-stroke-width: .28vw;
         -webkit-text-stroke-color: var(--color-secondary);
+    }
+}
+
+/* Any viewport under about 520px tall, at ANY width. This rule used to live
+   inside the max-width:599.98px block, which meant landscape phones never
+   matched it: they are 600px and wider, so they run the tablet path where
+   .scroll-indicator sits at a flat bottom: 200px. On a 667x375 iPhone SE in
+   landscape that puts the arrow 129px INSIDE the wordmark, rendering between
+   "Austin" and "Orphan". 844x390 and 926x428 clear it by only 6px and 15px,
+   and the arrow floats 16.5px on a loop with a 20px pulse ring, so those
+   collide too.
+
+   The arrow is what goes: it is a decorative anchor to #about and the page
+   still scrolls without it. This is a stopgap; giving landscape a real bottom
+   reserve so the arrow survives is the fuller fix. */
+@media screen and (max-height: 520px) {
+    .scroll-indicator {
+        display: none;
     }
 }
 
