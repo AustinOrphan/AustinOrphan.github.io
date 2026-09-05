@@ -89,7 +89,7 @@ sys.path.insert(0, os.path.join(FONT, 'lib'))
 from pen import (add, sub, mul, dot, perp, from_ang, ang, line, line_2pt, line_circle, circle_circle,
                  from_poly, ccw)
 from metrics import CAP, SB_STRAIGHT, SB_ROUND
-from rules import (glyph, stem, diagonal, horizontal, arm, round_arc, RING_W, RING_OFF, CUT_DEG, HORIZ_MID,
+from rules import (glyph, stem, diagonal, horizontal, arm, round_arc, RING_W, RING_OFF, CUT_DEG, HORIZ_MID, HORIZ_JOIN,
                    HORIZ_TAPER, w_stem, w_horizontal, w_backslash, BACK_BASE, BACK_CAP)
 from glyphs import core
 
@@ -130,18 +130,18 @@ def _sdist(l, p):
     """Signed distance of p from line l, positive to the left of its direction (above, for a +x line)."""
     return dot(sub(p, l[0]), perp(l[1]))
 
-def _hline(x0, x1, y_c, edge):
+def _hline(x0, x1, y_c, edge, mid=HORIZ_JOIN):
     """The top (+1) or bottom (-1) edge line of rules.horizontal(x0, x1, y_c)."""
     L = x1 - x0
-    return line_2pt((x0, y_c + edge * w_horizontal(L, 0) / 2), (x1, y_c + edge * w_horizontal(L, 1) / 2))
+    return line_2pt((x0, y_c + edge * w_horizontal(L, 0, mid) / 2), (x1, y_c + edge * w_horizontal(L, 1, mid) / 2))
 
-def _armline(x0, x1, outer, edge):
+def _armline(x0, x1, outer, edge, mid=HORIZ_JOIN):
     """The outer (+1) or inner (-1) edge line of rules.arm(x0, x1, outer): the outer edge is level on
     the metric line, the inner edge carries R4's whole taper."""
     y_out, sgn = (CAP, -1) if outer == 'top' else (0.0, 1)
     if edge > 0: return line((x0, y_out), (1.0, 0.0))
     L = x1 - x0
-    return line_2pt((x0, y_out + sgn * w_horizontal(L, 0)), (x1, y_out + sgn * w_horizontal(L, 1)))
+    return line_2pt((x0, y_out + sgn * w_horizontal(L, 0, mid)), (x1, y_out + sgn * w_horizontal(L, 1, mid)))
 
 def _touch(l, ci, ri, s):
     """Where a counter circle (ci, ri) tangent to line l touches it; s = +1 if the counter is above l."""
@@ -235,12 +235,12 @@ def _arm_bowl(right, x0=FOOT[0], cap=True, above=None):
 
 def _bar(b):
     """The rules.horizontal of a _bar_bowl, its buried end reshaped to lie inside the band."""
-    return _bury(horizontal(b['x0'], b['x1'], b['y_c']), 'bottom', b['c'], b['r'], b['Po'], b['x1'] + RUN)
+    return _bury(horizontal(b['x0'], b['x1'], b['y_c'], mid=HORIZ_JOIN), 'bottom', b['c'], b['r'], b['Po'], b['x1'] + RUN)
 
 def _bottom_arm(b):
     """The baseline rules.arm of an _arm_bowl: outer edge exactly on 0, R5 cut at the foot corner,
     buried end reshaped to lie inside the band."""
-    a = arm(b['x0'], b['x1'], 'bottom', left='cut', right='flat')
+    a = arm(b['x0'], b['x1'], 'bottom', left='cut', right='flat', mid=HORIZ_JOIN)
     return _bury(a, 'bottom', b['c'], b['r'], b['Po'], b['x1'] + RUN)
 
 def _wedge_x(x0, y_out, ci, ri, sgn):
@@ -249,7 +249,7 @@ def _wedge_x(x0, y_out, ci, ri, sgn):
     x1 = ci[0] + ri
     for _ in range(50):
         L = x1 - x0
-        inner = line_2pt((x0, y_out + sgn * w_horizontal(L, 0)), (x1, y_out + sgn * w_horizontal(L, 1)))
+        inner = line_2pt((x0, y_out + sgn * w_horizontal(L, 0, HORIZ_JOIN)), (x1, y_out + sgn * w_horizontal(L, 1, HORIZ_JOIN)))
         p = line_circle(inner, ci, ri, pick='max')
         if abs(p[0] - x1) < 1e-9: return x1
         x1 = p[0]
@@ -258,7 +258,7 @@ def _wedge_x(x0, y_out, ci, ri, sgn):
 def _top_arm(b):
     """Cap-line arm from the stem's top corner into the round, meeting its counter in the wedge."""
     x1 = _wedge_x(TOP[0], CAP, b['ci'], b['ri'], -1)
-    a = arm(TOP[0], x1, 'top', left='cut', right='flat')
+    a = arm(TOP[0], x1, 'top', left='cut', right='flat', mid=HORIZ_JOIN)
     return _bury(a, 'top', b['c'], b['r'], (b['c'][0], float(CAP)), x1), x1
 
 

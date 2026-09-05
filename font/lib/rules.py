@@ -33,10 +33,33 @@ def w_backslash(y): return BACK_BASE  + (BACK_CAP  - BACK_BASE)  * (y / CAP)
 w_stem = w_slash
 
 # ---- R4 horizontals
-HORIZ_MID, HORIZ_TAPER = 47.5, 0.018     # width at mid-length; loss per unit length, left to right
-def w_horizontal(length, t):
-    """Width of a horizontal of `length` at fraction t along it (0 = left end, 1 = right end)."""
-    return HORIZ_MID + HORIZ_TAPER * length * (0.5 - t)
+# R4 has two weights, because a horizontal has two jobs.
+#
+# A horizontal that RUNS INTO A ROUND has to arrive at that round's own band, or the outline
+# steps where they meet: HORIZ_JOIN is the band at the bottom of a round (R7's heavy side),
+# and the bowl letters' bars and arms are solved against it.
+#
+# A horizontal IN THE OPEN has no such constraint, and giving it the join weight made every
+# free arm as heavy as the heaviest part of the O.  Measured colour ran from Y at -41% to
+# B at +47% of the alphabet's median, horizontal-dense letters at the top of that list and
+# diagonal-dense ones at the bottom.  HORIZ_FREE is RING_W instead -- the round's NOMINAL
+# band, which is also the stem at mid-cap -- so a free arm, a stem and an unmodulated round
+# all weigh the same.
+#
+# The two cannot be reconciled by one number.  Lowering the single R4 to 33 opened a 7.6-unit
+# ledge at every bowl, and tapering a bar from free to join weight sent its underside tangent
+# to the bowl's bottom, where the two curves no longer cross and the join has no solution.
+HORIZ_JOIN  = RING_W + RING_OFF[1]       # 47.23, an R1 band at the bottom of a round
+HORIZ_FREE  = RING_W                     # 33.19, a horizontal that runs into nothing
+HORIZ_TAPER = 0.018                      # loss per unit length, left to right, either way
+HORIZ_MID   = HORIZ_JOIN                 # the metric-line nominal: the mid line is shared with
+                                         # the bowl letters, so it stays tied to the join weight
+def w_horizontal(length, t, mid=None):
+    """Width of a horizontal of `length` at fraction t along it (0 = left end, 1 = right end).
+
+    `mid` is the nominal: HORIZ_FREE by default, HORIZ_JOIN for a horizontal solved against a
+    round.  R4's length taper applies either way."""
+    return (HORIZ_FREE if mid is None else mid) + HORIZ_TAPER * length * (0.5 - t)
 
 # ---- R5 terminals
 CUT_DEG = 20.6
@@ -59,13 +82,13 @@ def diagonal(p0, p1, bottom=None, top=None):
     e1 = cut_for(p1, p0, 'top', top, CUT_DEG) if top else ('flat',)
     return stroke(p0, p1, wf(p0[1]), wf(p1[1]), e0, e1)
 
-def horizontal(x0, x1, y, left=None, right=None):
+def horizontal(x0, x1, y, left=None, right=None, mid=None):
     """A level horizontal from x0 to x1 centred on y, R4 widths.  left/right: None for
     flat, or the direction of the letter's body along that end ('up'/'down') for an R5 cut."""
     L = abs(x1 - x0)
     e0 = cut_for((x0, y), (x1, y), 'left', left, CUT_DEG) if left else ('flat',)
     e1 = cut_for((x1, y), (x0, y), 'right', right, CUT_DEG) if right else ('flat',)
-    return stroke((x0, y), (x1, y), w_horizontal(L, 0), w_horizontal(L, 1), e0, e1)
+    return stroke((x0, y), (x1, y), w_horizontal(L, 0, mid), w_horizontal(L, 1, mid), e0, e1)
 
 def glyph(cp, contours, adv=None, sb=(SB_STRAIGHT, SB_STRAIGHT), notes=None):
     """Package a glyph: shifts the contours so the left extreme sits at sb[0] and sets the
@@ -75,7 +98,7 @@ def glyph(cp, contours, adv=None, sb=(SB_STRAIGHT, SB_STRAIGHT), notes=None):
     contours = [c.map(lambda p: (p[0] + dx, p[1])) for c in contours]
     return dict(cp=cp, adv=adv if adv is not None else round(x1 - x0 + sb[0] + sb[1]), contours=contours, notes=notes or {})
 
-def arm(x0, x1, outer, left='cut', right='cut'):
+def arm(x0, x1, outer, left='cut', right='cut', mid=None):
     """An R4 horizontal whose OUTER edge lies level on a metric line: outer='top' puts the
     top edge on CAP with the body below, 'bottom' the bottom edge on 0 with the body above.
     Widths are R4's (w_horizontal at each end) measured from the outer edge, so the whole
@@ -86,7 +109,7 @@ def arm(x0, x1, outer, left='cut', right='cut'):
     y_out, sgn, body = (CAP, -1, 'down') if outer == 'top' else (0.0, 1, 'up')
     L = x1 - x0
     outer_l = line((x0, y_out), (1, 0))
-    inner_l = line_2pt((x0, y_out + sgn * w_horizontal(L, 0)), (x1, y_out + sgn * w_horizontal(L, 1)))
+    inner_l = line_2pt((x0, y_out + sgn * w_horizontal(L, 0, mid)), (x1, y_out + sgn * w_horizontal(L, 1, mid)))
     def end(spec, x_end, face):
         if spec == 'flat': return line((x_end, y_out), (0, 1))
         other = x1 if face == 'left' else x0
