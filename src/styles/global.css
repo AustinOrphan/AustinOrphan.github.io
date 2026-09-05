@@ -112,7 +112,13 @@ body {
     line-height: 1.6;
     overflow-x: hidden;
     background-color: transparent;
-    padding-bottom: 145px; /* Space for footer reveal */
+    /* Space for the fixed footer to reveal into. Must clear its full height,
+       which is 150px on desktop, plus the 16px of slack this has always
+       carried. Moves with the footer: it was 145px against a 129px footer,
+       and went to 166 when the controls took a 44px touch target and the mark
+       scaled with them. The mobile block below reserves its own, larger value
+       because the footer stacks there. */
+    padding-bottom: 166px;
     position: relative;
 }
 
@@ -1735,7 +1741,15 @@ a {
     animation: lineGlow 4s ease-in-out infinite;
 }
 
-/* 10.2 Footer Social Links */
+/* 10.2 Footer Social Links
+
+   The buttons are 44px so they clear the 44px touch target Apple and WCAG AAA
+   ask for; they were 35px. Everything in the footer that sizes off them was
+   scaled by the same 44/35 = 1.257 rather than left behind, which keeps two
+   proportions the eye actually reads: the glyph fills the same share of its
+   button as before (18/35 = 22.6/44 = .514), and the mark stays the same step
+   larger than a button as before (44/35 = 55/44 = 1.25). Growing the hit box
+   alone drops the glyph ratio to .409 and the buttons read hollow. */
 .footer-profiles {
     display: flex;
     gap: 15px;
@@ -1745,14 +1759,14 @@ a {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 35px;
-    height: 35px;
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
     background: rgba(var(--color-primary-rgb), 0.05);
     color: var(--color-accent);
     text-decoration: none;
     transition: all 0.3s ease;
-    font-size: 18px;
+    font-size: 22.6px;
     position: relative;
     overflow: hidden;
 }
@@ -1790,7 +1804,8 @@ a {
     background: rgba(var(--color-primary-rgb), 0.05);
     border: 1px solid rgba(var(--color-primary-rgb), 0.2);
     color: var(--color-accent);
-    padding: 8px 12px;
+    min-height: 44px; /* same 44px target as the social buttons */
+    padding: 8px 16px;
     border-radius: 20px;
     cursor: pointer;
     transition: all 0.3s ease;
@@ -1807,7 +1822,7 @@ a {
 }
 
 .footer-return i {
-    font-size: 16px;
+    font-size: 20px; /* 16px scaled by the same 1.257 */
     transition: transform 0.3s ease;
 }
 
@@ -2802,17 +2817,17 @@ a {
         margin: 0 0 10px;
     }
 
-    /* Must clear the fixed footer's full height, which is 326px in this block
-       (10 top pad + 34 return pill + 10 + 1 rule + 15 + 44 mark + 10 + 35
-       profiles + 10 + 22 copyright + 135 bottom pad). It reserved 280px, so the
-       last 46px of page content sat inside the footer's top band and the SEND
-       MESSAGE button's border cut across the return pill. */
-    /* Must clear the fixed footer's full height, which is 214px after the
-       padding above. This leaves 46px of slack. These two numbers have to move
-       together: under-reserving is what let page content sit inside the footer
-       and put the SEND MESSAGE border through the Top pill. */
+    /* Must clear the fixed footer's full height, which is 244px in this block
+       (10 top pad + 44 return pill + 10 + 1 rule + 15 + 55 mark + 10 + 44
+       profiles + 10 + 22 copyright + 28 bottom pad), plus 46px of slack.
+
+       These two numbers have to move together. Under-reserving is what once let
+       page content sit inside the footer and put the SEND MESSAGE button's
+       border through the Top pill. The footer grew 30px when the controls went
+       to a 44px touch target and the mark scaled with them, so this grew 30px
+       too, 260 -> 290. */
     body:not(.blog) {
-        padding-bottom: 260px;
+        padding-bottom: 290px;
     }
 }
 

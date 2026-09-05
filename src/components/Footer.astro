@@ -47,12 +47,15 @@ const year = new Date().getFullYear();
         <div class="decoration-line-full"></div>
     </div>
     <div class="footer-content">
-        <!-- Mark left, copyright right. Two alternatives were rendered and kept
-             in mind: copyright left with the mark right (the original grid,
-             where the mark reads as a corner afterthought), and this same
-             arrangement with the mark at 34px instead of 44px. -->
+        <!-- Mark left, copyright right. One alternative was rendered and kept in
+             mind: copyright left with the mark right (the original grid, where
+             the mark reads as a corner afterthought).
+
+             55px is 44px scaled by 44/35, the same factor the social buttons
+             grew by when they went to a 44px touch target. It holds the mark a
+             step above a button, the way 44 sat above 35. -->
         <div class="footer-left">
-            <Logo variant="hero" size={44} class="footer-logo" />
+            <Logo variant="hero" size={55} class="footer-logo" />
         </div>
         <div class="footer-center">
             <div class="footer-profiles">
