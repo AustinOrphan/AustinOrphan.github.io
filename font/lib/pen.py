@@ -110,9 +110,11 @@ def stroke(p0, p1, w0, w1, end0=('flat',), end1=('flat',)):
       ('flat',)                 square to the centre-line
       ('extend', d)             square, but d units further out (to overlap a junction)
       ('cut', angle, side)      oblique: the corner on `side` ('L' or 'R', looking
-                                from p0 toward p1) is the tip, sitting exactly at
-                                the end point; the cut line runs from it at the
-                                absolute `angle` to meet the other edge
+                                OUT of the stroke at that end, i.e. along p0->p1 at
+                                p1 and along p1->p0 at p0, which is cut_for's frame)
+                                is the tip, sitting exactly at the end point; the cut
+                                line runs from it at the absolute `angle` to meet the
+                                other edge
     """
     v = unit(sub(p1, p0)); n = perp(v)
     L0, R0 = add(p0, mul(n, w0/2)), sub(p0, mul(n, w0/2))
@@ -130,7 +132,12 @@ def stroke(p0, p1, w0, w1, end0=('flat',), end1=('flat',)):
             cut = line_ang(Lpt if side == 'L' else Rpt, angle)
             return (Lpt, isect(right, cut)) if side == 'L' else (isect(left, cut), Rpt)
         raise ValueError(spec)
-    a, b = end(end0, p0, L0, R0, mul(v, -1))
+    # A 'cut' spec names its tip side looking OUT of the stroke at that end (cut_for's frame).
+    # At p1 that is the direction of travel; at p0 it is the reverse, so L and R swap.
+    def outward(spec):
+        if spec[0] == 'cut': return ('cut', spec[1], 'R' if spec[2] == 'L' else 'L')
+        return spec
+    a, b = end(outward(end0), p0, L0, R0, mul(v, -1))
     c, d = end(end1, p1, L1, R1, v)
     return from_poly(ccw([b, d, c, a]))
 
