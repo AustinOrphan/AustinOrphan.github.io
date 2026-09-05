@@ -19,6 +19,11 @@ interface Props {
 
 const { variant = 'fixed', prevPost, nextPost } = Astro.props;
 const year = new Date().getFullYear();
+
+/* Blog routes drop the Blog link, which would only point at the section you
+   are already in. Getting home is the mark's job, so no link replaces it.
+   Read off the URL rather than passed in, so no caller can get it wrong. */
+const onBlog = Astro.url.pathname.startsWith('/blog');
 ---
 <footer class:list={['site-footer', `site-footer--${variant}`]}>
     {(prevPost || nextPost) && (
@@ -51,17 +56,36 @@ const year = new Date().getFullYear();
              mind: copyright left with the mark right (the original grid, where
              the mark reads as a corner afterthought).
 
-             55px is 44px scaled by 44/35, the same factor the social buttons
-             grew by when they went to a 44px touch target. It holds the mark a
-             step above a button, the way 44 sat above 35. -->
+             The mark is sized in CSS from --footer-mark, which tracks the
+             buttons so it stays a step above one at every width. The 55 here
+             is only the pre-CSS fallback, the value at the clamp's floor. -->
         <div class="footer-left">
-            <Logo variant="hero" size={55} class="footer-logo" />
+            <a href="/" class="footer-mark-link" aria-label="Home">
+                <Logo variant="hero" size={55} class="footer-logo" />
+            </a>
         </div>
         <div class="footer-center">
+            <!-- The same links, in the same order, as the hero's #linkBar,
+                 minus home, which the mark to the left handles. The hero bar
+                 is anchored to the hero and has scrolled far away by the time
+                 this is on screen, and blog pages never render it at all, so
+                 this is the only place the resume and the demos are reachable
+                 from the bottom of a page.
+
+                 Projects is a plain link to /#projects, not the ProjectsMenu
+                 component: that component takes the first [data-projects-menu]
+                 in the document and owns the id "projects-menu-list", so a
+                 second copy on the home page would render a menu that never
+                 opens and duplicate an id that aria-controls points at. -->
             <div class="footer-profiles">
                 <a href="https://github.com/austinorphan" target="_blank" rel="noopener noreferrer" aria-label="GitHub" class="footer-profile-link"><i class="ph-duotone ph-github-logo"></i></a>
                 <a href="https://www.linkedin.com/in/austinorphan/" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn" class="footer-profile-link"><i class="ph-duotone ph-linkedin-logo"></i></a>
+                <a href="/AustinOrphanResume.pdf" download aria-label="Download resume" class="footer-profile-link"><i class="ph-duotone ph-read-cv-logo"></i></a>
                 <a href="mailto:AustinGOrphan@gmail.com" aria-label="Email" class="footer-profile-link"><i class="ph-duotone ph-envelope-simple"></i></a>
+                {!onBlog && (
+                    <a href="/blog/" aria-label="Blog" class="footer-profile-link"><i class="ph-duotone ph-notepad"></i></a>
+                )}
+                <a href="/#projects" aria-label="Live project demos" class="footer-profile-link"><i class="ph-duotone ph-game-controller"></i></a>
             </div>
         </div>
         <div class="footer-right">

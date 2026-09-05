@@ -66,6 +66,21 @@
    2. CSS Custom Properties (Variables)
    ========================================================================== */
 :root {
+    /* Icon-row sizing, shared by the hero's #linkBar and the footer's social
+       row. Both are six round targets on one line, so both live or die by the
+       same budget: at 320px six 44x44 targets are already 264px before a
+       single gap or any padding. Each part scales with the viewport against a
+       floor, so a row shrinks with the screen instead of overflowing it, and
+       the targets never go below the 44px Apple/Google minimum (WCAG 2.5.8
+       asks 24px). Deliberately px/vw rather than rem/em: these must not grow
+       back past the screen edge at 200% text zoom.
+
+       The 600px+ block gives the hero's icons their own, much larger desktop
+       size; past that width these only still size the footer. */
+    --linkbar-target: clamp(44px, 13vw, 56px);
+    --linkbar-glyph: clamp(22px, 6vw, 26px);
+    --linkbar-gap: clamp(4px, 1.3vw, 12px);
+
     /* Color System */
     --color-background: #1D2B35;
     --color-primary: #EEE5E9;
@@ -113,12 +128,13 @@ body {
     overflow-x: hidden;
     background-color: transparent;
     /* Space for the fixed footer to reveal into. Must clear its full height,
-       which is 150px on desktop, plus the 16px of slack this has always
-       carried. Moves with the footer: it was 145px against a 129px footer,
-       and went to 166 when the controls took a 44px touch target and the mark
-       scaled with them. The mobile block below reserves its own, larger value
-       because the footer stacks there. */
-    padding-bottom: 166px;
+       which is 155px on desktop, plus the 16px of slack this has always
+       carried. Moves with the footer: 145 against a 129px footer, then 166
+       when the controls took a 44px touch target and the mark scaled with
+       them, now 171 with the six-icon row on the shared sizing budget. The
+       mobile block below reserves its own, larger value because the footer
+       stacks there. */
+    padding-bottom: 171px;
     position: relative;
 }
 
@@ -435,10 +451,11 @@ a {
 
 /* 7.1 Hero Layout */
 .hero-section {
-    /* Shared by #linkBar and .scroll-indicator so the two stay a fixed distance
-       apart. The arrow used to carry its own bottom: 200px, which silently
-       drifted the moment the bar's offset changed. */
-    --linkbar-target: clamp(44px, 13vw, 56px);
+    /* --linkbar-target lives on :root (section 2) because the footer's icon row
+       reads it too. .scroll-indicator is positioned off it, so the arrow and
+       the bar stay a fixed distance apart; the arrow used to carry its own
+       bottom: 200px, which silently drifted the moment the bar's offset
+       changed. */
     --linkbar-bottom: max(64px, calc(env(safe-area-inset-bottom) + 30px));
     /* The pill's drawn height: the touch target plus its padding and border. */
     --linkbar-height: calc(var(--linkbar-target) + 26px);
@@ -501,15 +518,7 @@ a {
 
 /* 7.2 Link Bar (Mobile & Desktop) */
 #linkBar {
-    /* Mobile sizing budget. Six touch targets, five gaps, the horizontal
-       padding and the border all have to fit the viewport, and at 320px six
-       44x44 targets alone are 264px of it. Each part scales with the viewport
-       against a floor, so the bar shrinks with the screen instead of
-       overflowing it, and the targets never go below the 44px Apple/Google
-       minimum (WCAG 2.5.8 asks 24px). Deliberately px/vw rather than rem/em:
-       these must not grow back past the screen edge at 200% text zoom. */
-    --linkbar-glyph: clamp(22px, 6vw, 26px);
-    --linkbar-gap: clamp(4px, 1.3vw, 12px);
+    /* Sizing budget in :root (section 2), shared with the footer's icon row. */
     /* border-box so max-width caps the pill that is actually drawn. With the
        default content-box the 32px of padding and 2px of border sat outside
        the cap and the bar rendered 34px wider than it was allowed to be. */
@@ -1642,6 +1651,23 @@ a {
    the two --fixed / --static modifiers below carry the only real difference,
    which is how the bar is positioned. */
 .site-footer {
+    /* Derived from the shared budget in :root, with a lower ceiling. The hero's
+       bar gets the whole viewport; this row shares a 720px column with the mark
+       and the copyright, and at the 56px ceiling it came to 396px of that and
+       squeezed "(c) 2026 Austin Orphan" onto two lines. The 44px floor and the
+       vw scaling, which are what actually matter on a phone, are shared.
+
+       Declared here rather than on :root so the sub-320px exception can
+       override --footer-target on this element and have --footer-mark follow:
+       a custom property substitutes the value cascaded onto its own element,
+       so a derived token on :root cannot see an override further down. */
+    --footer-target: min(var(--linkbar-target), 48px);
+    --footer-glyph: min(var(--linkbar-glyph), 24px);
+    /* The mark, held a step above a button at every width. 1.25 is the ratio it
+       has always had (44 against 35, then 55 against 44); pinning the mark
+       instead would let the button overtake it at the top of the clamp. */
+    --footer-mark: calc(var(--footer-target) * 1.25);
+
     margin-top: 0;
     padding: 15px 0 10px;
     background: transparent;
@@ -1743,32 +1769,64 @@ a {
 
 /* 10.2 Footer Social Links
 
-   The buttons are 44px so they clear the 44px touch target Apple and WCAG AAA
-   ask for; they were 35px. Everything in the footer that sizes off them was
-   scaled by the same 44/35 = 1.257 rather than left behind, which keeps two
-   proportions the eye actually reads: the glyph fills the same share of its
-   button as before (18/35 = 22.6/44 = .514), and the mark stays the same step
-   larger than a button as before (44/35 = 55/44 = 1.25). Growing the hit box
-   alone drops the glyph ratio to .409 and the buttons read hollow. */
+   Five or six targets on one line (the home page carries a Blog link the blog
+   pages do not), sized from the same budget as the hero's #linkBar so the two
+   rows scale together and both hold a 44px touch target. Six fixed 44px
+   buttons plus 15px gaps came to 339px, which overflowed a 320px phone by 51px
+   and clipped the last icon; the clamps fit six in 285px.
+
+   The glyph keeps the same share of its button it has always had (22/44, and
+   24/48 at the top of the clamp), and --footer-mark holds the mark a step
+   above a button. Growing the hit box alone drops that share to .409 and the
+   buttons read hollow. */
 .footer-profiles {
     display: flex;
-    gap: 15px;
+    /* A net, not a layout: the row fits at every width measured, but it clears
+       320px by only 3px, so a future gap tweak should drop to a second line
+       rather than push an icon off the screen. */
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: 100%;
+    gap: var(--linkbar-gap);
 }
 
 .footer-profile-link {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 44px;
-    height: 44px;
+    flex: 0 0 auto;
+    width: var(--footer-target);
+    height: var(--footer-target);
     border-radius: 50%;
     background: rgba(var(--color-primary-rgb), 0.05);
     color: var(--color-accent);
     text-decoration: none;
     transition: all 0.3s ease;
-    font-size: 22.6px;
+    font-size: var(--footer-glyph);
     position: relative;
     overflow: hidden;
+}
+
+/* The mark is the home link, the way a masthead logo usually is, so the row
+   carries no home icon of its own. Kept as a link on the home page too: a
+   logo that is clickable everywhere except one page is the surprising
+   version, and it costs nothing here. */
+.footer-mark-link {
+    /* The global `a` reset is display:flex, width/height:100%, justify-content:
+       center. Left alone it stretches this link across the whole 1fr cell and
+       centres the mark in it, which reads as the mark having drifted off the
+       gutter. Shrink-wrap it instead and let .footer-left's text-align place
+       it: left in the grid, centred once the footer collapses to one column.
+       Same trap the #linkBar > a rule documents. */
+    display: inline-flex;
+    width: auto;
+    height: auto;
+    justify-content: flex-start;
+    transition: opacity 0.3s ease;
+}
+
+.footer-mark-link:hover {
+    opacity: 0.75;
 }
 
 .footer-profile-link::before {
@@ -2406,9 +2464,18 @@ a {
    the alternative is icons off the edge of the screen: at 280px the targets
    land at 36.4px, still comfortably over the 24px WCAG 2.5.8 minimum. */
 @media screen and (max-width: 319.98px) {
+    /* Both six-icon rows, the hero's and the footer's. The footer's is tighter
+       still: its static variant carries a 1rem gutter, so it has 32px less to
+       work with than the full-bleed bar. The footer is set on .site-footer, not
+       on the row, so that --footer-mark scales down with the buttons too. */
     #linkBar {
         --linkbar-target: max(36px, 13vw);
         --linkbar-glyph: max(18px, 6vw);
+    }
+
+    .site-footer {
+        --footer-target: max(36px, 13vw);
+        --footer-glyph: max(18px, 6vw);
     }
 }
 
@@ -2769,9 +2836,17 @@ a {
     .footer-right {
         text-align: center;
     }
-    
-    .footer-profiles {
-        justify-content: center;
+
+    /* .footer-content's 20px gutter comes off the icon row's allowance, and at
+       320px six 44px targets plus their gaps need 285 of the 280 that leaves,
+       so the row wrapped to a second line and the taller footer then pushed
+       past the reserve below. The static variant already zeroes that gutter
+       and had room. Let only the icon cell out to the padding edge, rather
+       than narrowing the gutter itself, so the mark and the copyright keep
+       the inset they have always had. */
+    .site-footer--fixed .footer-center {
+        margin-left: -20px;
+        margin-right: -20px;
     }
 
     /* 135px of bottom padding left a void as tall as the footer's own content
@@ -2817,17 +2892,18 @@ a {
         margin: 0 0 10px;
     }
 
-    /* Must clear the fixed footer's full height, which is 244px in this block
-       (10 top pad + 44 return pill + 10 + 1 rule + 15 + 55 mark + 10 + 44
-       profiles + 10 + 22 copyright + 28 bottom pad), plus 46px of slack.
+    /* Must clear the fixed footer's full height plus 46px of slack. The footer
+       is tallest at the top of this block, not the bottom: the icon row and
+       the mark are on viewport-scaled clamps, so 253px at 390-768px against
+       244px at 320px and 227px at 280px. Reserve for the tallest.
 
-       These two numbers have to move together. Under-reserving is what once let
+       These numbers have to move together. Under-reserving is what once let
        page content sit inside the footer and put the SEND MESSAGE button's
-       border through the Top pill. The footer grew 30px when the controls went
-       to a 44px touch target and the mark scaled with them, so this grew 30px
-       too, 260 -> 290. */
+       border through the Top pill, and it recurred at 320px when the six-icon
+       row briefly wrapped to a second line. 260 -> 290 for the 44px targets,
+       then -> 299 for the six-icon row on the shared sizing budget. */
     body:not(.blog) {
-        padding-bottom: 290px;
+        padding-bottom: 299px;
     }
 }
 
@@ -3227,16 +3303,15 @@ body.blog {
 }
 
 /* 14.2 Footer: the mark takes the left cell of the 1fr auto 1fr grid and the
-   copyright moves right, so the row reads mark / social / copyright. */
+   copyright moves right, so the row reads mark / social / copyright. Sized off
+   --footer-mark rather than the size attribute so it tracks the buttons. */
+/* The mark is wrapped in an inline-level link now, so .footer-left's own
+   text-align places it: left in the three-column grid, centred once the
+   footer collapses to one column below 768px. Auto margins no longer do
+   anything here, which is why the old margin: 0 auto pair is gone. */
 .footer-left .footer-logo {
-    margin-right: auto;
-}
-
-/* Below 768px the footer collapses to a single centred column. */
-@media (max-width: 768px) {
-    .footer-left .footer-logo {
-        margin: 0 auto;
-    }
+    width: var(--footer-mark);
+    height: var(--footer-mark);
 }
 
 /* 14.3 Hero backdrop: the mark, oversized and faint, behind the wordmark.
