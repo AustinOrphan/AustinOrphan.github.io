@@ -2,3 +2,5 @@ numpy
 svgpathtools
 pillow
 pymupdf
+fonttools
+scipy
