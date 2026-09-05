@@ -72,6 +72,10 @@ const onBlog = Astro.url.pathname.startsWith('/blog');
                  this is the only place the resume and the demos are reachable
                  from the bottom of a page.
 
+                 The envelope goes to /#contact, not to a mailto:. Every
+                 envelope on the site now means the same thing, and from a blog
+                 post this is the only route to the contact form at all.
+
                  Projects is a plain link to /#projects, not the ProjectsMenu
                  component: that component takes the first [data-projects-menu]
                  in the document and owns the id "projects-menu-list", so a
@@ -81,7 +85,7 @@ const onBlog = Astro.url.pathname.startsWith('/blog');
                 <a href="https://github.com/austinorphan" target="_blank" rel="noopener noreferrer" aria-label="GitHub" class="footer-profile-link"><i class="ph-duotone ph-github-logo"></i></a>
                 <a href="https://www.linkedin.com/in/austinorphan/" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn" class="footer-profile-link"><i class="ph-duotone ph-linkedin-logo"></i></a>
                 <a href="/AustinOrphanResume.pdf" download aria-label="Download resume" class="footer-profile-link"><i class="ph-duotone ph-read-cv-logo"></i></a>
-                <a href="mailto:AustinGOrphan@gmail.com" aria-label="Email" class="footer-profile-link"><i class="ph-duotone ph-envelope-simple"></i></a>
+                <a href="/#contact" aria-label="Contact" class="footer-profile-link"><i class="ph-duotone ph-envelope-simple"></i></a>
                 {!onBlog && (
                     <a href="/blog/" aria-label="Blog" class="footer-profile-link"><i class="ph-duotone ph-notepad"></i></a>
                 )}
