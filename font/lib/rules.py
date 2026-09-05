@@ -74,3 +74,23 @@ def glyph(cp, contours, adv=None, sb=(SB_STRAIGHT, SB_STRAIGHT), notes=None):
     dx = sb[0] - x0
     contours = [c.map(lambda p: (p[0] + dx, p[1])) for c in contours]
     return dict(cp=cp, adv=adv if adv is not None else round(x1 - x0 + sb[0] + sb[1]), contours=contours, notes=notes or {})
+
+def arm(x0, x1, outer, left='cut', right='cut'):
+    """An R4 horizontal whose OUTER edge lies level on a metric line: outer='top' puts the
+    top edge on CAP with the body below, 'bottom' the bottom edge on 0 with the body above.
+    Widths are R4's (w_horizontal at each end) measured from the outer edge, so the whole
+    1.8%-of-length change is taken on the inner edge and the flat side stays exactly on the
+    metric line (SPEC R4).  Each end is 'cut' (an R5 cut, tip at the outer corner; serves a
+    free tip and an end buried in a stem alike) or 'flat'.  Use horizontal() for bars that
+    sit away from the metric lines.  Lifted from glyphs/set_straight.py."""
+    y_out, sgn, body = (CAP, -1, 'down') if outer == 'top' else (0.0, 1, 'up')
+    L = x1 - x0
+    outer_l = line((x0, y_out), (1, 0))
+    inner_l = line_2pt((x0, y_out + sgn * w_horizontal(L, 0)), (x1, y_out + sgn * w_horizontal(L, 1)))
+    def end(spec, x_end, face):
+        if spec == 'flat': return line((x_end, y_out), (0, 1))
+        other = x1 if face == 'left' else x0
+        _, angle, _ = cut_for((x_end, y_out), (other, y_out), face, body, CUT_DEG)
+        return line_ang((x_end, y_out), angle)
+    l_end, r_end = end(left, x0, 'left'), end(right, x1, 'right')
+    return from_poly(ccw([isect(outer_l, l_end), isect(inner_l, l_end), isect(inner_l, r_end), isect(outer_l, r_end)]))
