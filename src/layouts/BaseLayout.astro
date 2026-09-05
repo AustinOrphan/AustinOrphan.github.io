@@ -13,6 +13,10 @@ interface Props {
   description?: string;
   canonicalURL?: string;
   bodyClass?: string;
+  /** The page's robots directive. Pages that should stay out of search results
+   *  pass their own value here rather than adding a second <meta name="robots">,
+   *  which would leave two conflicting tags in the head. */
+  robots?: string;
 }
 
 const {
@@ -20,6 +24,7 @@ const {
   description = SITE_DESCRIPTION,
   canonicalURL: canonicalURLProp,
   bodyClass,
+  robots = 'index,follow',
 } = Astro.props;
 
 const canonicalURL = canonicalURLProp ?? new URL(Astro.url.pathname, Astro.site).toString();
@@ -91,7 +96,7 @@ const jsonLd = JSON.stringify(personSchema).replace(/</g, '\\u003c');
 
   <meta name="description" content={description}>
   <meta name="author" content="Austin Orphan">
-  <meta name="robots" content="index,follow">
+  <meta name="robots" content={robots}>
 
   <meta property="og:url" content={canonicalURL}>
   <meta property="og:type" content="website">
