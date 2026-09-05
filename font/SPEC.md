@@ -90,7 +90,21 @@ curls, not loops. Read off its Béziers (and the fits in
 - It is the **heaviest stroke**: ≈ 6.0 pt at mid-length, tapering from ≈ 6.2 pt
   at the left to ≈ 5.0 pt at the right.
 - Both ends **hook downward**. In the united mark the hooks touch the ring and
-  enclose two small eyes; the eyes exist only because of the ring.
+  enclose two small eyes.
+
+Taken together these are the signature of a **planetary ring**: an elliptical
+annulus seen in perspective, whose front half is the bar. Fitting that model
+(major axis from hook tip to hook tip, height from the bar's edges) gives an
+outer ellipse of 51.5 × 11.3 pt tilted 14.1°, an inner ellipse of 45.4 × 5.0 pt
+sharing its centre and axis, centred at (50.0, 51.5), which is 2.6 pt from the
+O's centre. The bar's top and bottom edges lie on the two ellipses to 0.10 and
+0.13 pt mean residual, the hooks' outer curls to 0.23 pt, and the band between
+the ellipses is 6.0 pt at the ends and 6.4 pt in the middle, the bar's own
+width. So the hooks are the ring's ends, the eyes are the gap between the
+ring's two edges where they turn, and each return stroke is the start of the
+ring's **back half**, which in the mark disappears behind the O; the returns
+thin to about half the bar's width before they vanish. The fit lives in
+`source/ai_objects.json` under the bar object's `ring`.
 
 ### 2.3 Composition, not letterform
 
@@ -133,31 +147,27 @@ round weight, which is the conventional optical relationship.
 **D4. The O is built from its fitted circles**, not from the node-split source
 path. Identical within 0.01 pt, without the boolean scars.
 
-**D5. The bar's hooks return to the legs.** In the mark each hook's return
-stroke ends where it meets the ring, enclosing a small eye. Carried verbatim
-without the ring, the hooks end in space and overhang the feet by 104 and 105
-units (advance 847). The user's direction was that the hooks should follow
-their trajectory back to the legs. Two constructions were built and compared
-(`measure/evidence/hook-options*.png`):
+**D5. The ring's back half continues to the legs.** In the mark the bar is
+the front half of a ring (§2.2) and the returns are the start of its back half,
+hidden behind the O. Carried verbatim without the O, the returns end in space.
+The user's direction was that the hooks should follow their trajectory back
+to the legs and that the bar is a ring like a planet's. So each return is
+continued from its end face along the ring's centre ellipse (the mean of the
+fitted outer and inner ellipses) toward the ring's middle until it passes
+behind the nearer leg, thinning from the face width to the face's thinnest
+stroke, the O's thin side (13.4 units), where it meets the leg's outer edge,
+the way the mark's own returns thin toward the planet; the last stretch to the
+leg's centre-line is buried so the union is seamless. The face midpoints sit
+0.26 and 0.41 pt off the centre ellipse and are blended onto it over the first
+8 pt. The back arcs reach the legs after 9.0 pt (71 units) on the left and
+23.4 pt (185 units) on the right. The bar and hooks themselves are verbatim
+and the A's advance stays 847.
 
-- *Continue each return straight along its end tangent until it meets the
-  leg.* The returns are straight where they end (end radii of curvature 1080
-  and 8142 units), so this is the literal reading. On the left it lands after
-  91 units and reads well; on the right the mark's hook sits much farther from
-  its leg and the continuation is a 201-unit hairline across the counter,
-  a stroke the mark has no vocabulary for. Rejected for that reason.
-- *Slide each hook inward along the bar's own arc until its return's end face
-  touches its leg's outer edge*, then rebuild the bar between the hooks as arcs
-  of the original radii (1778 top, 2369 bottom, in font units) through the
-  moved junctions, and carry the return the last few units into the leg's
-  centre-line. This applies the mark's own construction, the return landing
-  on the nearest structure, with the leg standing in for the ring. The hooks
-  themselves are untouched. **Adopted.** Slides: left 92 units (a rotation of
-  2.23° about the bottom arc's centre), right 189 units (4.57°); tails 20 and
-  16 units. The A's advance becomes 661.
-
-The verbatim bar is kept as the unencoded alternate `A.open` (advance 847).
-Switching the default back is one argument in `build_A`.
+Built and set aside on the way (`measure/evidence/hook-options*.png`): a
+straight continuation of each return (a 201-unit hairline on the right, no
+curvature), a circular bend of 20° (an arbitrary amount), and sliding the
+hooks inward until the returns land on the legs (moves the hooks and narrows
+the bar). The bar without tails is kept as the unencoded alternate `A.open`.
 
 **D6. Typographic constants** (`lib/metrics.py`), which the mark cannot
 supply: em 1000; cap 700; round overshoot 10; point overshoot 16; side bearing
@@ -177,14 +187,15 @@ largest scope decision in the face and the easiest to revisit.
 | O inner radius | 326.81 |
 | O counter offset | 19.83 units toward 45.07° |
 | O stroke, thick / mean / thin | 53.0 / 33.2 / 13.4 |
-| A apex | (342, 716) |
-| A feet tips | (63, 0) and (621, 0) |
+| A apex | (423.4, 716) |
+| A feet tips | (143.8, 0) and (701.9, 0) |
 | A leg angles | 68.71° and 111.29° |
 | A left leg width, foot → apex | 39.5 → 27.1 |
 | A right leg width, foot → apex | 37.2 → 25.5 |
 | A foot cuts | +21.8° and −19.4° from horizontal |
-| A bar | source Béziers, hooks slid inward per D5; box 40 … 543 × 222 … 454 |
-| A advance | 661 (A.open, verbatim bar: 847) |
+| A bar | source Béziers, verbatim; box 40 … 807 × 179 … 499 |
+| A tails | ring back arcs, 71 and 185 units to the legs, 26.4 / 18.9 → 13.4 wide |
+| A advance | 847 (A.open, no tails: 847) |
 | O advance | 800 |
 
 ## 5. Rules for every other glyph
