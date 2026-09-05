@@ -73,6 +73,8 @@ BODY_NARROW = 420                 # three quarters of medium: S J
 TOP, BOT    = CAP + OVER_ROUND, -OVER_ROUND      # 710 / -10, the round overshoots
 G_BAR_Y     = CAP / 2 - HORIZ_MID / 4            # 338.125: the mid line reflected in the half-cap
 
+BODY_S = 420.0      # R8's narrow body, the S's width class
+
 def _band_w(th):
     """R1 band width along the radius at page angle th (deg): RING_W minus the displacement's
     component, so 53.0 at 225 deg and 13.4 at 45 deg whatever the round's size."""
@@ -444,90 +446,37 @@ def _s_corners(g, sgn):
             ('top terminal, outer corner',   sgn * _turn(top_face, fwd('Uo', S_TOP_T)))]
 
 def build_S():
-    g = _s_solve(); e = g['e']
-    (Cu, au, bu), (Cl, al, bl) = e['Uo'], e['Lo']
-    raw = _s_contour(g); k = raw.ccw()
-    corners = _s_corners(g, 1.0 if raw.area() > 0 else -1.0)
-    reflex = [f"{n} {t:+.2f}" for n, t in corners if t < -0.001]
-    w_up = norm(sub(_ell_pt(*e['Uo'], g['t_xu']), _ell_pt(*e['Ui'], g['t_xu'])))
-    w_lo = norm(sub(_ell_pt(*e['Lo'], g['t_xl']), _ell_pt(*e['Li'], g['t_xl'])))
-    w_top = norm(sub(_ell_pt(*e['Uo'], S_TOP_T), _ell_pt(*e['Ui'], S_TOP_T)))
-    w_bot = norm(sub(_ell_pt(*e['Lo'], S_BOT_T), _ell_pt(*e['Li'], S_BOT_T)))
-    bridge = norm(sub(g['T1'], g['T2'])); b_ang = ang(sub(g['T2'], g['T1']))
-    u = perp(unit(sub(g['T2'], g['T1'])))
-    waist = abs(u[0]*(g['PX'][0]-g['T1'][0]) + u[1]*(g['PX'][1]-g['T1'][1]))
-    return glyph(ord('S'), [k], sb=(SB_ROUND, SB_ROUND), notes=dict(
-        construction=f"Two R1 rounds STACKED and traced as ONE closed contour.  Upper bowl: outer ellipse "
-                     f"semi-axes ({au:.1f}, {bu:.1f}) centred {tuple(round(v,1) for v in Cu)}, touching the cap "
-                     f"overshoot {TOP:g} and the left extreme.  Lower bowl: ({al:.1f}, {bl:.1f}) centred "
-                     f"{tuple(round(v,1) for v in Cl)}, touching the baseline overshoot {BOT:g} and the right "
-                     f"extreme.  Both are ellipses with R1 applied term for term -- outer ellipse; counter the "
-                     f"same ellipse with BOTH semi-axes brought in by RING_W={RING_W:.2f} and the centre "
-                     f"displaced by RING_OFF -- so the stroke still runs {ROUND_THICK:.1f} at the lower left to "
-                     f"{ROUND_THIN:.1f} at the upper right as in the O.  The centres are {Cl[0]-Cu[0]:.0f} apart "
-                     f"in x and {Cu[1]-Cl[1]:.0f} in y: a stack, not a diagonal, so each bowl carries about "
-                     f"{2*au/S_BODY*100:.0f}% of the body's width and the arcs are "
-                     f"{_up(g['t_xu'], S_TOP_T)-S_TOP_T:.0f} deg (upper) and "
-                     f"{_up(g['g_l'], _down(S_BOT_T, g['t_xl']))-_down(S_BOT_T, g['t_xl']):.0f} deg (lower), "
-                     f"each opening sideways -- the upper to the right, the lower to the left.",
-        waist=f"R1 cannot make both edges of a stacked waist tangent.  At a smooth waist the two bowls' "
-              f"outward normals are opposite, so their bands are RING_W minus and plus the SAME component of "
-              f"RING_OFF and differ by 2*|RING_OFF|*|cos(waist tilt + 45 deg)| -- zero only when the stroke "
-              f"crosses the waist rising at 45 deg, which is a coil, not an S.  Here the upper band is "
-              f"{w_up:.1f} at the hand-off and the lower {w_lo:.1f}, a difference of {w_up-w_lo:.1f}, and the "
-              f"whole of it is spent on ONE edge: the LOWER edge is a true tangency (the upper bowl's outer "
-              f"edge touching the lower bowl's counter, closed by the solve to {abs(g['pierce']):.1e} in the "
-              f"lower counter's own normalised radius, {abs(g['pierce'])*al/2:.4f} units), and the UPPER edge "
-              f"is the straight line tangent to BOTH the upper counter and the lower bowl's outer edge.  A "
-              f"line tangent to both meets each without turning, so neither hand-off is a corner "
-              f"(measured: {corners[0][1]:+.2f}, {corners[3][1]:+.2f}, {corners[4][1]:+.2f} deg); the "
-              f"difference between the bands comes out as the straight's LENGTH, {bridge:.0f} units at "
-              f"{b_ang:.1f} deg, from {tuple(round(v) for v in g['T2'])} to "
-              f"{tuple(round(v) for v in g['T1'])}.  That straight is the S's spine and reads as one.  The "
-              f"ink across the waist -- the tangency point to the straight -- is {waist:.1f}.",
-        corners=f"Every corner of the finished contour, measured on the outline itself as the change of "
-                f"direction from the incoming edge to the outgoing one (positive convex, negative reflex): "
-                + "; ".join(f"{n} {t:+.2f} deg" for n, t in corners) + ".  "
-                + (f"REFLEX VERTICES: {'; '.join(reflex)}." if reflex else
-                   "No reflex vertex anywhere; the four right-angled corners are the two free terminals' "
-                   "radial faces, which R1 asks for, and the three waist hand-offs are tangent to within "
-                   "the solver's own residual."),
-        terminals=f"Ends at parameters {S_TOP_T:g} on the upper bowl (upper right) and {S_BOT_T:g} on the "
-                  f"lower (lower left), each cut on the chord between outer edge and counter at that "
-                  f"parameter -- R1's radial cut, which under the affine map that makes the ellipse is a "
-                  f"chord at constant parameter.  R1's widths put {w_top:.1f} at the top terminal and "
-                  f"{w_bot:.1f} at the bottom one (R7: light upper right, heavy lower left).  The pair leaves "
-                  f"the upper bowl open over {360 - (_up(g['t_xu'], S_TOP_T) - S_TOP_T):.0f} deg to the right "
-                  f"and the lower open over "
-                  f"{360 - (_up(g['g_l'], _down(S_BOT_T, g['t_xl'])) - _down(S_BOT_T, g['t_xl'])):.0f} deg to "
-                  f"the left, the two apertures facing opposite ways as an S's must.  THE ONE READING THE "
-                  f"RULES LEAVE OPEN in this letter: the pair itself.  20/200, 30/195, 40/220, 45/225 and "
-                  f"15/185 were all drawn and read; every one of them is legible, and 30/210 is kept because "
-                  f"it is the pair that leaves both terminals pointing squarely out of the letter -- 20/200 "
-                  f"curls the upper one down into its own counter and 45/225 opens the upper aperture past "
-                  f"the C's.",
-        proportion=f"Body {S_BODY:g}, R8's own narrow width -- the previous drawing of this letter took the "
-                   f"medium {BODY_MEDIUM:g} because its bowls, solved for a doubly tangent waist, came out "
-                   f"barely half the body wide and needed the room; stacked bowls do not.  The two free "
-                   f"numbers are the bowls' semi-width ({S_A:g}, the same for both, so the centres sit "
-                   f"{S_BODY - 2*S_A:g} apart in x) and the lower bowl's semi-height ({S_BL:g}); the upper "
-                   f"bowl's semi-height ({bu:.2f}) is solved, not chosen, by the waist's lower tangency.  "
-                   f"The lower bowl is the taller of the two ({bl/bu:.2f}x), so the waist sits above the "
-                   f"middle at y={g['PX'][1]:.0f} and the lower counter is the larger, as R7 asks.",
-        spacing=f"{SB_ROUND}/{SB_ROUND}: round on both sides.",
-        deviations=f"None on width: the body is R8's narrow {S_BODY:g}.  Two, both inside R1 and both "
-                   f"argued above.  First, the bowls are ellipses rather than circles, which R1 allows as "
-                   f"long as its construction is applied to both axes, as it is; lib has no elliptical band, "
-                   f"so the arcs are built here from pen's arc_segments under an affine map (exact for "
-                   f"cubics).  Second, the waist's upper edge is a straight tangent to both curves rather "
-                   f"than a curve-to-curve hand-off, because R1's absolute displacement leaves the two bands "
-                   f"{w_up-w_lo:.1f} units apart there and no stacked arrangement can close that; the "
-                   f"straight is the cheapest thing that closes it without a corner.",
-        geometry=dict(upper=dict(centre=Cu, a=au, b=bu), lower=dict(centre=Cl, a=al, b=bl),
-                      waist=dict(tangency=g['PX'], t_upper=g['t_xu'], t_lower=g['t_xl'],
-                                 bands=(w_up, w_lo), ink=waist,
-                                 straight=dict(fr=g['T2'], to=g['T1'], length=bridge, deg=b_ang)),
-                      corners=corners)))
+    """Two R1 bowls stacked and unioned.
+
+    The upper bowl's outer circle touches the cap overshoot and sets the left extreme; the
+    lower bowl's touches the baseline overshoot and sets the right extreme, and the pair is
+    sheared apart by DX so the waist runs diagonally as an S's does.  Radii are chosen so the
+    two bands overlap through the middle: 2*(ru+rl) exceeds the letter's height by 80 units,
+    against a band RING_W wide, which is what makes the waist a junction rather than a touch.
+    Each arc is carried well past the waist (to 315 and from 65 degrees) so that its radial
+    cut is buried inside the other bowl and never shows; stopping either arc at the waist
+    itself leaves a blunt step, which is what the previous drawing had.  Terminals are R1's
+    radial cuts at 18 and -158 degrees.
+
+    The earlier version solved for a doubly tangent waist and traced one contour; it came out
+    wispy, with hooked terminals and a spine that did not hold at text size.
+    """
+    ru, rl, dx = 195.0, 205.0, 14.0
+    top, bot = CAP + OVER_ROUND, -OVER_ROUND
+    cu = (ru - dx, top - ru)
+    cl = (BODY_S - rl + dx, bot + rl)
+    contours = [round_arc(cu, ru, 18.0, 315.0), round_arc(cl, rl, 65.0, -158.0)]
+    overlap = 2*(ru + rl) - (top - bot)
+    return glyph(ord('S'), contours, sb=(SB_ROUND, SB_ROUND), notes=dict(
+        construction=("two R1 bowls, upper r %.0f centred (%.0f, %.0f), lower r %.0f centred "
+                      "(%.0f, %.0f), sheared %.0f apart; arcs 18..315 and 65..-158 so both "
+                      "radial cuts at the waist are buried in the other bowl"
+                      % (ru, cu[0], cu[1], rl, cl[0], cl[1], dx)),
+        waist=("the bands overlap by %.0f units of radius against a %.1f-unit band, so the "
+               "waist is a junction of the two bowls and carries the round stroke"
+               % (overlap, RING_W)),
+        proportion="body %d, R8's narrow width" % BODY_S,
+        deviations="none from R1-R9"))
 
 def build_Q():
     tail, p0, p1, u = _q_tail()

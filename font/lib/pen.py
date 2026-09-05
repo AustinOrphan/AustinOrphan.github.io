@@ -154,8 +154,12 @@ def arc_band(c, r_out, r_in, off, a0, a1):
     start, outer = arc_segments(c, r_out, a0, a1)
     i1 = line_circle(line_ang(c, a1), ci, r_in, pick='max')     # inner end on the a1 ray
     i0 = line_circle(line_ang(c, a0), ci, r_in, pick='max')
-    b1, b0 = ang(sub(i1, ci)), ang(sub(i0, ci))
-    if b0 > b1: b0 -= 360                                        # go back the way we came
+    # atan2 wraps to (-180, 180], so an inner end can come back 360 away from the outer ray
+    # it belongs to; unwrap each against its own ray.  Reading them raw sent the inner edge
+    # the long way round and filled the ring solid, which only showed on clockwise arcs.
+    def _near(b, a): return a + ((b - a + 180) % 360) - 180
+    b1 = _near(ang(sub(i1, ci)), a1)
+    b0 = _near(ang(sub(i0, ci)), a0)
     _, inner = arc_segments(ci, r_in, b1, b0)
     k = Contour(start)
     for sg in outer: k.curve_to(sg[1], sg[2], sg[3])
