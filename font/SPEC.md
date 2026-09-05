@@ -227,7 +227,13 @@ choice is the O: the O's mean stroke width (33.2) equals this profile's width
 at mid-height (33.3), so a stem beside an O carries the O's average weight.
 
 **R4. Horizontals.** From the bar: **47.5 units at mid-length, thinning 1.8%
-of its length from left to right**, and level. The bar's tilt, arch and hooks
+of its length from left to right**, and level. A horizontal whose outer edge
+lies on the cap line or the baseline (the arms of E, F, L, T, Z, the tops and
+bottoms of digits) keeps that edge exactly on the metric line and takes the
+whole taper on its inner edge, so flat tops and bottoms sit where the H's and
+I's do; a horizontal away from the metric lines (H's bar, E's middle arm, A's
+would-be bar) tapers symmetrically about a level centre-line. `rules.arm()`
+and `rules.horizontal()` build the two cases. The bar's tilt, arch and hooks
 are one gesture, the A's flourish; the hooks cannot recur on an E without
 colliding with the arm below, and the tilt and arch belong to the same
 stroke, so none of the three transfers. Horizontals end in R5 cuts.
