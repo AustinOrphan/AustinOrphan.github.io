@@ -189,7 +189,7 @@ def build_O():
                            width_thick=r_out-r_in+norm(off), width_thin=r_out-r_in-norm(off), width_mean=r_out-r_in,
                            source_outer=outer[:3], source_inner=inner[:3]))
 
-def build_A(tuck=True, slide=False, name='A', cp=ord('A')):
+def build_A(tuck=True, slide=False, name='A', cp=ord('A'), clip_legs=True):
     global O_THIN
     O_THIN = build_O()['notes']['width_thin']
     tipL, cutL, cApex, cutR, tipR, apex = [tuple(v) for v in OBJ['A']['vertices']]
@@ -224,6 +224,27 @@ def build_A(tuck=True, slide=False, name='A', cp=ord('A')):
         for side, poly_src in _ring_tails(OBJ['A']['vertices'], width_end=O_THIN / s).items():
             contours.append(from_poly([fp(xp(p)) for p in poly_src['poly']]).ccw())
             tails[side] = poly_src['notes']
+    clipped = {}
+    if clip_legs:
+        # The ring runs 105 units past each leg, which made the A 847 wide against 638 for
+        # its own width class and left it colliding with whatever it stood next to.  Clipping
+        # the ring on the legs' own OUTER EDGES is the natural cut: the ring is meant to pass
+        # BEHIND the letter, so the legs are exactly what should hide it, and the cut faces
+        # come out parallel to the legs.  What is left of the ring inside the legs is the
+        # crossbar, still carrying the ring's tilt.  The full ring is kept as 'A.open'.
+        mid = ((poly[0][0] + poly[4][0] + poly[5][0]) / 3,
+               (poly[0][1] + poly[4][1] + poly[5][1]) / 3)   # inside the legs' wedge
+        L = (poly[5], poly[0])                            # apex -> tipL, the left outer edge
+        Rr = (poly[5], poly[4])                           # apex -> tipR
+        keep, out = [contours[0]], 0
+        for c in contours[1:]:
+            k = clip_half(c, L[0], L[1], mid)
+            k = clip_half(k, Rr[0], Rr[1], mid) if k is not None else None
+            if k is None: out += 1
+            else: keep.append(k)
+        contours = keep
+        clipped = dict(dropped_contours=out,
+                       cut_on=[[list(L[0]), list(L[1])], [list(Rr[0]), list(Rr[1])]])
     x0, y0, x1, y1 = bbox([c.flatten() for c in contours])
     dx = SB_ROUND - x0
     contours = [c.map(lambda p: (p[0] + dx, p[1])) for c in contours]
@@ -234,7 +255,7 @@ def build_A(tuck=True, slide=False, name='A', cp=ord('A')):
         l = line_2pt(outer_a, outer_b); return abs(dot(sub(inner_pt, l[0]), perp(l[1])))
     legL = (width(tipL_f, apex_f, cutL_f), width(tipL_f, apex_f, cApex_f))
     legR = (width(tipR_f, apex_f, cutR_f), width(tipR_f, apex_f, cApex_f))
-    notes = dict(rotated_by_deg=R, lean_deg=lean, scale=s, y_feet_source=y_feet, apex_source=apex,
+    notes = dict(clipped_to_legs=clipped, rotated_by_deg=R, lean_deg=lean, scale=s, y_feet_source=y_feet, apex_source=apex,
                  foot_level_residual_font=residual_pt*s, x_shift=dx,
                  vertices=dict(tipL=tipL_f, cutL=cutL_f, counter_apex=cApex_f, cutR=cutR_f, tipR=tipR_f, apex=apex_f),
                  leg_L_width_foot_apex=legL, leg_R_width_foot_apex=legR,
@@ -247,7 +268,7 @@ def build_A(tuck=True, slide=False, name='A', cp=ord('A')):
 
 def build_A_open():
     """The bar and hooks verbatim, hooks ending in space where the ring was.  Unencoded alternate."""
-    return build_A(tuck=False, slide=False, name='A.open', cp=-1)
+    return build_A(tuck=False, slide=False, name='A.open', cp=-1, clip_legs=False)
 
 def build_space():
     return dict(cp=32, adv=SPACE_ADV, contours=[], notes={})
