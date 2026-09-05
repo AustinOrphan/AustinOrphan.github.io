@@ -286,3 +286,84 @@ def cut_for(p_end, p_other, face, body, off_deg):
     elif face == 'left':  angle = 270 + off_deg if b[1] < 0 else 90 - off_deg
     else: raise ValueError(face)
     return ('cut', angle, side)
+
+
+# ---- fitting cubics to a sampled curve ------------------------------------------------
+def fit_cubics(P, T, tol=0.05, depth=0):
+    """Schneider's fit: a chain of cubic Beziers through the sampled curve P, tangent to the
+    unit tangents T at the two ends of every piece.
+
+    Offsetting a curve by a varying width gives something that is not itself an ellipse or a
+    circle, so the S's edges have to be approximated.  A dense polygon is the wrong way --
+    set_round's own notes record that a chain of short chords turns into a visible ripple once
+    the compiler rounds -- so the samples are fitted instead, and the caller is told the worst
+    deviation so the tolerance can be argued rather than assumed.
+
+    Returns (segments, max_error) where segments are (p1, p2, p3) control triples following on
+    from P[0], ready for Contour.curve_to.
+    """
+    n = len(P)
+    if n < 2: return [], 0.0
+    if n == 2:
+        d = norm(sub(P[1], P[0])) / 3.0
+        return [(add(P[0], mul(T[0], d)), sub(P[1], mul(T[-1], d)), P[1])], 0.0
+    u = [0.0]                                            # chord-length parameterisation
+    for i in range(1, n): u.append(u[-1] + norm(sub(P[i], P[i-1])))
+    if u[-1] <= 0: return [], 0.0
+    u = [t / u[-1] for t in u]
+    t0, t1 = T[0], mul(T[-1], -1)
+
+    def solve(u):
+        """Least squares for the two handle lengths at this parameterisation."""
+        c00 = c01 = c11 = x0 = x1 = 0.0
+        for i in range(n):
+            s = u[i]; m = 1 - s
+            a0, a1 = mul(t0, 3*m*m*s), mul(t1, 3*m*s*s)
+            c00 += dot(a0, a0); c01 += dot(a0, a1); c11 += dot(a1, a1)
+            tmp = sub(P[i], (P[0][0]*(m**3 + 3*m*m*s) + P[-1][0]*(3*m*s*s + s**3),
+                             P[0][1]*(m**3 + 3*m*m*s) + P[-1][1]*(3*m*s*s + s**3)))
+            x0 += dot(a0, tmp); x1 += dot(a1, tmp)
+        det = c00*c11 - c01*c01
+        lim = norm(sub(P[-1], P[0]))
+        if abs(det) < 1e-12: return lim/3.0, lim/3.0
+        a, b = (x0*c11 - x1*c01) / det, (c00*x1 - c01*x0) / det
+        if not (1e-6 < a < 4*lim and 1e-6 < b < 4*lim): return lim/3.0, lim/3.0
+        return a, b
+
+    def at(p1, p2, s):
+        m = 1 - s
+        return (m**3*P[0][0] + 3*m*m*s*p1[0] + 3*m*s*s*p2[0] + s**3*P[-1][0],
+                m**3*P[0][1] + 3*m*m*s*p1[1] + 3*m*s*s*p2[1] + s**3*P[-1][1])
+
+    def worst(p1, p2, u):
+        e, k = 0.0, n // 2
+        for i in range(1, n-1):
+            d = norm(sub(at(p1, p2, u[i]), P[i]))
+            if d > e: e, k = d, i
+        return e, k
+
+    a, b = solve(u)
+    p1, p2 = add(P[0], mul(t0, a)), add(P[-1], mul(t1, b))
+    err, split = worst(p1, p2, u)
+    for _ in range(4):                                   # Newton: slide each sample to its
+        v = list(u)                                      # nearest point on the curve, refit
+        for i in range(1, n-1):
+            s = v[i]; m = 1 - s
+            d1 = (3*m*m*(p1[0]-P[0][0]) + 6*m*s*(p2[0]-p1[0]) + 3*s*s*(P[-1][0]-p2[0]),
+                  3*m*m*(p1[1]-P[0][1]) + 6*m*s*(p2[1]-p1[1]) + 3*s*s*(P[-1][1]-p2[1]))
+            d2 = (6*m*(p2[0]-2*p1[0]+P[0][0]) + 6*s*(P[-1][0]-2*p2[0]+p1[0]),
+                  6*m*(p2[1]-2*p1[1]+P[0][1]) + 6*s*(P[-1][1]-2*p2[1]+p1[1]))
+            r = sub(at(p1, p2, s), P[i])
+            den = dot(d1, d1) + dot(r, d2)
+            if abs(den) > 1e-12: v[i] = min(1.0, max(0.0, s - dot(r, d1) / den))
+        v = sorted(v)
+        aa, bb = solve(v)
+        q1, q2 = add(P[0], mul(t0, aa)), add(P[-1], mul(t1, bb))
+        e2, k2 = worst(q1, q2, v)
+        if e2 >= err: break
+        u, p1, p2, err, split = v, q1, q2, e2, k2
+    if err <= tol or depth > 12 or split in (0, n-1):
+        return [(p1, p2, P[-1])], err
+    L, eL = fit_cubics(P[:split+1], T[:split+1], tol, depth+1)
+    R, eR = fit_cubics(P[split:], T[split:], tol, depth+1)
+    return L + R, max(eL, eR)
