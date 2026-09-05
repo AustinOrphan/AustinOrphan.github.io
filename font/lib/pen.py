@@ -367,3 +367,74 @@ def fit_cubics(P, T, tol=0.05, depth=0):
     L, eL = fit_cubics(P[:split+1], T[:split+1], tol, depth+1)
     R, eR = fit_cubics(P[split:], T[split:], tol, depth+1)
     return L + R, max(eL, eR)
+
+
+# ---- clipping a contour to a half-plane, keeping its curves ---------------------------
+def _cubic_at(P, t):
+    m = 1 - t
+    return (m*m*m*P[0][0] + 3*m*m*t*P[1][0] + 3*m*t*t*P[2][0] + t*t*t*P[3][0],
+            m*m*m*P[0][1] + 3*m*m*t*P[1][1] + 3*m*t*t*P[2][1] + t*t*t*P[3][1])
+
+def _split_cubic(P, t):
+    """de Casteljau: the cubic P split at t, as two cubics."""
+    ab = [mul(add(P[i], mul(sub(P[i+1], P[i]), t)), 1.0) for i in range(3)]
+    cd = [mul(add(ab[i], mul(sub(ab[i+1], ab[i]), t)), 1.0) for i in range(2)]
+    e = add(cd[0], mul(sub(cd[1], cd[0]), t))
+    return (P[0], ab[0], cd[0], e), (e, cd[1], ab[2], P[3])
+
+def clip_half(c, a, b, keep, tol=1e-12):
+    """The part of contour `c` on the same side of the line a--b as the point `keep`.
+
+    Cubics are SPLIT at their crossings rather than flattened: a clipped bar that came back
+    as a polygon would ripple once the compiler rounded it, which is the failure set_round's
+    notes record.  Where the outline leaves and re-enters, the two points are joined along
+    the clip line, so the cut face is straight and lies exactly on it.
+    """
+    n = perp(unit(sub(b, a)))
+    sgn = 1.0 if dot(sub(keep, a), n) > 0 else -1.0
+    s = lambda p: sgn * dot(sub(p, a), n)
+    pieces = []                                          # (kind, points) with every crossing split out
+    p0 = c.start
+    for sg in c.segs:
+        if sg[0] == 'l':
+            P = (p0, sg[1]); sa, sb = s(P[0]), s(P[1])
+            if (sa > 0) != (sb > 0) and abs(sa - sb) > tol:
+                t = sa / (sa - sb); m = add(P[0], mul(sub(P[1], P[0]), t))
+                pieces += [('l', (P[0], m)), ('l', (m, P[1]))]
+            else:
+                pieces.append(('l', P))
+            p0 = sg[1]
+        else:
+            P = (p0, sg[1], sg[2], sg[3])
+            ts = []                                      # crossings, by sampling then bisection
+            N = 64
+            prev = s(_cubic_at(P, 0.0))
+            for i in range(1, N + 1):
+                t1 = i / float(N); cur = s(_cubic_at(P, t1))
+                if (prev > 0) != (cur > 0):
+                    lo, hi = (i - 1) / float(N), t1
+                    for _ in range(60):
+                        mid = (lo + hi) / 2
+                        if (s(_cubic_at(P, lo)) > 0) != (s(_cubic_at(P, mid)) > 0): hi = mid
+                        else: lo = mid
+                    ts.append((lo + hi) / 2)
+                prev = cur
+            cur, base = P, 0.0
+            for t in ts:
+                u = (t - base) / (1.0 - base)
+                left, cur = _split_cubic(cur, u); base = t
+                pieces.append(('c', left))
+            pieces.append(('c', cur))
+            p0 = sg[3]
+    kept = []
+    for kind, P in pieces:
+        mid = add(mul(P[0], 0.5), mul(P[-1], 0.5)) if kind == 'l' else _cubic_at(P, 0.5)
+        if s(mid) >= -1e-9: kept.append((kind, P))
+    if not kept: return None
+    out = Contour(kept[0][1][0])
+    for i, (kind, P) in enumerate(kept):
+        if i and norm(sub(P[0], out.segs[-1][-1] if out.segs else out.start)) > 1e-7:
+            out.line_to(P[0])                            # the cut face, along the clip line
+        if kind == 'l': out.line_to(P[1])
+        else: out.curve_to(P[1], P[2], P[3])
+    return out.ccw()
