@@ -61,7 +61,10 @@ import Logo from '../components/Logo.astro';
     <a href="#hero" aria-label="Go to Hero Section"><i class="ph-duotone ph-house"></i></a>
     <a href="#about" aria-label="Go to About Section"><i class="ph-duotone ph-user"></i></a>
     <a href="#projects" aria-label="Go to Projects Section"><i class="ph-duotone ph-folder-open"></i></a>
-    <a href="#contact" aria-label="Go to Contact Section"><i class="ph-duotone ph-envelope"></i></a>
+    <!-- envelope-simple, not envelope: the link bar and the footer both use
+         envelope-simple for this same destination, and this strip is on screen
+         beside the link bar. One destination, one glyph. -->
+    <a href="#contact" aria-label="Go to Contact Section"><i class="ph-duotone ph-envelope-simple"></i></a>
   </nav>
 
   <KonamiEgg />

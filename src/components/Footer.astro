@@ -80,7 +80,13 @@ const onBlog = Astro.url.pathname.startsWith('/blog');
                  component: that component takes the first [data-projects-menu]
                  in the document and owns the id "projects-menu-list", so a
                  second copy on the home page would render a menu that never
-                 opens and duplicate an id that aria-controls points at. -->
+                 opens and duplicate an id that aria-controls points at.
+
+                 It carries folder-open rather than the link bar's controller,
+                 because it goes where the section nav's folder-open goes: the
+                 projects section. The controller means the live demos menu,
+                 which only the hero bar has. Glyphs follow the destination,
+                 not the slot. -->
             <div class="footer-profiles">
                 <a href="https://github.com/austinorphan" target="_blank" rel="noopener noreferrer" aria-label="GitHub" class="footer-profile-link"><i class="ph-duotone ph-github-logo"></i></a>
                 <a href="https://www.linkedin.com/in/austinorphan/" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn" class="footer-profile-link"><i class="ph-duotone ph-linkedin-logo"></i></a>
@@ -89,7 +95,7 @@ const onBlog = Astro.url.pathname.startsWith('/blog');
                 {!onBlog && (
                     <a href="/blog/" aria-label="Blog" class="footer-profile-link"><i class="ph-duotone ph-book-open-text"></i></a>
                 )}
-                <a href="/#projects" aria-label="Live project demos" class="footer-profile-link"><i class="ph-duotone ph-game-controller"></i></a>
+                <a href="/#projects" aria-label="Projects" class="footer-profile-link"><i class="ph-duotone ph-folder-open"></i></a>
             </div>
         </div>
         <div class="footer-right">
