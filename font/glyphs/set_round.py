@@ -19,20 +19,13 @@ Two joins in this group are solved rather than drawn, and both come down to
 the same thing: where two curves have to become one outline, put them where
 they TOUCH.
 
-  The S's waist.  The two bowls are STACKED -- centres 30 units apart in x
-  and 349 in y -- because that is the only arrangement that reads as an S,
-  and a stacked waist is the one place R1 will not close by itself: the two
-  bowls' outward normals there are opposite, so their bands are RING_W minus
-  and plus the SAME component of RING_OFF and differ by 22 units, and that
-  difference vanishes only if the stroke crosses the waist rising at 45 deg,
-  which is a coil.  So the whole difference is spent on ONE edge.  The lower
-  edge is a true tangency, solved for: the upper bowl's semi-height is the
-  value at which its outer edge touches the lower bowl's counter.  The upper
-  edge is the straight line tangent to BOTH the upper counter and the lower
-  bowl's outer edge -- a line tangent to two curves meets each of them
-  without turning, so that edge has no corner either, and the 22 units come
-  out as the straight's length.  Measured on the finished outline all three
-  waist hand-offs turn 0.00 deg and the letter has no reflex vertex.
+  The S is no longer one of them: it is not a ring at all but a single open stroke,
+  built from a spine that is tangent-continuous by construction and given R1's own
+  band width for the direction each point faces.  Two R1 bowls cannot make an S --
+  at the waist their outward normals are opposite, so their bands differ by
+  2|RING_OFF| = 22 units of a 33-unit stroke -- and two CIRCULAR bowls stacked in
+  the 720 cap cap the body at 420 against the O's 720, which is what made the old
+  S read as a 9.  The construction is at build_S.
 
   The U's and J's stems against their rounds.  R1's displacement means a stem
   cannot be tangent to the outer circle and to the counter at once, so each
@@ -61,7 +54,7 @@ import math, os, sys
 HERE = os.path.dirname(os.path.abspath(__file__)); FONT = os.path.dirname(HERE)
 sys.path.insert(0, os.path.join(FONT, 'lib'))
 from pen import (Contour, add, sub, mul, norm, unit, perp, from_ang, ang, line, line_2pt,
-                 line_circle, line_x_at_y, arc_segments, from_poly, ccw)
+                 line_circle, line_x_at_y, arc_segments, from_poly, ccw, fit_cubics)
 from metrics import CAP, OVER_ROUND, SB_STRAIGHT, SB_ROUND
 from rules import (glyph, stem, diagonal, horizontal, round_arc, round_ring, w_stem, w_horizontal,
                    w_backslash, RING_W, RING_OFF, ROUND_THICK, ROUND_THIN, CUT_DEG, HORIZ_MID)
@@ -445,38 +438,124 @@ def _s_corners(g, sgn):
             ('top terminal, counter corner', sgn * _turn(back('Ui', S_TOP_T), top_face)),
             ('top terminal, outer corner',   sgn * _turn(top_face, fwd('Uo', S_TOP_T)))]
 
+# ---- S: one spine, carrying R1's weight ----------------------------------------------
+# Two R1 bowls cannot make an S.  At the waist their outward normals are opposite, so their
+# bands are RING_W minus and plus the SAME component of RING_OFF and differ by 22 units of a
+# 33-unit stroke; the union either steps or, if the bowls are pulled apart far enough to
+# fuse smoothly, stops reading as an S.  Circular bowls also cannot be wide: two of them
+# stacked inside the 720 cap leaves a body of 420, against the O's 720, and that is why the
+# previous S was the narrowest thing in the alphabet and read as a 9.
+#
+# An S has no counter -- it is an open stroke -- so it is drawn as one:
+#
+#   spine   a quarter of the upper ellipse (terminal, over the top, to the left extreme,
+#           where the tangent is straight down), a cubic connector carrying the inflection
+#           (left extreme to right extreme, tangent straight down at BOTH ends, so it is
+#           tangent-continuous with both quarters by construction), then a quarter of the
+#           lower ellipse (right extreme, round the bottom, to the terminal).
+#   weight  R1's own band width for the direction each point FACES:
+#           RING_W - |RING_OFF| cos(theta - 45.07).  On the quarters theta is the ellipse's
+#           true outward normal, which reduces to the radius on a circle, so the S carries
+#           the O's weight exactly -- thin at the top and the right (19.1, 19.2), thick at
+#           the left and the bottom (47.2), thinnest of all at 45 deg where the O is
+#           thinnest too.  Across the connector the outward side swaps, so the width is
+#           blended from the left extreme's to the right extreme's, which puts the thick to
+#           thin transition on the waist: the diagonal stress an S wants.
+#
+# The edges are offsets of an ellipse by a varying width, so they are not conics and are
+# fitted (pen.fit_cubics) rather than polygonised; the fit's worst deviation is reported in
+# the glyph's notes and is far below the compiler's own rounding.
+S_BODY  = 560.0            # R8 gives no class for this; see the note in the glyph
+S_B     = 200.0            # the bowls' semi-height
+S_TOP   = 20.0             # the terminals, as parameters on their own ellipses
+S_BOT   = -160.0
+S_WAIST = 150.0            # the connector's handle length: how diagonally the waist runs
+S_TOL   = 0.15             # units; the fit's tolerance, a seventh of the compiler's rounding
+S_N     = 160              # samples per section
+
+def _band_at(theta):
+    """R1's band width for a point whose outward normal points at page angle theta."""
+    return RING_W - norm(RING_OFF) * math.cos(math.radians(theta) - math.radians(ang(RING_OFF)))
+
+def _ell_nrm(A, B, t):
+    """Page angle of the ellipse's true OUTWARD normal at parameter t; the radius when A == B."""
+    r = math.radians(t)
+    return ang((math.cos(r) / A, math.sin(r) / B))
+
+def _s_spine():
+    """(point, unit tangent, width) sampled from the top terminal to the bottom one."""
+    A = S_BODY / 2.0
+    wt, wl, wb, wr = _band_at(90.0), _band_at(180.0), _band_at(270.0), _band_at(0.0)
+    Cu = (wl/2 + A, TOP - wt/2 - S_B)            # top a half-band below TOP, left extreme
+    Cl = (S_BODY - wr/2 - A, BOT + wb/2 + S_B)   # a half-band inside x = 0; lower mirrored
+    out = []
+    for i in range(S_N + 1):                     # upper quarter, travelled with increasing t
+        t = S_TOP + (180.0 - S_TOP) * i / S_N; r = math.radians(t)
+        out.append(((Cu[0] + A*math.cos(r), Cu[1] + S_B*math.sin(r)),
+                    unit((-A*math.sin(r), S_B*math.cos(r))), _band_at(_ell_nrm(A, S_B, t))))
+    low = []
+    for i in range(S_N + 1):                     # lower quarter, travelled with DECREASING t
+        t = S_BOT * i / S_N; r = math.radians(t)
+        low.append(((Cl[0] + A*math.cos(r), Cl[1] + S_B*math.sin(r)),
+                    unit((A*math.sin(r), -S_B*math.cos(r))), _band_at(_ell_nrm(A, S_B, t))))
+    P0, P3 = out[-1][0], low[0][0]               # the connector, tangent straight down at both ends
+    P1, P2 = (P0[0], P0[1] - S_WAIST), (P3[0], P3[1] + S_WAIST)
+    w0, w3 = out[-1][2], low[0][2]
+    for i in range(1, S_N):
+        u = i / float(S_N); m = 1 - u
+        pt = (m**3*P0[0] + 3*m*m*u*P1[0] + 3*m*u*u*P2[0] + u**3*P3[0],
+              m**3*P0[1] + 3*m*m*u*P1[1] + 3*m*u*u*P2[1] + u**3*P3[1])
+        d = (3*m*m*(P1[0]-P0[0]) + 6*m*u*(P2[0]-P1[0]) + 3*u*u*(P3[0]-P2[0]),
+             3*m*m*(P1[1]-P0[1]) + 6*m*u*(P2[1]-P1[1]) + 3*u*u*(P3[1]-P2[1]))
+        out.append((pt, unit(d), w0 + (w3 - w0) * (3*u*u - 2*u**3)))
+    return out + low
+
+def _edges(pts):
+    """The two offset edges, and a numeric unit tangent along each, for the fit."""
+    L = [add(p, mul(perp(d), w/2)) for p, d, w in pts]
+    R = [sub(p, mul(perp(d), w/2)) for p, d, w in pts]
+    def tans(E):
+        T = [unit(sub(E[1], E[0]))]
+        T += [unit(sub(E[i+1], E[i-1])) for i in range(1, len(E)-1)]
+        T.append(unit(sub(E[-1], E[-2])))
+        return T
+    return (L, tans(L)), (R, tans(R))
+
 def build_S():
-    """Two R1 bowls stacked and unioned.
-
-    The upper bowl's outer circle touches the cap overshoot and sets the left extreme; the
-    lower bowl's touches the baseline overshoot and sets the right extreme, and the pair is
-    sheared apart by DX so the waist runs diagonally as an S's does.  Radii are chosen so the
-    two bands overlap through the middle: 2*(ru+rl) exceeds the letter's height by 80 units,
-    against a band RING_W wide, which is what makes the waist a junction rather than a touch.
-    Each arc is carried well past the waist (to 315 and from 65 degrees) so that its radial
-    cut is buried inside the other bowl and never shows; stopping either arc at the waist
-    itself leaves a blunt step, which is what the previous drawing had.  Terminals are R1's
-    radial cuts at 18 and -158 degrees.
-
-    The earlier version solved for a doubly tangent waist and traced one contour; it came out
-    wispy, with hooked terminals and a spine that did not hold at text size.
-    """
-    ru, rl, dx = 195.0, 205.0, 14.0
-    top, bot = CAP + OVER_ROUND, -OVER_ROUND
-    cu = (ru - dx, top - ru)
-    cl = (BODY_S - rl + dx, bot + rl)
-    contours = [round_arc(cu, ru, 18.0, 315.0), round_arc(cl, rl, 65.0, -158.0)]
-    overlap = 2*(ru + rl) - (top - bot)
-    return glyph(ord('S'), contours, sb=(SB_ROUND, SB_ROUND), notes=dict(
-        construction=("two R1 bowls, upper r %.0f centred (%.0f, %.0f), lower r %.0f centred "
-                      "(%.0f, %.0f), sheared %.0f apart; arcs 18..315 and 65..-158 so both "
-                      "radial cuts at the waist are buried in the other bowl"
-                      % (ru, cu[0], cu[1], rl, cl[0], cl[1], dx)),
-        waist=("the bands overlap by %.0f units of radius against a %.1f-unit band, so the "
-               "waist is a junction of the two bowls and carries the round stroke"
-               % (overlap, RING_W)),
-        proportion="body %d, R8's narrow width" % BODY_S,
-        deviations="none from R1-R9"))
+    pts = _s_spine()
+    (L, TL), (R, TR) = _edges(pts)
+    segL, eL = fit_cubics(L, TL, S_TOL)
+    segR, eR = fit_cubics(R[::-1], [mul(t, -1) for t in TR[::-1]], S_TOL)
+    k = Contour(L[0])
+    for p1, p2, p3 in segL: k.curve_to(p1, p2, p3)
+    k.line_to(R[-1])                                   # the end terminal, square to the spine
+    for p1, p2, p3 in segR: k.curve_to(p1, p2, p3)
+    k = k.ccw()
+    ws = [w for _, _, w in pts]
+    return glyph(ord('S'), [k], sb=(SB_ROUND, SB_ROUND), notes=dict(
+        construction=f"One stroke, not two bowls.  Spine: a quarter of the upper ellipse "
+                     f"(semi-axes {S_BODY/2:g} x {S_B:g}) from parameter {S_TOP:g} deg over the top to its "
+                     f"left extreme, a cubic connector to the lower ellipse's right extreme with the "
+                     f"tangent straight down at both ends (handles {S_WAIST:g}), then the lower quarter "
+                     f"round the bottom to {S_BOT:g} deg.  Tangent-continuous throughout by construction; "
+                     f"the connector carries the inflection.",
+        weight=f"R1's band width for the direction each point faces, RING_W - |RING_OFF| cos(theta - "
+               f"{ang(RING_OFF):.2f}): {_band_at(90):.1f} at the top, {_band_at(180):.1f} at the left "
+               f"extreme, {_band_at(0):.1f} at the right, {_band_at(270):.1f} at the bottom, "
+               f"{min(ws):.1f} at its thinnest -- the O's own numbers, since on the quarters theta is the "
+               f"ellipse's true outward normal, which is the radius when the ellipse is a circle.  "
+               f"Across the connector the outward side swaps, so the width is blended left-extreme to "
+               f"right-extreme and the thick-to-thin transition falls on the waist.",
+        why_not_two_bowls="Two R1 bowls meet at the waist with opposite outward normals, so their bands "
+                          "differ by 2|RING_OFF| = 22 units of a 33-unit stroke and the union steps.  "
+                          "Circular bowls also cap the body at 420 against the O's 720, which is what "
+                          "made the previous S read as a 9.",
+        proportion=f"body {S_BODY:g}, {100*S_BODY/BODY_WIDE:.0f}% of the O.  R8's narrow class ({BODY_NARROW:g}) "
+                   f"is a deviation, argued above: it is set by the circular-bowl construction this glyph "
+                   f"no longer uses.",
+        fit=f"edges fitted by pen.fit_cubics to {S_TOL:g} units; worst deviation {max(eL, eR):.4f} "
+            f"({len(segL)} + {len(segR)} segments), against the compiler's 1-unit rounding.",
+        deviations=f"R8's width class only; the body is {S_BODY:g}, not {BODY_NARROW:g}."))
 
 def build_Q():
     tail, p0, p1, u = _q_tail()
