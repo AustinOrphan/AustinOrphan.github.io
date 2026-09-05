@@ -19,18 +19,17 @@ A typeface forces four changes to the A, each recorded in the glyph's notes:
   3. scaled so the feet sit on the baseline and the apex tip at cap + point
      overshoot.  (The O is scaled separately so its outer circle spans the cap
      height plus round overshoot; the mark's A-to-O size ratio is composition.)
-  4. hooks returned to the legs: in the mark each hook's return stroke ends
-     where it meets the ring.  With the ring gone, each hook is slid inward
-     along the bar's own arc (a rotation about the bottom edge's circle centre)
-     until its return's end face touches its leg's outer edge, and the bar
-     between the hooks is rebuilt as arcs of the original radii through the
-     moved junctions.  A short tail then carries the return to the leg's
-     centre-line so the union is seamless.  The hooks themselves are untouched;
-     the eye each encloses with bar and leg is the mark's eye with the leg
-     standing in for the ring.  Slides: left 92 units, right 189.
-     (tuck=True, slide=False would instead continue each return straight along
-     its end tangent; on the right that is a 200-unit hairline, so it is not
-     used.)  The verbatim bar is kept as the unencoded alternate 'A.open'.
+  4. the ring's back half: the crossbar is the front half of a planetary ring,
+     an elliptical annulus (measure/extract_ai.py fits it: 103 x 22.6 pt,
+     tilted 14 degrees, centred within 2.6 pt of the O's centre; the bar's edges
+     and the hooks' curls sit on it to a few tenths of a point).  The hooks are
+     the ring's ends and each return stroke is the start of the back half,
+     which in the mark disappears behind the O.  With no planet, the back half
+     is continued from each face along the ring's centre ellipse until it
+     passes behind the nearer leg, thinning from the face width to the face's
+     thinnest stroke (the O's thin side) where it meets the leg, as the mark's
+     own returns thin toward the planet.  The bar and hooks are verbatim.
+     The bar without tails is kept as the unencoded alternate 'A.open'.
 """
 import json, math, os, sys
 HERE = os.path.dirname(os.path.abspath(__file__)); FONT = os.path.dirname(HERE)
@@ -121,6 +120,63 @@ def _slide_hooks(bar_f, poly):
     out = out.ccw()
     return out, dict(moved=moved, top_radius=r_top, bottom_radius=r_bot, n_top=len(segs_t), n_bottom=len(segs_b))
 
+def _ring_tails(vertices, width_end):
+    """The bar is the front half of a planetary ring (an elliptical annulus fitted in
+    measure/extract_ai.py, stored as OBJ['bar']['ring']).  Each hook's return stroke is the
+    start of the ring's back half.  With no planet to hide behind, the back half is continued
+    from each return's end face along the ring's centre ellipse until it passes behind the
+    nearer leg, thinning from the face width to `width_end` (the face's thinnest stroke, the
+    O's thin side, in source units) where it meets the leg's outer edge; the last stretch to
+    the leg's centre-line is buried.  Returns {side: {'poly': [...source points...], 'notes': {...}}}."""
+    R = OBJ['bar']['ring']; C = tuple(R['centre']); axv = tuple(R['axis']); nv = perp(axv)
+    a_m, b_m = (R['a_outer'] + R['a_inner']) / 2, (R['b_outer'] + R['b_inner']) / 2      # the centre ellipse of the band
+    back = -R['front_sign']
+    def E(t): return add(C, add(mul(axv, a_m*math.cos(t)), mul(nv, b_m*math.sin(t))))
+    def uv(p): d = sub(p, C); return (dot(d, axv), dot(d, nv))
+    (barc,) = source_contours(OBJ['bar']['items']); pts = [barc.start] + [sg[-1] for sg in barc.segs]
+    tipL, cutL, cApex, cutR, tipR, apex = [tuple(v) for v in vertices]
+    legs = {'L': (line_2pt(tipL, apex), line_2pt(cutL, cApex)), 'R': (line_2pt(tipR, apex), line_2pt(cutR, cApex))}
+    out = {}
+    for side, face_k in (('L', 7), ('R', 16)):
+        f0, f1 = pts[face_k], pts[face_k + 1]; mid = mul(add(f0, f1), 0.5); width = norm(sub(f1, f0))
+        # start on the centre ellipse at the face's position along the axis, on the back side
+        u0, v0 = uv(mid); t0 = math.atan2(back * math.sqrt(max(0.0, 1 - (u0/a_m)**2)), u0 / a_m)
+        # walk toward the ring's middle on the back side, i.e. toward t = +90 (back above the
+        # axis) or -90 degrees (back below), by the shorter way round
+        t_target = back * math.pi / 2
+        direction = 1.0 if ((t_target - t0 + math.pi) % (2*math.pi) - math.pi) > 0 else -1.0
+        outer_l, inner_l = legs[side]; legc = line(mul(add(outer_l[0], inner_l[0]), 0.5), unit(add(outer_l[1], inner_l[1])))
+        n_out, n_c = perp(outer_l[1]), perp(legc[1])
+        s_out0 = dot(sub(mid, outer_l[0]), n_out) > 0; s_c0 = dot(sub(mid, legc[0]), n_c) > 0
+        # sample the ellipse finely; blend the start from the actual face midpoint onto the ellipse
+        centre_pts, k_cross = [mid], None
+        off0 = sub(mid, E(t0)); dt = math.radians(0.25); blend_len = 8.0; dist = 0.0
+        for i in range(1, 4000):
+            q = E(t0 + direction*dt*i); dist += norm(sub(q, E(t0 + direction*dt*(i-1))))
+            w = max(0.0, 1 - dist/blend_len); q = add(q, mul(off0, w))
+            centre_pts.append(q)
+            if k_cross is None and (dot(sub(q, outer_l[0]), n_out) > 0) != s_out0: k_cross = i
+            if (dot(sub(q, legc[0]), n_c) > 0) != s_c0: break
+        if k_cross is None: raise RuntimeError(f'ring tail {side}: the back arc never reached the leg')
+        # offsets: start at the face corners' offsets, taper to width_end at the leg's outer edge
+        d0 = unit(sub(centre_pts[1], centre_pts[0])); h0, h1 = dot(sub(f0, mid), perp(d0)), dot(sub(f1, mid), perp(d0))
+        s_face = max(abs(dot(sub(f0, mid), d0)), abs(dot(sub(f1, mid), d0)))
+        left, right, run = [], [], [0.0]
+        for i in range(1, len(centre_pts)): run.append(run[-1] + norm(sub(centre_pts[i], centre_pts[i-1])))
+        s_cross = run[k_cross]
+        for i, q in enumerate(centre_pts):
+            tv = unit(sub(centre_pts[min(i+1, len(centre_pts)-1)], centre_pts[max(i-1, 0)])); nn = perp(tv)
+            if run[i] >= s_cross or run[i] <= s_face: k = 1.0 if run[i] <= s_face else width_end / width
+            else: k = 1.0 - (1.0 - width_end / width) * ((run[i] - s_face) / max(1e-9, s_cross - s_face))
+            left.append(add(q, mul(nn, h0*k))); right.append(add(q, mul(nn, h1*k)))
+        i0 = next(i for i, r_ in enumerate(run) if r_ > s_face)
+        # the back edge sits a hair inside the return, so the union has no shared edge to seam on
+        back_in = mul(d0, -0.15)
+        poly = [add(f0, back_in)] + left[i0:] + right[i0:][::-1] + [add(f1, back_in)]
+        out[side] = dict(poly=poly, notes=dict(face_width=width, width_at_leg=width_end, arc_to_leg=s_cross, start_offset_from_ellipse=norm(off0),
+                                                 ring=dict(a=a_m, b=b_m, tilt_deg=R['tilt_deg'])))
+    return out
+
 def build_O():
     outer, inner = OBJ['ring']['outer'], OBJ['ring']['inner']          # [cx, cy, r, fit_sd]
     s = (CAP + 2*OVER_ROUND) / (2*outer[2])
@@ -133,7 +189,9 @@ def build_O():
                            width_thick=r_out-r_in+norm(off), width_thin=r_out-r_in-norm(off), width_mean=r_out-r_in,
                            source_outer=outer[:3], source_inner=inner[:3]))
 
-def build_A(tuck=True, slide=True, name='A', cp=ord('A')):
+def build_A(tuck=True, slide=False, name='A', cp=ord('A')):
+    global O_THIN
+    O_THIN = build_O()['notes']['width_thin']
     tipL, cutL, cApex, cutR, tipR, apex = [tuple(v) for v in OBJ['A']['vertices']]
     (bar_src,) = source_contours(OBJ['bar']['items'])   # one closed outline: bar + both hooks
     # -- 1. lean: bisector of the outer edges vs the vertical
@@ -163,49 +221,9 @@ def build_A(tuck=True, slide=True, name='A', cp=ord('A')):
     contours = [from_poly(poly).ccw(), bar_f]
     tails = {}
     if tuck:
-        # -- 4. hook tails.  The bar outline's segments follow the source order, so the
-        #       end faces are known by index: seg 7 (left) and seg 16 (right).  Each face
-        #       is bracketed by the return's outer edge (seg 6 / 15, arriving) and inner
-        #       edge (seg 8 / 17, departing).
-        def seg_pts(k):
-            pts = [bar_f.start] + [sg[-1] for sg in bar_f.segs]
-            return pts[k], bar_f.segs[k]
-        def tangent_end(k):     # direction of travel at the end of segment k
-            p0, sg = seg_pts(k); return unit(sub(sg[-1], sg[2] if sg[0] == 'c' else p0))
-        def tangent_start(k):   # direction of travel at the start of segment k
-            p0, sg = seg_pts(k); return unit(sub(sg[1] if sg[0] == 'c' else sg[-1], p0))
-        legs = {'L': (line_2pt(poly[0], poly[5]), line_2pt(poly[1], poly[2])),
-                'R': (line_2pt(poly[4], poly[5]), line_2pt(poly[3], poly[2]))}
-        # face / arriving-edge / departing-edge segment indices in the outline.  After a slide the
-        # outline is rebuilt as [top arc (n_top segs)] [left hook segs 4..10] [bottom arc] [right hook 13..17,0,1]
-        if slid:
-            nt, nb = slid['n_top'], slid['n_bottom']
-            iL = nt; iR = nt + 7 + nb           # first segment of each hook piece
-            idx = {'L': (iL + 3, iL + 2, iL + 4), 'R': (iR + 3, iR + 2, iR + 4)}
-        else:
-            idx = {'L': (7, 6, 8), 'R': (16, 15, 17)}
-        for side in ('L', 'R'):
-            face_k, out_k, in_k = idx[side]
-            f0, fseg = seg_pts(face_k); f1 = fseg[-1]
-            mid = mul(add(f0, f1), 0.5); width = norm(sub(f1, f0))
-            d = unit(add(tangent_end(out_k), mul(tangent_start(in_k), -1)))
-            outer_l, inner_l = legs[side]
-            leg_centre = line(mul(add(outer_l[0], inner_l[0]), 0.5), unit(add(outer_l[1], inner_l[1])))
-            n = perp(d); h = width / 2
-            # The return is straight where it ends (its end curvature is negligible, see notes),
-            # so the tail continues the face's two corners parallel to the end tangent.
-            land = isect(line(mid, d), leg_centre); L = norm(sub(land, mid))
-            tailc = from_poly([f0, add(f0, mul(d, L)), add(f1, mul(d, L)), f1]).ccw()
-            def kappa_end(k):
-                p0, sg = seg_pts(k)
-                if sg[0] != 'c': return 0.0
-                P0, P1, P2, P3 = p0, sg[1], sg[2], sg[3]
-                d1 = mul(sub(P3, P2), 3); d2 = mul(add(sub(P3, mul(P2, 2)), P1), 6)
-                return (d1[0]*d2[1] - d1[1]*d2[0]) / max(1e-9, norm(d1)**3)
-            k_c = kappa_end(out_k); arc_deg = 0.0
-            contours.append(tailc)
-            tails[side] = dict(from_=mid, to=land, length=norm(sub(land, mid)), direction_deg=ang(d), width=width,
-                               end_radius_of_return=(1/k_c if abs(k_c) > 1e-6 else 0.0))
+        for side, poly_src in _ring_tails(OBJ['A']['vertices'], width_end=O_THIN / s).items():
+            contours.append(from_poly([fp(xp(p)) for p in poly_src['poly']]).ccw())
+            tails[side] = poly_src['notes']
     x0, y0, x1, y1 = bbox([c.flatten() for c in contours])
     dx = SB_ROUND - x0
     contours = [c.map(lambda p: (p[0] + dx, p[1])) for c in contours]
