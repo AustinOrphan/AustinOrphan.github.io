@@ -596,7 +596,21 @@ U_R  = BODY_MEDIUM / 2                     # 279: the half round's outer radius
 U_C  = (U_R, BOT + U_R)                    # centre; the round sits on the baseline overshoot
 J_R  = BODY_NARROW / 2                     # 210
 J_C  = (J_R, BOT + J_R)
-J_END = 165.0                              # the hook's free radial end, a little above the left extreme
+J_END = 165.0                              # where the J's bowl ends and its curl begins
+# The curl: the bowl's band carried on round a circle internally tangent to it at J_END.  R1 is
+# scale-free and its counter displacement is fixed to the page, so both edges hand off by
+# construction, and the tangent is continuous exactly (measured 0.00 deg).
+#
+# The A's own hook turns 163 deg, and grafting that much turn -- literally or as curvature --
+# gives a fish hook: at 90 deg the tip is already curling back into the mouth and by 163 the J
+# closes into a 9.  The turn is the whole variable, and 45 deg is where the terminal reads as
+# lifting rather than hooking.  The radius then only sets how gently: it does not change the
+# turn, but it does set the one defect this construction has, a notch where the curl's counter
+# meets the bowl's.  That notch is RING_W/r of the radius difference, so a wide curl is both
+# gentler AND cleaner -- 3.42 units at r=70, 0.55 at r=140, which is under the compiler's own
+# 1-unit rounding and therefore disappears on compile rather than needing a solved hand-off.
+J_CURL_R    = 140.0                        # the curl's outer radius
+J_CURL_TURN = 45.0                         # degrees of turn past J_END
 BURY = 20.0                                # how far a stem's flat end runs on past the junction, buried
 OVERLAP = 1.0                              # how far a fill reaches into the stem it abuts, so the union
                                            # never has to resolve two contours that only touch along a line
@@ -793,15 +807,25 @@ def build_J():
     a1 += 360.0
     st  = stem(x_s, y0, CAP, bottom=None, top='left')
     arc = round_arc(J_C, J_R, J_END, a1)
+    c2 = add(J_C, mul(from_ang(J_END), J_R - J_CURL_R))          # internally tangent at J_END
+    curl = round_arc(c2, J_CURL_R, J_END, J_END - J_CURL_TURN)
     fill = _fill_in(x_s, J_C, J_R)
-    tip = add(J_C, mul(from_ang(J_END), J_R))
-    return glyph(ord('J'), [arc, st, fill], sb=(SB_ROUND, SB_STRAIGHT), notes=dict(
+    tip = add(c2, mul(from_ang(J_END - J_CURL_TURN), J_CURL_R))
+    notch = RING_W * abs(J_R - J_CURL_R) / J_R
+    return glyph(ord('J'), [arc, curl, st, fill], sb=(SB_ROUND, SB_STRAIGHT), notes=dict(
         construction=f"Narrow body {BODY_NARROW}: one R3 stem (rules.stem) down the right and a hook that is an "
                      f"R1 arc (rules.round_arc, r={J_R:g} centred {J_C}) from {J_END:g} deg round the bottom to "
                      f"the stem, sitting on the baseline overshoot.",
-        hook=f"The free end is R1's radial cut at {J_END:g} deg, a little past the left extreme, so the hook "
-             f"lifts instead of stopping dead on the horizontal; the face is {_band_w(J_END):.1f} long there, "
-             f"the heavy side of the round (R7).  Its outer tip is at {tuple(round(v, 1) for v in tip)}.",
+        curl=f"The bowl ends at {J_END:g} deg and the band is carried on round a circle of radius "
+             f"{J_CURL_R:g} internally tangent to it there, through {J_CURL_TURN:g} deg of turn, ending on "
+             f"R1's radial cut.  It is the A's hook as a GESTURE, not as an outline: R1 is scale-free and its "
+             f"counter displacement is fixed to the page, so both edges hand off by construction and the "
+             f"tangent is continuous to 0.00 deg.  The A's own hook turns 163 deg and that much turn -- "
+             f"grafted or rebuilt -- curls the tip back into the mouth and closes the J into a 9; "
+             f"{J_CURL_TURN:g} deg is where the terminal lifts instead of hooking.  The curl's counter meets "
+             f"the bowl's with a {notch:.2f}-unit notch (RING_W x the radius difference over the bowl's "
+             f"radius), under the compiler's 1-unit rounding, which is why the radius is {J_CURL_R:g} and not "
+             f"the 70 that first looked right.  The free tip is at {tuple(round(v, 1) for v in tip)}.",
         stem_top=f"free R5 cut with the body to the left: the tip is the upper-right corner, the corner farther "
                  f"from the letter's centre (R5), the same cut the H's and the U's right stems take.",
         joins=f"The stem meets the round on its light side, the U's right junction exactly (_light_junction): "
