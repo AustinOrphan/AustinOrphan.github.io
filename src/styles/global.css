@@ -2558,19 +2558,15 @@ a {
     }
 }
 
-/* Any viewport under about 520px tall, at ANY width. This rule used to live
-   inside the max-width:599.98px block, which meant landscape phones never
-   matched it: they are 600px and wider, so they run the tablet path where
-   .scroll-indicator sits at a flat bottom: 200px. On a 667x375 iPhone SE in
-   landscape that puts the arrow 129px INSIDE the wordmark, rendering between
-   "Austin" and "Orphan". 844x390 and 926x428 clear it by only 6px and 15px,
-   and the arrow floats 16.5px on a loop with a 20px pulse ring, so those
-   collide too.
+/* Narrow short viewports only: landscape phones under 600px, and the portrait
+   collapses that iOS page zoom produces (a 320px phone at 200% becomes
+   160x284). These run the mobile path, where the link bar is fixed at the
+   bottom and there is genuinely nowhere to put the arrow.
 
-   The arrow is what goes: it is a decorative anchor to #about and the page
-   still scrolls without it. This is a stopgap; giving landscape a real bottom
-   reserve so the arrow survives is the fuller fix. */
-@media screen and (max-height: 520px) {
+   At 600px and up the arrow is kept instead, by the block below. That used to
+   be a blanket hide at any width, which was the stopgap; landscape now gets a
+   real reserve rather than losing the affordance. */
+@media screen and (max-width: 599.98px) and (max-height: 520px) {
     .scroll-indicator {
         display: none;
     }
@@ -3587,5 +3583,40 @@ body.blog {
     .section-nav:hover,
     .section-nav.show-on-scroll {
         right: var(--nav-edge);
+    }
+}
+
+/* Landscape phones and short tablets, 600px and up.
+
+   Two things were wrong here. The content was pinned at padding-top: 25dvh,
+   which on a 390px-tall screen is 97px, so the whole group sat at 61% of the
+   viewport with 9px of clearance underneath. And the arrow, at a flat
+   bottom: 200px, landed inside the wordmark.
+
+   Centring the group matches what desktop does: measured there, the gap from
+   tagline to link bar is exactly the gap from wordmark to tagline at every
+   size, so the bar reads as a third line of one block. Anchoring the bar to
+   the floor instead pushed that ratio to 5.6 on a phone and 11.0 on a tablet,
+   where it stops belonging to the hero at all.
+
+   The wordmark is also sized against height here, not width alone. At 10vw a
+   844px-wide screen renders 84px of type into 390px of viewport, which left
+   the arrow only 23px of clearance against its 16.5px float and 20px ring.
+   min(10vw, 18dvh) only binds on the screens that were too tight; anything
+   taller keeps 10vw untouched. */
+@media screen and (min-width: 600px) and (max-height: 520px) {
+    .hero-section .page-wrapper {
+        justify-content: center;
+        padding-top: 0;
+        /* room for the arrow below the group */
+        padding-bottom: 72px;
+    }
+
+    .hero-section h1 {
+        font-size: min(10vw, 18dvh);
+    }
+
+    .scroll-indicator {
+        bottom: 14px;
     }
 }
