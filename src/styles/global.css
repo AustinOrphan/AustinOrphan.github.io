@@ -3228,6 +3228,31 @@ a {
   color: var(--color-background);
 }
 
+/* /blog/tags/. Badges rather than a list, so a tag looks the same here as it
+   does on a post or a card; a two-column list scans better but stops reading
+   as a tag. Revisit past roughly fifty of them. */
+.tag-index {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+}
+
+/* inline-flex so the count sits beside the name with a real gap; the base
+   .tag-badge is inline-block, which would run the two together. */
+.tag-badge-counted {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.tag-count {
+  font-size: 0.72rem;
+  opacity: 0.65;
+  /* so the numbers do not jitter the badges as the counts change */
+  font-variant-numeric: tabular-nums;
+}
+
 .rss-link {
   display: block;
   text-align: center;
