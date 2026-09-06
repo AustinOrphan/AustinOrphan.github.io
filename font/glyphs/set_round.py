@@ -53,7 +53,7 @@ R8's own -- C G Q wide, U medium, S J narrow.
 import math, os, sys
 HERE = os.path.dirname(os.path.abspath(__file__)); FONT = os.path.dirname(HERE)
 sys.path.insert(0, os.path.join(FONT, 'lib'))
-from pen import (Contour, add, sub, mul, norm, unit, perp, from_ang, ang, line, line_2pt,
+from pen import (Contour, add, sub, mul, norm, unit, perp, from_ang, ang, line, line_2pt, arc_band,
                  line_circle, line_x_at_y, arc_segments, from_poly, ccw, fit_cubics)
 from metrics import CAP, OVER_ROUND, SB_STRAIGHT, SB_ROUND
 from rules import (glyph, stem, diagonal, horizontal, round_arc, round_ring, w_stem, w_horizontal,
@@ -597,9 +597,14 @@ U_C  = (U_R, BOT + U_R)                    # centre; the round sits on the basel
 J_R  = BODY_NARROW / 2                     # 210
 J_C  = (J_R, BOT + J_R)
 J_END = 165.0                              # where the J's bowl ends and its curl begins
-# The curl: the bowl's band carried on round a circle internally tangent to it at J_END.  R1 is
-# scale-free and its counter displacement is fixed to the page, so both edges hand off by
-# construction, and the tangent is continuous exactly (measured 0.00 deg).
+# The curl: the bowl's band carried on round a circle internally tangent to it at J_END.  The
+# outer edges are tangent there by construction and the tangent is continuous to 0.00 deg.
+#
+# The counter needs one solved step.  RING_OFF is a fixed VECTOR, so its effect along a radial
+# depends on the circle's size: an independent R1 round of radius 110 is 45.03 wide at that
+# angle where the bowl is 43.92, and the curl would bite 1.11 units into the J's counter.  The
+# curl is not an independent round, though -- it is the same stroke continuing -- so it carries
+# the BOWL's band, and its counter radius is solved for that rather than taken as r - RING_W.
 #
 # The A's own hook turns 163 deg, and grafting that much turn -- literally or as curvature --
 # gives a fish hook: at 90 deg the tip is already curling back into the mouth and by 163 the J
@@ -609,8 +614,20 @@ J_END = 165.0                              # where the J's bowl ends and its cur
 # meets the bowl's.  That notch is RING_W/r of the radius difference, so a wide curl is both
 # gentler AND cleaner -- 3.42 units at r=70, 0.55 at r=140, which is under the compiler's own
 # 1-unit rounding and therefore disappears on compile rather than needing a solved hand-off.
-J_CURL_R    = 140.0                        # the curl's outer radius
+J_CURL_R    = 110.0                        # the curl's outer radius
 J_CURL_TURN = 45.0                         # degrees of turn past J_END
+
+def _band_depth(c, r, r_in, th):
+    """How far in from the outer circle the R1 counter (c + RING_OFF, r_in) lies, along the
+    radial at page angle th: the band's width there."""
+    u = from_ang(th); b = u[0]*RING_OFF[0] + u[1]*RING_OFF[1]
+    return r - (b + math.sqrt(max(0.0, r_in*r_in - norm(RING_OFF)**2 + b*b)))
+
+def _curl_counter_r(c2, r2, th):
+    """The curl's counter radius, solved so its band at `th` equals the bowl's there, which is
+    what makes the two counters meet exactly instead of the curl biting into the J's."""
+    d = r2 - _band_depth(J_C, J_R, J_R - RING_W, th)
+    return norm(sub(mul(from_ang(th), d), RING_OFF))
 BURY = 20.0                                # how far a stem's flat end runs on past the junction, buried
 OVERLAP = 1.0                              # how far a fill reaches into the stem it abuts, so the union
                                            # never has to resolve two contours that only touch along a line
@@ -808,24 +825,31 @@ def build_J():
     st  = stem(x_s, y0, CAP, bottom=None, top='left')
     arc = round_arc(J_C, J_R, J_END, a1)
     c2 = add(J_C, mul(from_ang(J_END), J_R - J_CURL_R))          # internally tangent at J_END
-    curl = round_arc(c2, J_CURL_R, J_END, J_END - J_CURL_TURN)
+    ri2 = _curl_counter_r(c2, J_CURL_R, J_END)
+    curl = arc_band(c2, J_CURL_R, ri2, RING_OFF, J_END, J_END - J_CURL_TURN)
     fill = _fill_in(x_s, J_C, J_R)
     tip = add(c2, mul(from_ang(J_END - J_CURL_TURN), J_CURL_R))
-    notch = RING_W * abs(J_R - J_CURL_R) / J_R
+    notch = abs(_band_depth(c2, J_CURL_R, ri2, J_END) - _band_depth(J_C, J_R, J_R - RING_W, J_END))
+    r1_notch = abs(_band_depth(c2, J_CURL_R, J_CURL_R - RING_W, J_END)
+                   - _band_depth(J_C, J_R, J_R - RING_W, J_END))
     return glyph(ord('J'), [arc, curl, st, fill], sb=(SB_ROUND, SB_STRAIGHT), notes=dict(
         construction=f"Narrow body {BODY_NARROW}: one R3 stem (rules.stem) down the right and a hook that is an "
                      f"R1 arc (rules.round_arc, r={J_R:g} centred {J_C}) from {J_END:g} deg round the bottom to "
                      f"the stem, sitting on the baseline overshoot.",
         curl=f"The bowl ends at {J_END:g} deg and the band is carried on round a circle of radius "
              f"{J_CURL_R:g} internally tangent to it there, through {J_CURL_TURN:g} deg of turn, ending on "
-             f"R1's radial cut.  It is the A's hook as a GESTURE, not as an outline: R1 is scale-free and its "
-             f"counter displacement is fixed to the page, so both edges hand off by construction and the "
-             f"tangent is continuous to 0.00 deg.  The A's own hook turns 163 deg and that much turn -- "
+             f"R1's radial cut.  It is the A's hook as a GESTURE, not as an outline.  The outer edges are "
+             f"tangent at the join by construction and the tangent is continuous to 0.00 deg.  "
+             f"The A's own hook turns 163 deg and that much turn -- "
              f"grafted or rebuilt -- curls the tip back into the mouth and closes the J into a 9; "
-             f"{J_CURL_TURN:g} deg is where the terminal lifts instead of hooking.  The curl's counter meets "
-             f"the bowl's with a {notch:.2f}-unit notch (RING_W x the radius difference over the bowl's "
-             f"radius), under the compiler's 1-unit rounding, which is why the radius is {J_CURL_R:g} and not "
-             f"the 70 that first looked right.  The free tip is at {tuple(round(v, 1) for v in tip)}.",
+             f"{J_CURL_TURN:g} deg is where the terminal lifts instead of hooking.  RING_OFF is a fixed "
+             f"vector, so an INDEPENDENT R1 round of radius {J_CURL_R:g} would be "
+             f"{_band_depth(c2, J_CURL_R, J_CURL_R - RING_W, J_END):.2f} wide at the join against the bowl's "
+             f"{_band_depth(J_C, J_R, J_R - RING_W, J_END):.2f}, and would bite {r1_notch:.2f} units into the "
+             f"J's counter; the curl is the same stroke continuing, not an independent round, so its counter "
+             f"radius is solved to carry the BOWL's band ({ri2:.2f}, against {J_CURL_R - RING_W:.2f} for a "
+             f"free-standing R1 round) and the two counters meet to {notch:.3f} units.  The free tip is at "
+             f"{tuple(round(v, 1) for v in tip)}.",
         stem_top=f"free R5 cut with the body to the left: the tip is the upper-right corner, the corner farther "
                  f"from the letter's centre (R5), the same cut the H's and the U's right stems take.",
         joins=f"The stem meets the round on its light side, the U's right junction exactly (_light_junction): "
