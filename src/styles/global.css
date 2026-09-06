@@ -3253,6 +3253,40 @@ a {
   font-variant-numeric: tabular-nums;
 }
 
+/* The strip on /blog/. Same badges as the index, capped in the page so the row
+   cannot grow past a couple of lines however many tags the vault ends up with. */
+.tag-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 1.75rem;
+}
+
+.tag-strip-label {
+  font-family: 'Comfortaa', cursive;
+  font-size: 0.78rem;
+  color: rgba(var(--color-primary-rgb), 0.45);
+  margin-right: 0.15rem;
+}
+
+.tag-strip-more {
+  /* the global `a` reset is display:flex, width/height:100% */
+  display: inline;
+  width: auto;
+  height: auto;
+  font-family: 'Comfortaa', cursive;
+  font-size: 0.8rem;
+  color: var(--color-accent);
+  text-decoration: none;
+  margin-left: 0.2rem;
+  white-space: nowrap;
+}
+
+.tag-strip-more:hover {
+  text-decoration: underline;
+}
+
 .rss-link {
   display: block;
   text-align: center;

@@ -7,6 +7,32 @@ import { getReadingTime } from '../../utils/reading-time';
 
 const allPosts = await getCollection('blog');
 const posts = allPosts.sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
+
+/* A strip of the most-used tags, so /blog/tags/ is reachable from the page
+   people actually land on rather than only by guessing the URL.
+
+   Capped, because an uncapped strip does not survive a real vault: at
+   twenty-eight tags it was three dense rows of pills shoving the first post
+   off the screen. .blog-page holds the column at 720px whatever the viewport,
+   so eight counted badges measure one row plus the overflow link on desktop
+   and two rows plus the link at 390px, and that is the ceiling no matter how
+   many tags the vault grows. Measured at twenty-one.
+
+   Same ordering as the index, count descending with an alphabetical tiebreak,
+   so the two pages agree on which tags are the big ones and neither shuffles
+   between builds. */
+const TAG_STRIP_CAP = 8;
+
+const tagCounts = new Map<string, number>();
+for (const post of allPosts) {
+  for (const tag of post.data.tags) {
+    tagCounts.set(tag, (tagCounts.get(tag) ?? 0) + 1);
+  }
+}
+const rankedTags = [...tagCounts.entries()].sort(
+  (a, b) => b[1] - a[1] || a[0].localeCompare(b[0]),
+);
+const stripTags = rankedTags.slice(0, TAG_STRIP_CAP);
 ---
 <BaseLayout title="Blog — Austin Orphan" description="Thoughts, projects, and technical notes from Austin Orphan." bodyClass="blog">
   <header class="blog-site-nav">
@@ -18,6 +44,21 @@ const posts = allPosts.sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.
   <div class="blog-page">
     <h1 class="blog-page-title">BLOG</h1>
     <p class="blog-page-subtitle">thoughts, projects, and technical notes</p>
+
+    {rankedTags.length > 0 && (
+      <nav class="tag-strip" aria-label="Browse by tag">
+        <span class="tag-strip-label">tags</span>
+        {stripTags.map(([tag, count]) => (
+          <a href={`/blog/tags/${tag}/`} class="tag-badge tag-badge-counted">
+            {tag}<span class="tag-count">{count}</span>
+          </a>
+        ))}
+        {/* Shown even when nothing is truncated. The strip is the only route to
+            the index, and hiding the link whenever the vault happens to be
+            under the cap would leave that page unreachable again. */}
+        <a href="/blog/tags/" class="tag-strip-more">all {rankedTags.length} tags →</a>
+      </nav>
+    )}
 
     {posts.map(post => (
       <article class="post-card">
