@@ -1,0 +1,60 @@
+---
+/* /blog/tags/ — the parent of the seven /blog/tags/<tag>/ routes, which until
+   now returned a 404. Truncating a URL is ordinary behaviour and crawlers do
+   it, so the gap was a defect rather than a missing feature. */
+import Logo from '../../../components/Logo.astro';
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import Footer from '../../../components/Footer.astro';
+import { getCollection } from 'astro:content';
+
+const posts = await getCollection('blog');
+
+const counts = new Map<string, number>();
+for (const post of posts) {
+  for (const tag of post.data.tags) {
+    counts.set(tag, (counts.get(tag) ?? 0) + 1);
+  }
+}
+
+/* Most used first, because a short list is easier to scan by weight than by
+   name. Alphabetical within a count so the order does not shuffle between
+   builds when two tags tie. */
+const tags = [...counts.entries()].sort(
+  (a, b) => b[1] - a[1] || a[0].localeCompare(b[0]),
+);
+---
+<BaseLayout
+  title="Tags — Austin Orphan Blog"
+  description="Every tag used across Austin Orphan's blog posts."
+  bodyClass="blog"
+>
+  <header class="blog-site-nav">
+    <a href="/" class="blog-nav-home"><Logo variant="hero" size={26} />Austin Orphan</a>
+    <span class="nav-sep">/</span>
+    <a href="/blog/">Blog</a>
+    <span class="nav-sep">/</span>
+    <span>Tags</span>
+  </header>
+
+  <div class="blog-page">
+    <h1 class="blog-page-title">TAGS</h1>
+    <p class="blog-page-subtitle">
+      {tags.length} tag{tags.length !== 1 ? 's' : ''} across {posts.length} post{posts.length !== 1 ? 's' : ''}
+    </p>
+
+    {tags.length > 0 ? (
+      <div class="tag-index">
+        {tags.map(([tag, count]) => (
+          <a href={`/blog/tags/${tag}/`} class="tag-badge tag-badge-counted">
+            {tag}<span class="tag-count">{count}</span>
+          </a>
+        ))}
+      </div>
+    ) : (
+      <p class="blog-page-subtitle">No tags yet.</p>
+    )}
+
+    <a href="/blog/" class="rss-link">← all posts</a>
+  </div>
+  <Footer variant="static" />
+</BaseLayout>
