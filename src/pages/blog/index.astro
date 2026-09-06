@@ -20,8 +20,10 @@ const posts = allPosts.sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.
     <p class="blog-page-subtitle">thoughts, projects, and technical notes</p>
 
     {posts.map(post => (
-      <a href={`/blog/${post.id.replace(/\.mdx?$/, '')}/`} class="post-card">
-        <h2 class="post-card-title">{post.data.title}</h2>
+      <article class="post-card">
+        <h2 class="post-card-title">
+          <a href={`/blog/${post.id.replace(/\.mdx?$/, '')}/`}>{post.data.title}</a>
+        </h2>
         <div class="post-card-meta">
           <time datetime={post.data.pubDate.toISOString()}>
             {post.data.pubDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
@@ -33,11 +35,11 @@ const posts = allPosts.sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.
         {post.data.tags.length > 0 && (
           <div class="post-card-tags">
             {post.data.tags.map(tag => (
-              <span class="tag-badge">{tag}</span>
+              <a href={`/blog/tags/${tag}`} class="tag-badge">{tag}</a>
             ))}
           </div>
         )}
-      </a>
+      </article>
     ))}
 
     <a href="/rss.xml" class="rss-link">↗ RSS feed</a>

@@ -38,8 +38,10 @@ const { posts, tag } = Astro.props;
     <p class="blog-page-subtitle">{posts.length} post{posts.length !== 1 ? 's' : ''}</p>
 
     {posts.map(post => (
-      <a href={`/blog/${post.id.replace(/\.mdx?$/, '')}/`} class="post-card">
-        <h2 class="post-card-title">{post.data.title}</h2>
+      <article class="post-card">
+        <h2 class="post-card-title">
+          <a href={`/blog/${post.id.replace(/\.mdx?$/, '')}/`}>{post.data.title}</a>
+        </h2>
         <div class="post-card-meta">
           <time datetime={post.data.pubDate.toISOString()}>
             {post.data.pubDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
@@ -51,11 +53,15 @@ const { posts, tag } = Astro.props;
         {post.data.tags.length > 0 && (
           <div class="post-card-tags">
             {post.data.tags.map(t => (
-              <span class="tag-badge">{t}</span>
+              <a
+                href={`/blog/tags/${t}`}
+                class:list={['tag-badge', t === tag && 'tag-badge-current']}
+                aria-current={t === tag ? 'page' : undefined}
+              >{t}</a>
             ))}
           </div>
         )}
-      </a>
+      </article>
     ))}
 
     <a href="/blog/" class="rss-link">← all posts</a>

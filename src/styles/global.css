@@ -2960,12 +2960,17 @@ a {
 }
 
 /* Post card */
+/* The card is an <article>, not an anchor. It used to be one whole <a>, which
+   is why the tags inside it were inert <span>s: an <a> cannot contain another,
+   and browsers unnest it. Now the title carries the link and its ::after spans
+   the card, so the whole card still goes to the post while the tag badges can
+   be links of their own. */
 .post-card {
+  position: relative; /* the containing block for that overlay */
   border: 1px solid rgba(var(--color-accent-rgb), 0.3);
   border-radius: 4px;
   padding: 1.25rem;
   margin-bottom: 1rem;
-  text-decoration: none;
   display: block;
   box-sizing: border-box;
   width: 100%;
@@ -2973,11 +2978,32 @@ a {
 }
 .post-card:hover { border-color: var(--color-accent); }
 
+/* Keyboard parity: tabbing to the title should light the card the way hovering
+   it does, since the title link is what the whole card stands for. */
+.post-card:has(.post-card-title a:focus-visible) { border-color: var(--color-accent); }
+
 .post-card-title {
   font-family: 'Anta', sans-serif;
   color: var(--color-primary);
   font-size: 1rem;
   margin: 0 0 0.35rem;
+}
+
+/* The global `a` reset is display:flex, width/height:100%, justify-content:
+   center, which would blow the title out of the card. */
+.post-card-title a {
+  display: inline;
+  width: auto;
+  height: auto;
+  color: inherit;
+  text-decoration: none;
+}
+
+.post-card-title a::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
 }
 
 .post-card-meta {
@@ -2994,10 +3020,22 @@ a {
   line-height: 1.6;
 }
 
+/* Positioned, so it paints above the title link's overlay and takes its own
+   clicks. Both are positioned inside .post-card and this comes later in the
+   DOM, which is what puts it on top; no z-index needed. */
 .post-card-tags {
+  position: relative;
   display: flex;
   gap: 0.4rem;
   flex-wrap: wrap;
+}
+
+/* On a tag page, the badge for the tag you are already looking at. Filled
+   rather than outlined, so the row reads as "you are here" instead of offering
+   a link back to the same page. */
+.tag-badge-current {
+  background: var(--color-secondary);
+  color: var(--color-background);
 }
 
 .rss-link {
