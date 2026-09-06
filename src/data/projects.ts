@@ -28,7 +28,12 @@ export const projects: Project[] = [
       'A deterministic top-down arena tank game with ricochets, mines, and tactical AI.',
     tech: ['TypeScript', 'three.js', 'Game Development', 'Deterministic Simulation'],
     demo: '/tanks/',
-    icon: 'crosshair',
+    /* strategy, not crosshair: the dropdown draws this at 15px, where a ringed
+       dot collapses into a cursor. The chalkboard Xs and movement arc say
+       "top-down, tactical" instead of "aim at something", and separated marks
+       survive that size where concentric ones blur. Phosphor has no tank or
+       explosion glyph at any version, so those were not options. */
+    icon: 'strategy',
     repo: 'https://github.com/austinorphan/tanks',
   },
   {
