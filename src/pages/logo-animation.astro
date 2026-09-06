@@ -33,6 +33,38 @@ import LogoAnimated from '../components/LogoAnimated.astro';
     </div>
     <div class="la-demo-row">
       <figure class="la-demo-cell">
+        <LogoAnimated variant="hero" size="min(300px, 26vw)" id="la-treat-on" class="la-treat-on" />
+        <figcaption>variant="hero" — outline and shadow</figcaption>
+      </figure>
+      <figure class="la-demo-cell">
+        <LogoAnimated variant="plain" size="min(300px, 26vw)" id="la-treat-off" class="la-treat-off" />
+        <figcaption>variant="plain" — neither</figcaption>
+      </figure>
+      <figure class="la-demo-cell">
+        <LogoAnimated variant="flat" size="min(300px, 26vw)" id="la-treat-flat" class="la-treat-flat" />
+        <figcaption>variant="flat" — accent fill</figcaption>
+      </figure>
+    </div>
+    <div class="la-demo-row">
+      <figure class="la-demo-cell">
+        <LogoAnimated variant="hero" size="min(220px, 20vw)" id="la-sp-half" class="la-sp-half" speed={0.5} />
+        <figcaption>speed=0.5 — 2.60s</figcaption>
+      </figure>
+      <figure class="la-demo-cell">
+        <LogoAnimated variant="hero" size="min(220px, 20vw)" id="la-sp-one" class="la-sp-one" />
+        <figcaption>speed=1 — 1.30s</figcaption>
+      </figure>
+      <figure class="la-demo-cell">
+        <LogoAnimated variant="hero" size="min(220px, 20vw)" id="la-sp-two" class="la-sp-two" speed={2} />
+        <figcaption>speed=2 — 0.65s</figcaption>
+      </figure>
+      <figure class="la-demo-cell">
+        <LogoAnimated variant="hero" size="min(220px, 20vw)" id="la-col" class="la-col" ink="#EEE5E9" outline="#2892D7" shadow="#D16666" />
+        <figcaption>ink / outline / shadow swapped</figcaption>
+      </figure>
+    </div>
+    <div class="la-demo-row">
+      <figure class="la-demo-cell">
         <LogoAnimated variant="hero" size="min(400px, 34vw)" id="la-mode-swash" class="la-mode-swash" trail="swash" />
         <figcaption>trail="swash" (default)</figcaption>
       </figure>
