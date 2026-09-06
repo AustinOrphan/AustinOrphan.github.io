@@ -1,0 +1,397 @@
+---
+// The site mark, written on. Same viewBox, sizing and props as Logo.astro; the
+// resting state IS Logo.astro (its markup is the final layer, drawn from the
+// same path module), so the two are pixel-identical once the animation ends.
+//
+// Order: left leg (foot up to the apex), right leg (apex down to the foot),
+// pen trail (a loop outside the right leg, then left under the bar to the
+// hook tip), thin circle grows, trail retracts from the foot while the bar
+// inks in left to right and the circle thickens, final layer fades in.
+// When each event starts and how long it runs is set ONLY by the --la-t-* /
+// --la-d-* custom properties on the component root in the <style> below;
+// design/logo-animation/choreography.md has the frame-by-frame reading of
+// the clip those numbers come from. Retime there, not here.
+//
+// Everything is CSS: dash reveals through <mask> strokes for the legs, the
+// trail and the bar, r/stroke-width on the circle, and opacity for the
+// cross-fades. prefers-reduced-motion gets the resting state
+// with no motion at all, which is also what the markup shows with no CSS.
+// The one script below is optional polish: once the last animation ends it
+// drops the `la-play` class, so the finished mark is rendered exactly like
+// Logo.astro (finished animations otherwise keep the SVG on a composited
+// layer, which anti-aliases its edges a shade differently).
+//
+// Geometry: design/logo-animation/geometry.json (derive_geometry.py for the
+// mark, derive_trail.py for the trail). Coordinates below are site path units
+// (y-up, tenths) inside the same translate/scale group Logo uses.
+import { LOGO_MARK_D, nextLogoAnimId } from './logo-mark';
+import { TRAIL_CENTRE_D, TRAIL_MARKS, TRAIL_MASK, TRAIL_MASK_D, TRAIL_OUTLINE_D } from './logo-trail';
+
+interface Props {
+  variant?: 'hero' | 'plain' | 'flat';
+  size?: number | string;
+  class?: string;
+  /** Start playing on load. Off, the mark sits in its final state until
+   *  something adds the `la-play` class. */
+  autoplay?: boolean;
+  /** Prefix for the mask ids (`<id>-l`, `-r`, `-b`, and `-t` in the swash mode). Unique
+   *  per page. Defaults to `la1`, `la2`, ... in render order, so the built HTML
+   *  is the same on every build; pass one when you need a stable name that
+   *  does not depend on render order. */
+  id?: string;
+  /** How the pen trail is drawn. `swash` (default) inks the Illustrator
+   *  swash's own tapered shape; `stroke` inks a uniform 380-unit round-capped
+   *  line along its centre, which is what the reference clip shows. Only the
+   *  chosen one is rendered — the other mode's geometry never reaches the HTML —
+   *  and the root carries `site-logo-anim-trail-<mode>` to style against. */
+  trail?: 'swash' | 'stroke';
+  /** Time scale for the WHOLE timeline: 2 runs it twice as fast, 0.5 half speed.
+   *  Every delay and duration below divides by it, so the choreography holds its
+   *  shape at any speed and there is no second version to keep in step. */
+  speed?: number;
+  /** Per-instance colours; each falls back to the theme. ink is the mark's fill,
+   *  outline the hero's stroke, shadow the hero's offset copy. */
+  ink?: string;
+  outline?: string;
+  shadow?: string;
+}
+const {
+  variant = 'hero',
+  size = 28,
+  class: className = '',
+  autoplay = true,
+  id,
+  trail = 'swash',
+  speed = 1,
+  ink,
+  outline,
+  shadow,
+} = Astro.props;
+const px = typeof size === 'number' ? `${size}px` : size;
+// Merged into the ONE style attribute below, not added as a second: two style
+// attributes on a tag are not combined, the first wins and the rest are dropped,
+// which silently ate --la-speed the first time round.
+const vars = [speed !== 1 && `--la-speed:${speed}`, ink && `--logo-ink:${ink}`,
+              outline && `--logo-outline:${outline}`, shadow && `--logo-shadow:${shadow}`]
+             .filter(Boolean).join(';');
+const uid = id ?? nextLogoAnimId();
+
+// Leg centre-lines, each in the direction the pen draws it: the left leg from
+// the foot cut midpoint UP to the apex, the right leg from the apex DOWN to
+// the foot cut midpoint (where the trail then starts). The leg pieces are the
+// A polygon split at the apex/counter line, so each mask reveals only its own leg.
+const LEG_L = 'M1623 1201 L5916 10247';
+const LEG_R = 'M5916 10247 L8436 334';
+// The two pieces split the A along apex->counter. The LEFT one runs 60 units past that
+// split (its last two points) so the fills interpenetrate: abutting fills are antialiased
+// independently and leave a hairline of background down the apex for the whole animated
+// span. The overlap is clipped to the A's own right edge, so the union is still the A.
+const LEG_L_QUAD = 'M5916 10247 L1274 1100 L1972 1302 L5892 9269 L5962 10083 Z';
+const LEG_R_QUAD = 'M5916 10247 L5832 9274 L8136 474 L8737 194 Z';
+// Each leg mask's stroke: 2x the piece's covering half-width about its centre-line, plus
+// 8 % (geometry.json stroke_widths.leg_mask). The left piece is wider for its overlap.
+const LEG_L_W = 860;
+const LEG_R_W = 790;
+
+// Bar outline and its centre-line: left hook tip, around the hook, left to
+// right along the bar, to the right hook tip.
+const BAR =
+  'M10728 6487 C10658 6782 10197 6930 9472 6951 C9410 6952 9347 6953 9282 6953 C8270 6952 6821 6732 5216 6330 C3929 6008 2757 5628 1862 5240 C1665 5155 1481 5070 1313 4984 C505 4575 44 4171 122 3834 C203 3483 809 3416 1742 3521 C1689 3627 1640 3735 1596 3845 C1239 3842 1024 3886 1000 3983 C976 4077 1131 4209 1424 4366 C1572 4445 1754 4530 1969 4620 C2794 4965 4075 5374 5533 5739 C7122 6136 8550 6388 9434 6448 C9502 6453 9567 6457 9629 6459 C10066 6475 10331 6433 10358 6324 C10387 6211 10156 6042 9736 5841 C9744 5758 9749 5673 9752 5588 C10425 5890 10798 6190 10728 6487 Z';
+const BAR_CENTRE =
+  'M1669 3683 C1394 3661 1104 3640 832 3705 C571 3773 467 3935 647 4168 C736 4277 849 4363 964 4441 C1258 4637 1582 4787 1906 4925 C2311 5098 2725 5249 3142 5389 C3933 5654 4736 5879 5546 6077 C6317 6265 7095 6429 7879 6547 C8414 6628 10098 6882 10490 6498 C10570 6406 10553 6303 10488 6207 C10319 5978 9996 5832 9744 5715';
+
+// Pen trail: the Illustrator swash (logo-trail.ts, geometry.json's
+// `trail_from_swash`). Its centre-line leaves the A's right foot cut midpoint
+// exactly where the right leg's centre-line ends, loops outside the right leg,
+// crosses it at 0.033 and 0.509 of its own length, runs left below the bar,
+// crosses the left leg at 0.909 and ends on the left hook tip, where the bar's
+// centre-line begins: one continuous pen gesture, right leg -> trail -> bar.
+// TRAIL_OUTLINE_D is the swash's tapered shape, revealed by a mask stroke
+// sweeping TRAIL_MASK_D (the centre-line, extended past both ends so a butt cap
+// never has to cut across an end face); TRAIL_CENTRE_D itself is the uniform-stroke
+// alternative (`trail="stroke"`), which is what the clip draws.
+
+// The head's easing. The pen moves at a constant speed in the clip, but the swash spreads
+// its arc length differently along the gesture, so the head is timed by the two landmarks
+// both drawings share: TRAIL_MARKS, measured on the swash, against the frames where the
+// clip reaches them. The clip closes the loop over the right leg at f19 = 0.634 s and
+// reaches the left leg at f23 = 0.767 s, i.e. 48.1 % and 89.7 % of the trail's
+// 0.48 -> 0.80 s window. Reading the landmarks from logo-trail.ts rather than writing them
+// out here means re-deriving the trail retimes the head instead of silently leaving it
+// pointing at landmarks that have moved.
+const HEAD_STOPS: [number, number][] = [
+  [TRAIL_MARKS.crossesRightLeg[1], 48.1],
+  [TRAIL_MARKS.crossesLeftLeg[0], 89.7],
+];
+const TAIL_STOPS: [number, number][] = [[TRAIL_MARKS.crossesRightLeg[1], 48]];
+// Both are authored in TRAIL fractions and mapped to what the dash actually is, so that
+// the VISIBLE head, not the dash position, lands on each landmark:
+//   swash   the mask sweeps TRAIL_MASK_D, whose lead-in and lead-out shift and squeeze the
+//           trail into [start, start + span]; its caps are butt, so ink boundary = dash.
+//   stroke  the line IS the centre-line, but its round cap puts the ink half a pen width
+//           (190 units, 0.015) past the dash at each end, so the dash runs that far behind.
+const LINE_CAP = 190 / 12337;
+const dash = (f: number) =>
+  +(trail === 'swash' ? TRAIL_MASK.start + TRAIL_MASK.span * f : Math.max(0, f - LINE_CAP)).toFixed(3);
+const at = (list: [number, number][]) => list.map(([f, pct]) => `${dash(f)} ${pct}%`).join(', ');
+// The head ends at 1 in the swash mode: the last stop sweeps the mask's lead-out, which
+// only covers the outline's final 96 units, in the last 6 ms.
+const easeHead = `linear(${dash(0)}, ${at(HEAD_STOPS)}, ${trail === 'swash' ? 1 : dash(1)})`;
+const easeTail = `linear(${dash(0)}, ${at(TAIL_STOPS)}, 1)`;
+
+// The ring is a plain circle while animating: it grows as a hairline about the
+// outer circle's centre (5523.1, 5424.9), thickens to the ring's mean weight
+// (390) at the centre-line radius 4038, and the final layer's fade-in brings
+// the displaced counter. No separate true-ring piece is needed.
+---
+<svg
+  style={`--la-ease-head-l:${easeHead};--la-ease-tail-l:${easeTail}${vars ? ';' + vars : ''}`}
+  class={`site-logo site-logo-${variant} site-logo-anim site-logo-anim-${variant} site-logo-anim-trail-${trail} ${autoplay ? 'la-play' : ''} ${className}`.trim()}
+  viewBox="-70 -70 1246 1246"
+  width={px}
+  height={px}
+  role="img"
+  aria-hidden="true"
+  focusable="false"
+>
+  <defs>
+    <mask id={`${uid}-l`} maskUnits="userSpaceOnUse" x="-600" y="-600" width="13000" height="13000">
+      <path class="la-mask la-leg-l" d={LEG_L} pathLength="1" stroke-width={LEG_L_W} />
+    </mask>
+    <mask id={`${uid}-r`} maskUnits="userSpaceOnUse" x="-600" y="-600" width="13000" height="13000">
+      <path class="la-mask la-leg-r" d={LEG_R} pathLength="1" stroke-width={LEG_R_W} />
+    </mask>
+    <mask id={`${uid}-b`} maskUnits="userSpaceOnUse" x="-600" y="-600" width="13000" height="13000">
+      <path class="la-mask la-bar-m" d={BAR_CENTRE} pathLength="1" stroke-width="970" />
+    </mask>
+    <!-- The trail's sweep: a stroke wide enough to cover the swash outline (653 units
+         at its widest from the centre-line), BUTT-capped so the ink boundary is exactly
+         the dash position, along a path that runs 550 units before the trail's start and
+         150 past its end so that boundary never has to cut across an end face. -->
+    {trail === 'swash' && (
+      <mask id={`${uid}-t`} maskUnits="userSpaceOnUse" x="-600" y="-600" width="13000" height="13000">
+        <path class="la-mask la-trail-m" d={TRAIL_MASK_D} pathLength="1" stroke-width={TRAIL_MASK.strokeWidth} />
+      </mask>
+    )}
+  </defs>
+
+  <g class="la-trail-layer" transform="translate(0,1084) scale(0.1,-0.1)">
+    {trail === 'swash'
+      ? <path class="la-trail-swash" d={TRAIL_OUTLINE_D} mask={`url(#${uid}-t)`} />
+      : <path class="la-trail-line" d={TRAIL_CENTRE_D} pathLength="1" />}
+  </g>
+
+  <g class="la-pieces" transform="translate(0,1084) scale(0.1,-0.1)">
+    <circle class="la-circle" cx="5523.1" cy="5424.9" r="0" />
+    <path class="la-leg" d={LEG_L_QUAD} mask={`url(#${uid}-l)`} />
+    <path class="la-leg" d={LEG_R_QUAD} mask={`url(#${uid}-r)`} />
+    <path class="la-bar" d={BAR} mask={`url(#${uid}-b)`} />
+  </g>
+
+  <!-- The final layer is Logo.astro's own markup, element for element, so the
+       resting render is the same raster as Logo's (a nested <svg> would go
+       through its own viewport and anti-alias a few edge pixels differently). -->
+  <g class="la-final">
+    {variant === 'hero' && (
+      <g class="la-final-shadow" transform="translate(22,22)">
+        <g transform="translate(0.000000,1084.000000) scale(0.100000,-0.100000)" class="site-logo-shadow"><path d={LOGO_MARK_D} /></g>
+      </g>
+    )}
+    <g
+      transform="translate(0.000000,1084.000000) scale(0.100000,-0.100000)"
+      class="site-logo-mark la-final-mark"
+      stroke-width={variant === 'hero' ? 300 : 0}
+      stroke-linejoin="round"
+      paint-order="stroke fill markers"
+    ><path d={LOGO_MARK_D} /></g>
+  </g>
+</svg>
+
+<style is:global>
+  /* Resting state, also the reduced-motion state: the final layer only. */
+  .site-logo-anim .la-final { opacity: 1; }
+  .site-logo-anim .la-pieces,
+  .site-logo-anim .la-trail-layer { opacity: 0; }
+
+  .site-logo-anim-hero .la-pieces,
+  .site-logo-anim-hero .la-trail-layer,
+  .site-logo-anim-plain .la-pieces,
+  .site-logo-anim-plain .la-trail-layer { color: var(--logo-ink, var(--color-primary)); }
+  .site-logo-anim-flat .la-pieces,
+  .site-logo-anim-flat .la-trail-layer { color: var(--logo-ink, var(--color-accent)); }
+
+  .site-logo-anim .la-leg,
+  .site-logo-anim .la-bar,
+  .site-logo-anim .la-trail-swash { fill: currentColor; }
+  .site-logo-anim .la-trail-line,
+  .site-logo-anim .la-circle {
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+  }
+
+  .site-logo-anim .la-mask {
+    fill: none;
+    stroke: #fff;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  /* The two trail treatments; the `trail` prop renders one or the other, never
+     both. Default: the swash's own tapered shape, filled and swept by its mask.
+     `trail="stroke"` inks a uniform line along the same centre-line instead,
+     which is what the clip shows; it needs no mask, its dash reveal runs on the
+     stroke itself. */
+  .site-logo-anim .la-trail-line { stroke-width: var(--la-trail-weight); }
+
+  /* The trail's mask alone is butt-capped: its path is extended past both ends of
+     the trail (logo-trail.ts), so the sweep never has to cut across an end face,
+     and the ink boundary is then exactly where the dash is. The other masks keep
+     round caps — their paths stop inside the shape they reveal. */
+  .site-logo-anim .la-trail-m { stroke-linecap: butt; }
+
+  /* Initial state of every piece; the animations run from here. A dash of
+     "1 2" offset by 1 hides a pathLength="1" stroke entirely (round caps
+     included); driving the offset to 0 draws it from its start to its end.
+     The trail's sweep instead grows its dash from 0, because its tail has to
+     retract behind the head later, so it starts at zero length and shows
+     nothing until the layer switches on. */
+  .site-logo-anim .la-mask {
+    stroke-dasharray: 1 2;
+    stroke-dashoffset: 1;
+  }
+  .site-logo-anim .la-trail-m,
+  .site-logo-anim .la-trail-line {
+    stroke-dasharray: 0 2;
+    stroke-dashoffset: 0;
+  }
+  .site-logo-anim .la-circle { stroke-width: 60; }
+
+  /* THE TIMELINE. Seconds from the start of play; every animation below takes
+     its delay and duration from here and nowhere else. Read off the clip frame
+     by frame, see design/logo-animation/choreography.md. */
+  .site-logo-anim {
+    --la-speed: 1;                                 /* time scale; 2 = twice as fast */
+    --la-t-leg-l: calc(0.24s / var(--la-speed));    --la-d-leg-l: calc(0.13s / var(--la-speed));   /* left leg, foot up to apex */
+    --la-t-leg-r: calc(0.36s / var(--la-speed));    --la-d-leg-r: calc(0.135s / var(--la-speed));  /* right leg, apex down to foot */
+    --la-t-trail: calc(0.48s / var(--la-speed));    --la-d-trail: calc(0.32s / var(--la-speed));   /* trail head, foot to hook tip */
+    --la-t-circle: calc(0.535s / var(--la-speed));  --la-d-circle: calc(0.565s / var(--la-speed)); /* thin circle grows */
+    --la-t-thicken: calc(0.73s / var(--la-speed));  --la-d-thicken: calc(0.35s / var(--la-speed)); /* circle thickens to ring weight */
+    --la-t-bar: calc(0.80s / var(--la-speed));      --la-d-bar: calc(0.23s / var(--la-speed));     /* bar inks in, hook to hook */
+    --la-t-tail: calc(0.80s / var(--la-speed));     --la-d-tail: calc(0.21s / var(--la-speed));    /* trail retracts, foot to hook tip */
+    --la-t-final: calc(1.02s / var(--la-speed));    --la-d-final: calc(0.08s / var(--la-speed));   /* final layer fades in */
+    --la-t-pieces: calc(1.10s / var(--la-speed));                          /* the drawn pieces switch off */
+    --la-t-treat: calc(1.04s / var(--la-speed));    --la-d-treat: calc(0.26s / var(--la-speed));   /* hero only: the red outline grows out
+                                                      from under the mark and the blue shadow
+                                                      slides to its offset -- the treatment
+                                                      SETTLES rather than appearing with the
+                                                      cross-fade */
+    --la-t-done: calc(1.30s / var(--la-speed));                            /* everything over */
+    --la-trail-weight: 380;                        /* trail="stroke" only: 0.6 of the bar's run */
+  }
+
+  /* Easing. The head and the tail come from the component's frontmatter, which
+     builds them out of the swash's own landmarks (logo-trail.ts's TRAIL_MARKS)
+     and the frames where the clip reaches them: the head is at the crossing that
+     closes the loop 48.1 % into its run (the clip's f19) and at the left leg at
+     89.7 % (f23), and the tail retracts at one speed to that same crossing,
+     reached at 0.90 s, then faster along the remnant under the bar. Their stops
+     are DASH positions, which is not the same number as the landmark: the swash
+     mode maps the trail onto the mask's longer path, the stroke mode subtracts
+     its round cap. Do that mapping in the frontmatter, not here.
+     The bar's hook goes down quickly, then its head runs at an even pace; the
+     circle grows at a steady rate then eases into its final radius. linear()
+     reproduces all four; the beziers are the fallback (the head's fits the same
+     two landmarks, and both trail fallbacks start from 0, so on those browsers
+     the trail lags by the mask's lead-in for the first ~13 ms). */
+  .site-logo-anim {
+    --la-ease-grow: cubic-bezier(0.2, 0.5, 0.45, 1);
+    --la-ease-bar: cubic-bezier(0.3, 0.45, 0.6, 1);
+    --la-ease-head: cubic-bezier(0.575, 0.625, 0.8, 0.825);
+    --la-ease-tail: linear;
+  }
+  @supports (animation-timing-function: linear(0, 1)) {
+    .site-logo-anim {
+      --la-ease-grow: linear(0, 0.21 17.5%, 0.29 23%, 0.37 29%, 0.44 35%, 0.54 41%, 0.6 47%, 0.675 53%, 0.73 59%, 0.8 65%, 0.85 71%, 0.9 77%, 0.94 82%, 0.97 88%, 0.99 94%, 1);
+      --la-ease-bar: linear(0, 0.09 14.8%, 0.34 29.6%, 0.47 43.9%, 0.63 58.3%, 0.8 73%, 0.93 87.4%, 1);
+      --la-ease-head: var(--la-ease-head-l, linear);
+      --la-ease-tail: var(--la-ease-tail-l, linear);
+    }
+  }
+
+  @media not all and (prefers-reduced-motion: reduce) {
+    .la-play .la-pieces {
+      opacity: 1;
+      animation: la-hide var(--la-t-pieces) step-end forwards;
+    }
+    .la-play .la-trail-layer {
+      animation:
+        la-show 1ms step-start var(--la-t-trail) forwards,
+        la-fade 20ms linear calc(var(--la-t-tail) + var(--la-d-tail)) forwards;
+    }
+    .la-play .la-final {
+      opacity: 0;
+      animation: la-show var(--la-d-final) linear var(--la-t-final) forwards;
+    }
+    .la-play .la-leg-l { animation: la-draw var(--la-d-leg-l) linear var(--la-t-leg-l) forwards; }
+    .la-play .la-leg-r { animation: la-draw var(--la-d-leg-r) linear var(--la-t-leg-r) forwards; }
+    .la-play .la-trail-m,
+    .la-play .la-trail-line {
+      animation:
+        la-trail-head var(--la-d-trail) var(--la-ease-head) var(--la-t-trail) forwards,
+        la-trail-tail var(--la-d-tail) var(--la-ease-tail) var(--la-t-tail) forwards;
+    }
+    /* Hero only: flat has neither a shadow nor a stroke, and animating stroke-width there
+       would give it a red outline it is not supposed to have. */
+    .site-logo-anim-hero.la-play .la-final-shadow {
+      animation: la-shadow var(--la-d-treat) var(--la-ease-grow) var(--la-t-treat) forwards;
+    }
+    .site-logo-anim-hero.la-play .la-final-mark {
+      animation: la-outline var(--la-d-treat) var(--la-ease-grow) var(--la-t-treat) forwards;
+    }
+    .la-play .la-bar-m { animation: la-draw var(--la-d-bar) var(--la-ease-bar) var(--la-t-bar) forwards; }
+    .la-play .la-circle {
+      animation:
+        la-grow var(--la-d-circle) var(--la-ease-grow) var(--la-t-circle) forwards,
+        la-thicken var(--la-d-thicken) linear var(--la-t-thicken) forwards;
+    }
+  }
+
+  @keyframes la-draw { to { stroke-dashoffset: 0; } }
+  @keyframes la-fade { to { opacity: 0; } }
+  @keyframes la-show { to { opacity: 1; } }
+  @keyframes la-hide { from { opacity: 1; } to { opacity: 0; } }
+  @keyframes la-grow { from { r: 0px; } to { r: 4038px; } }
+  @keyframes la-thicken { from { stroke-width: 60px; } to { stroke-width: 390px; } }
+  /* The offsets Logo.astro sets as attributes; the keyframes must LAND on them exactly, or
+     the resting render stops matching Logo's. translate is origin-independent, so no
+     transform-box/transform-origin is needed on the SVG group. */
+  @keyframes la-shadow { from { transform: translate(0px, 0px); } to { transform: translate(22px, 22px); } }
+  @keyframes la-outline { from { stroke-width: 0px; } to { stroke-width: 300px; } }
+  /* Visible trail = [tail, head]: dasharray "(head - tail) 2", offset -tail. */
+  @keyframes la-trail-head {
+    from { stroke-dasharray: 0 2; }
+    to { stroke-dasharray: 1 2; }
+  }
+  @keyframes la-trail-tail {
+    from { stroke-dasharray: 1 2; stroke-dashoffset: 0; }
+    to { stroke-dasharray: 0 2; stroke-dashoffset: -1; }
+  }
+</style>
+
+<script>
+  // Settle: once EVERY animation on this mark has finished, drop the playing class so the
+  // resting markup is all that is left to paint. Keying on one named animation was fine while
+  // the pieces switched off last, but the hero's outline and shadow now settle after them, and
+  // dropping the class mid-flight would snap them to their end state.
+  document.querySelectorAll<SVGSVGElement>('.site-logo-anim').forEach((svg) => {
+    svg.addEventListener('animationend', () => {
+      // subtree: true matters -- every animation here is on a DESCENDANT, so the bare
+      // call returns an empty list and every() on it is vacuously true, which would
+      // drop the class on the first animationend of the run.
+      if (svg.getAnimations({ subtree: true }).every((a) => a.playState === 'finished')) {
+        svg.classList.remove('la-play');
+      }
+    });
+  });
+</script>

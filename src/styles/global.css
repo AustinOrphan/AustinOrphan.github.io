@@ -3322,16 +3322,24 @@ body.blog {
 }
 
 .site-logo-hero .site-logo-mark {
-    fill: var(--color-primary);
-    stroke: var(--color-secondary);
+    fill: var(--logo-ink, var(--color-primary));
+    stroke: var(--logo-outline, var(--color-secondary));
 }
 
 .site-logo-hero .site-logo-shadow {
-    fill: var(--color-accent);
+    fill: var(--logo-shadow, var(--color-accent));
 }
 
 .site-logo-flat .site-logo-mark {
-    fill: var(--color-accent);
+    fill: var(--logo-ink, var(--color-accent));
+    stroke: none;
+}
+
+/* "plain" is hero's ink with neither of hero's two extra passes: no red outline,
+   no blue offset copy. Same fill as hero, so the two can be swapped without the
+   mark changing weight or colour. */
+.site-logo-plain .site-logo-mark {
+    fill: var(--logo-ink, var(--color-primary));
     stroke: none;
 }
 
