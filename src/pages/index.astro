@@ -29,11 +29,16 @@ import Logo from '../components/Logo.astro';
           <a href="/AustinOrphanResume.pdf" download aria-label="Download Resume">
             <i class="icon ph-duotone ph-read-cv-logo"></i>
           </a>
-          <a href="mailto:AustinGOrphan@gmail.com" aria-label="Email Contact">
+          <!-- Goes to the contact form, not to a mailto:. The section nav's
+               envelope reveals on the first pixel of scroll and sits on screen
+               alongside this bar; when one was a mailto: and the other an
+               anchor, two envelope glyphs a few hundred pixels apart meant
+               different things. They agree now. -->
+          <a href="#contact" aria-label="Go to contact form">
             <i class="icon ph-duotone ph-envelope-simple"></i>
           </a>
           <a href="/blog/" aria-label="Blog">
-            <i class="icon ph-duotone ph-notepad"></i>
+            <i class="icon ph-duotone ph-book-open-text"></i>
           </a>
           <ProjectsMenu />
         </div>
@@ -56,7 +61,10 @@ import Logo from '../components/Logo.astro';
     <a href="#hero" aria-label="Go to Hero Section"><i class="ph-duotone ph-house"></i></a>
     <a href="#about" aria-label="Go to About Section"><i class="ph-duotone ph-user"></i></a>
     <a href="#projects" aria-label="Go to Projects Section"><i class="ph-duotone ph-folder-open"></i></a>
-    <a href="#contact" aria-label="Go to Contact Section"><i class="ph-duotone ph-envelope"></i></a>
+    <!-- envelope-simple, not envelope: the link bar and the footer both use
+         envelope-simple for this same destination, and this strip is on screen
+         beside the link bar. One destination, one glyph. -->
+    <a href="#contact" aria-label="Go to Contact Section"><i class="ph-duotone ph-envelope-simple"></i></a>
   </nav>
 
   <KonamiEgg />
