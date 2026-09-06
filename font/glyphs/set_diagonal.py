@@ -74,7 +74,7 @@ import math, os, sys
 HERE = os.path.dirname(os.path.abspath(__file__)); FONT = os.path.dirname(HERE)
 sys.path.insert(0, os.path.join(FONT, 'lib')); sys.path.insert(0, FONT)
 from pen import stroke, cut_for, ang, perp, unit, sub, mul, dot
-from metrics import CAP, OVER_POINT, SB_STRAIGHT, SB_ROUND, UPM
+from metrics import CAP, OVER_POINT, OVER_ROUND, SB_STRAIGHT, SB_ROUND, UPM
 from rules import glyph, stem, diagonal, arm, w_slash, w_backslash, w_stem, w_horizontal, CUT_DEG, HORIZ_MID, HORIZ_TAPER
 from glyphs import core
 
@@ -282,42 +282,94 @@ def build_W():
                     f'brings the advance to {W_MAX_ADV}, as R8 directs for the W.')))
 
 # ---- M --------------------------------------------------------------------------
-def build_M():
-    xL = w_stem(0) / 2                                          # left stem: left foot corner at x = 0
-    P_TL = (xL - w_stem(TIP_Y) / 2, TIP_Y)                      # top-left point: stem's left edge meets the leg's upper edge
-    run = _spread(TIP_Y - POINT_Y, HALF_APEX)                   # a leg's run at the A's lean, point to point
-    T = (P_TL[0] + run, POINT_Y)                                # the vee's point, on the baseline overshoot
+# The M is the one letter that has to be wide and heavy at once, and the shipping construction
+# could not be both: at the A's lean, with vertical R3 sides and the vee on the baseline
+# overshoot, the body came to 583 -- 25 over the medium 558 -- and its own notes recorded that
+# reaching 558 would mean steepening the legs and giving up the A's apex angle for a letter R8
+# does not size.  It also left three counters, the middle one a 243-unit trough under the vee
+# that read as a hole at text size.
+#
+# This resolves it the other way round: keep the A's lean, and go WIDER to a width the face can
+# name -- CAP + 2*OVER_ROUND = 720, the O's own outer diameter.  Two things then follow rather
+# than being chosen:
+#   * the sides SPLAY (14.44 deg off the vertical) -- solved, as the least splay that brings the
+#     body to 720, so the width is the datum and the splay is its consequence
+#   * the third counter closes, and the M becomes a two-counter letter, 201 and 203
+# The one proportion that IS chosen is the vee's height, at two fifths of the cap.  Raising the
+# vee at all is what closes the middle counter (it closes at 0.388 cap and this sits 8 units
+# above that); 0.40 is the round proportion just past the threshold.  Selected from a five-way
+# sweep (A current, B splay only, C open the apex, D vee at 0.20 cap, E this) rendered large,
+# in words, and at 30px and 17px.
+M_BODY  = CAP + 2 * OVER_ROUND                  # 720: the O's outer diameter
+M_VEE_Y = 0.40 * CAP                            # 280: the vee's point, two fifths up the cap
+
+
+def _m_parts(splay, vee_y=M_VEE_Y, lean=HALF_APEX):
+    """The M's four strokes and its body width, for a given splay.
+
+    `splay` is the sides' lean off the vertical, + = wider at the foot; 0 reproduces the R3
+    stems the shipping M used.  A splayed side is no longer a vertical, so it takes R2's
+    diagonal widths (w_slash on the left, w_backslash on the right) rather than w_stem.
+    """
+    tan, cos = math.tan(math.radians(splay)), math.cos(math.radians(splay))
+    wfL = w_stem if splay == 0 else w_slash
+    wfR = w_stem if splay == 0 else w_backslash
+    F_L  = (0.0, 0.0)                                           # left foot's outer corner
+    P_TL = (wfL(0) / 2 + TIP_Y * tan - wfL(TIP_Y) / (2 * cos), TIP_Y)
+    run  = (TIP_Y - vee_y) * math.tan(math.radians(lean))       # a leg's run at the A's lean
+    T    = (P_TL[0] + run, vee_y)                               # the vee's point
     P_TR = (T[0] + run, TIP_Y)
-    xR = P_TR[0] - w_stem(TIP_Y) / 2
-    F_L, F_R = (xL - w_stem(0) / 2, 0.0), (xR + w_stem(0) / 2, 0.0)   # the two R5 foot tips, on the baseline
-    aL_stem, aL_leg = _stem_edge_angle(xL, TIP_Y, 'L', 0), ang(sub(T, P_TL))
-    aR_stem, aR_leg = _stem_edge_angle(xR, TIP_Y, 'R', 0), ang(sub(T, P_TR))
-    cLs, cLl = _point_cuts(aL_stem, aL_leg); cRs, cRl = _point_cuts(aR_stem, aR_leg)
+    F_R  = (P_TR[0] + TIP_Y * tan - wfR(TIP_Y) / (2 * cos) + wfR(0) / 2, 0.0)
+    aL_side, aR_side = ang(sub(F_L, P_TL)), ang(sub(F_R, P_TR))
+    aL_leg,  aR_leg  = ang(sub(T, P_TL)),   ang(sub(T, P_TR))
+    cLs, cLl = _point_cuts(aL_side, aL_leg)
+    cRs, cRl = _point_cuts(aR_side, aR_leg)
     cTl, cTr = _point_cuts(ang(sub(P_TL, T)), ang(sub(P_TR, T)))
-    stemL = _placed_stroke(F_L, +1, P_TL, +1, end0='right', end1=cLs, wf=w_stem)
-    stemR = _placed_stroke(F_R, -1, P_TR, -1, end0='left', end1=cRs, wf=w_stem)
-    legL = _placed_stroke(T, +1, P_TL, -1, end0=cTl, end1=cLl)   # outer edge: lower-left at T, upper-right at the stem
-    legR = _placed_stroke(T, -1, P_TR, +1, end0=cTr, end1=cRl)
-    body = F_R[0]                                               # right foot's right corner
-    cuts = _terminals(('left foot', stemL, F_L), ('right foot', stemR, F_R))
-    return glyph(ord('M'), [stemL, legL, legR, stemR], sb=(SB_STRAIGHT, SB_STRAIGHT), notes=dict(
+    sideL = _placed_stroke(F_L, +1, P_TL, +1, end0='right', end1=cLs, wf=wfL)
+    sideR = _placed_stroke(F_R, -1, P_TR, -1, end0='left',  end1=cRs, wf=wfR)
+    legL  = _placed_stroke(T, +1, P_TL, -1, end0=cTl, end1=cLl)
+    legR  = _placed_stroke(T, -1, P_TR, +1, end0=cTr, end1=cRl)
+    return [sideL, legL, legR, sideR], F_R[0] - F_L[0], (P_TL, T, P_TR), (F_L, F_R), run
+
+
+def _m_splay(target=M_BODY, lo=0.0, hi=45.0):
+    """The least splay that brings the body to `target`.  Monotonic in splay, so bisect."""
+    for _ in range(80):
+        mid = (lo + hi) / 2
+        if _m_parts(mid)[1] < target: lo = mid
+        else: hi = mid
+    return (lo + hi) / 2
+
+
+def build_M():
+    splay = _m_splay()
+    strokes, body, points, feet, run = _m_parts(splay)
+    sideL, legL, legR, sideR = strokes
+    F_L, F_R = feet
+    cuts = _terminals(('left foot', sideL, F_L), ('right foot', sideR, F_R))
+    return glyph(ord('M'), strokes, sb=(SB_STRAIGHT, SB_STRAIGHT), notes=dict(
         terminal_cuts=cuts,
-        construction=('Two R3 stems with R5 feet (tips at the outer foot corners on the baseline, cuts rising '
-                      'inward) and, between them, the V: two R2 diagonals at the A\'s lean whose outer edges meet in '
-                      'a point at y = -OVER_POINT and whose upper edges meet the stems\' outer edges in points at '
-                      'y = CAP + OVER_POINT (R6); the three points\' buried ends nest per _point_cuts.'),
-        body_width=body, half_apex_deg=HALF_APEX, points=(P_TL, T, P_TR), stem_x=(xL, xR), leg_run=run, feet=(F_L, F_R),
-        vertices=('three points: the two shoulders at the cap overshoot, where each stem\'s outer edge meets its '
-                  'leg\'s upper edge, and the vee at the baseline overshoot.  All three zoomed at 4x from the '
+        construction=('Two splayed R2 sides with R5 feet (tips at the outer foot corners on the baseline, cuts '
+                      'rising inward) and, between them, the V: two R2 diagonals at the A\'s lean whose outer '
+                      'edges meet in a point at the vee and whose upper edges meet the sides\' outer edges in '
+                      f'points at y = CAP + OVER_POINT (R6); the three points\' buried ends nest per _point_cuts. '
+                      f'The sides lean {splay:.2f} deg off the vertical, so they take R2\'s diagonal widths '
+                      f'(w_slash / w_backslash) rather than R3\'s w_stem.'),
+        body_width=body, half_apex_deg=HALF_APEX, splay_deg=splay, vee_y=M_VEE_Y,
+        points=points, feet=feet, leg_run=run,
+        vertices=('three points: the two shoulders at the cap overshoot, where each side\'s outer edge meets its '
+                  'leg\'s upper edge, and the vee at two fifths of the cap.  All three zoomed at 4x from the '
                   'compiled outline: two edges, one tip, no spur, no notch.'),
-        proportion=(f'M is not in R8\'s width table, so the width follows from the construction: R8 asks pointed '
-                    f'constructions to use the A\'s apex angle, and at the A\'s lean each leg runs {run:.1f} units '
-                    f'over the {TIP_Y - POINT_Y:g} from point to point, so with the stems the body is {body:.1f} '
-                    f'(foot corner to foot corner), {body - BODY_MEDIUM:.1f} over the medium 558 and '
-                    f'{100 * body / UPM:.0f}% of the em.  Narrowing the vee to reach 558 would steepen the legs to '
-                    f'{math.degrees(math.atan((BODY_MEDIUM - 2 * xL + w_stem(TIP_Y)) / 2 / (TIP_Y - POINT_Y))):.1f} '
-                    f'deg off the vertical and give up the A\'s angle for a letter R8 does not size.'),
-        deviations='none: width from the construction (see proportion)'))
+        proportion=(f'M is not in R8\'s width table, so the width is taken from the face instead: the body is '
+                    f'CAP + 2*OVER_ROUND = {M_BODY:.0f}, the O\'s outer diameter, which makes the widest letter '
+                    f'as wide as the mark\'s own circle.  The lean stays the A\'s apex half-angle '
+                    f'({HALF_APEX:.2f} deg) and the SPLAY is then solved, not chosen: {splay:.2f} deg is the least '
+                    f'splay that reaches {M_BODY:.0f}, each leg running {run:.1f} units from the vee to the cap '
+                    f'overshoot.  Advance {body + 2 * SB_STRAIGHT:.0f}.'),
+        deviations=(f'The vee sits at {M_VEE_Y:.0f} = 0.40*CAP rather than on the baseline overshoot (R6). That is '
+                    f'the one chosen proportion here, and it is what makes the M a two-counter letter: the middle '
+                    f'counter closes at a vee of 0.388*CAP and this is the round proportion just past it. On the '
+                    f'baseline the M carried three counters, the middle a 243-unit trough that read as a hole.')))
 
 # ---- N --------------------------------------------------------------------------
 def build_N():
