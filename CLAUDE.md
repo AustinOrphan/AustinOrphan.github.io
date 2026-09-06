@@ -146,8 +146,14 @@ live in the "11. Special Modes" section of `global.css`.
 
 ## Content Updates
 
-- **Resume:** replace `public/AustinOrphanResume.pdf`; linked from
-  `src/components/About.astro` and `src/pages/index.astro`
+- **Resume:** authored as a Google Doc. Run the **Publish resume** workflow
+  (Actions → Run workflow) to export it over `public/AustinOrphanResume.pdf`
+  and push; that manual run is the publish gate, since the Doc is always live.
+  Needs the `RESUME_DOC_ID` secret. `scripts/check-resume-pdf.mjs` refuses
+  anything that is not a PDF, is under 10KB, lacks the name, or carries an
+  address other than the one the site advertises. Dropping a file into
+  `public/` by hand still works. Linked from `src/components/About.astro`,
+  `src/components/Footer.astro` and `src/pages/index.astro`
 - **Social links / hero icons:** edit `#linkBar` in `src/pages/index.astro` and
   the matching CSS in `global.css`
 - **Footer social links / copyright:** edit `src/components/Footer.astro` once;
