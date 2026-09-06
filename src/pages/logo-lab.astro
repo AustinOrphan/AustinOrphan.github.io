@@ -11,6 +11,7 @@
 // Not linked from anywhere; noindex.
 import BaseLayout from '../layouts/BaseLayout.astro';
 import LogoAnimated from '../components/LogoAnimated.astro';
+import Hero from '../components/Hero.astro';
 
 const VARIANTS = ['hero', 'plain', 'flat'] as const;
 const TRAILS = ['swash', 'stroke'] as const;
@@ -147,11 +148,20 @@ const TRAILS = ['swash', 'stroke'] as const;
       </figure>
 
       <figure class="situ situ-hero">
-        <figcaption>hero backdrop — <code>variant="flat"</code>, sized by CSS, drawn behind the wordmark</figcaption>
-        <div class="situ-frame situ-hero-frame">
-          <div class="situ-backdrop" data-situ><LogoAnimated variant="flat" size="100%" autoplay={false} id="situ-hero" /></div>
-          <div class="situ-hero-copy"><span>AUSTIN</span><span>ORPHAN</span></div>
+        <figcaption>
+          hero backdrop — the <em>real</em> hero (src/components/Hero.astro, the same one
+          index.astro renders), with its backdrop drawn by LogoAnimated
+        </figcaption>
+        <div class="situ-frame situ-hero-frame" data-situ>
+          <Hero>
+            <LogoAnimated slot="backdrop" variant="flat" autoplay={false} id="situ-hero" />
+          </Hero>
         </div>
+        <p class="lab-hint">
+          The backdrop is forced visible here. On the live page it is opacity 0 for the whole
+          write-on — the draw finishes about a second before anything shows — so using it there
+          needs the play triggered on reveal rather than on load.
+        </p>
       </figure>
     </section>
   </main>
@@ -160,8 +170,11 @@ const TRAILS = ['swash', 'stroke'] as const;
 <style is:global>
   .logo-lab { background: var(--color-background); color: var(--color-primary); }
   .lab { max-width: 1180px; margin: 0 auto; padding: 84px 24px 96px; }
-  .lab h1 { font-size: 1.5rem; margin: 0 0 24px; letter-spacing: 0.02em; }
-  .lab h2 { font-size: 1.1rem; margin: 56px 0 8px; }
+  /* Direct children only: the in-situ panel renders the real hero, whose own h1 is
+     styled by the bare `h1` rule in global.css. A descendant selector here outranks
+     it and shrank the wordmark to 24px. */
+  .lab > h1 { font-size: 1.5rem; margin: 0 0 24px; letter-spacing: 0.02em; }
+  .lab > section > h2, .lab > h2 { font-size: 1.1rem; margin: 56px 0 8px; }
   .lab-hint { color: rgba(var(--color-primary-rgb), 0.55); font-size: 0.82rem; margin: 6px 0 0; }
 
   .lab-stage-wrap { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 28px; align-items: start; }
@@ -216,10 +229,26 @@ const TRAILS = ['swash', 'stroke'] as const;
   }
   .situ-footer-row { display: flex; align-items: center; gap: 16px; }
   .situ-dim { color: rgba(var(--color-primary-rgb), 0.5); font-size: 0.82rem; }
-  .situ-hero-frame { position: relative; height: 360px; display: grid; place-items: center; overflow: hidden; }
-  .situ-backdrop { position: absolute; width: 330px; height: 330px; opacity: 0.34; pointer-events: none; }
-  .situ-hero-copy { position: relative; display: grid; text-align: center; line-height: 0.92;
-    font-size: 3.2rem; letter-spacing: -0.02em; }
+  /* The real hero is full-height and its backdrop is revealed by index.astro's own
+     scroll handler, which does not run here — so it is forced visible and the section
+     is scaled down to sit in a panel. Everything else is the hero's own CSS. */
+  .situ-hero-frame { padding: 0; overflow: hidden; position: relative; }
+  .situ-hero-frame .hero-section { min-height: 0; height: 78vh; }
+  .situ-hero-frame .scroll-indicator { display: none; }
+  /* Three things the real page does with script or chrome that the panel has to
+     stand in for. None of them touch the mark itself, which is the thing being
+     judged here; they are called out so the panel is not mistaken for the live
+     page's behaviour.
+       1. index.astro's own script writes style.animation on the h1 and #cbar to
+          reveal them; global.css holds both at opacity 0 until it does.
+       2. the backdrop is revealed by that same script, and stays at opacity 0
+          through the whole write-on on the live page (see the note above).
+       3. #linkBar is position:fixed, so inside a panel it pins itself to the
+          viewport instead of sitting in the hero. */
+  .situ-hero-frame .hero-section h1,
+  .situ-hero-frame .hero-section #cbar { opacity: 1; }
+  .situ-hero-frame .hero-logo-backdrop { opacity: 0.34; }
+  .situ-hero-frame #linkBar { position: static; margin-top: 28px; opacity: 1; transform: none; }
 </style>
 
 <script>
