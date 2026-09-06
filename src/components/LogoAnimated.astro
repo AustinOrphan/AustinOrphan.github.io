@@ -28,7 +28,7 @@ import { LOGO_MARK_D, nextLogoAnimId } from './logo-mark';
 import { TRAIL_CENTRE_D, TRAIL_MARKS, TRAIL_MASK, TRAIL_MASK_D, TRAIL_OUTLINE_D } from './logo-trail';
 
 interface Props {
-  variant?: 'hero' | 'flat';
+  variant?: 'hero' | 'plain' | 'flat';
   size?: number | string;
   class?: string;
   /** Start playing on load. Off, the mark sits in its final state until
@@ -45,6 +45,15 @@ interface Props {
    *  chosen one is rendered — the other mode's geometry never reaches the HTML —
    *  and the root carries `site-logo-anim-trail-<mode>` to style against. */
   trail?: 'swash' | 'stroke';
+  /** Time scale for the WHOLE timeline: 2 runs it twice as fast, 0.5 half speed.
+   *  Every delay and duration below divides by it, so the choreography holds its
+   *  shape at any speed and there is no second version to keep in step. */
+  speed?: number;
+  /** Per-instance colours; each falls back to the theme. ink is the mark's fill,
+   *  outline the hero's stroke, shadow the hero's offset copy. */
+  ink?: string;
+  outline?: string;
+  shadow?: string;
 }
 const {
   variant = 'hero',
@@ -53,8 +62,18 @@ const {
   autoplay = true,
   id,
   trail = 'swash',
+  speed = 1,
+  ink,
+  outline,
+  shadow,
 } = Astro.props;
 const px = typeof size === 'number' ? `${size}px` : size;
+// Merged into the ONE style attribute below, not added as a second: two style
+// attributes on a tag are not combined, the first wins and the rest are dropped,
+// which silently ate --la-speed the first time round.
+const vars = [speed !== 1 && `--la-speed:${speed}`, ink && `--logo-ink:${ink}`,
+              outline && `--logo-outline:${outline}`, shadow && `--logo-shadow:${shadow}`]
+             .filter(Boolean).join(';');
 const uid = id ?? nextLogoAnimId();
 
 // Leg centre-lines, each in the direction the pen draws it: the left leg from
@@ -126,7 +145,7 @@ const easeTail = `linear(${dash(0)}, ${at(TAIL_STOPS)}, 1)`;
 // the displaced counter. No separate true-ring piece is needed.
 ---
 <svg
-  style={`--la-ease-head-l:${easeHead};--la-ease-tail-l:${easeTail}`}
+  style={`--la-ease-head-l:${easeHead};--la-ease-tail-l:${easeTail}${vars ? ';' + vars : ''}`}
   class={`site-logo site-logo-${variant} site-logo-anim site-logo-anim-${variant} site-logo-anim-trail-${trail} ${autoplay ? 'la-play' : ''} ${className}`.trim()}
   viewBox="-70 -70 1246 1246"
   width={px}
@@ -195,9 +214,11 @@ const easeTail = `linear(${dash(0)}, ${at(TAIL_STOPS)}, 1)`;
   .site-logo-anim .la-trail-layer { opacity: 0; }
 
   .site-logo-anim-hero .la-pieces,
-  .site-logo-anim-hero .la-trail-layer { color: var(--color-primary); }
+  .site-logo-anim-hero .la-trail-layer,
+  .site-logo-anim-plain .la-pieces,
+  .site-logo-anim-plain .la-trail-layer { color: var(--logo-ink, var(--color-primary)); }
   .site-logo-anim-flat .la-pieces,
-  .site-logo-anim-flat .la-trail-layer { color: var(--color-accent); }
+  .site-logo-anim-flat .la-trail-layer { color: var(--logo-ink, var(--color-accent)); }
 
   .site-logo-anim .la-leg,
   .site-logo-anim .la-bar,
@@ -250,21 +271,22 @@ const easeTail = `linear(${dash(0)}, ${at(TAIL_STOPS)}, 1)`;
      its delay and duration from here and nowhere else. Read off the clip frame
      by frame, see design/logo-animation/choreography.md. */
   .site-logo-anim {
-    --la-t-leg-l: 0.24s;    --la-d-leg-l: 0.13s;   /* left leg, foot up to apex */
-    --la-t-leg-r: 0.36s;    --la-d-leg-r: 0.135s;  /* right leg, apex down to foot */
-    --la-t-trail: 0.48s;    --la-d-trail: 0.32s;   /* trail head, foot to hook tip */
-    --la-t-circle: 0.535s;  --la-d-circle: 0.565s; /* thin circle grows */
-    --la-t-thicken: 0.73s;  --la-d-thicken: 0.35s; /* circle thickens to ring weight */
-    --la-t-bar: 0.80s;      --la-d-bar: 0.23s;     /* bar inks in, hook to hook */
-    --la-t-tail: 0.80s;     --la-d-tail: 0.21s;    /* trail retracts, foot to hook tip */
-    --la-t-final: 1.02s;    --la-d-final: 0.08s;   /* final layer fades in */
-    --la-t-pieces: 1.10s;                          /* the drawn pieces switch off */
-    --la-t-treat: 1.04s;    --la-d-treat: 0.26s;   /* hero only: the red outline grows out
+    --la-speed: 1;                                 /* time scale; 2 = twice as fast */
+    --la-t-leg-l: calc(0.24s / var(--la-speed));    --la-d-leg-l: calc(0.13s / var(--la-speed));   /* left leg, foot up to apex */
+    --la-t-leg-r: calc(0.36s / var(--la-speed));    --la-d-leg-r: calc(0.135s / var(--la-speed));  /* right leg, apex down to foot */
+    --la-t-trail: calc(0.48s / var(--la-speed));    --la-d-trail: calc(0.32s / var(--la-speed));   /* trail head, foot to hook tip */
+    --la-t-circle: calc(0.535s / var(--la-speed));  --la-d-circle: calc(0.565s / var(--la-speed)); /* thin circle grows */
+    --la-t-thicken: calc(0.73s / var(--la-speed));  --la-d-thicken: calc(0.35s / var(--la-speed)); /* circle thickens to ring weight */
+    --la-t-bar: calc(0.80s / var(--la-speed));      --la-d-bar: calc(0.23s / var(--la-speed));     /* bar inks in, hook to hook */
+    --la-t-tail: calc(0.80s / var(--la-speed));     --la-d-tail: calc(0.21s / var(--la-speed));    /* trail retracts, foot to hook tip */
+    --la-t-final: calc(1.02s / var(--la-speed));    --la-d-final: calc(0.08s / var(--la-speed));   /* final layer fades in */
+    --la-t-pieces: calc(1.10s / var(--la-speed));                          /* the drawn pieces switch off */
+    --la-t-treat: calc(1.04s / var(--la-speed));    --la-d-treat: calc(0.26s / var(--la-speed));   /* hero only: the red outline grows out
                                                       from under the mark and the blue shadow
                                                       slides to its offset -- the treatment
                                                       SETTLES rather than appearing with the
                                                       cross-fade */
-    --la-t-done: 1.30s;                            /* everything over */
+    --la-t-done: calc(1.30s / var(--la-speed));                            /* everything over */
     --la-trail-weight: 380;                        /* trail="stroke" only: 0.6 of the bar's run */
   }
 

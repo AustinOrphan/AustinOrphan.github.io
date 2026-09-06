@@ -1,19 +1,29 @@
 ---
-// The site mark. One vector, two treatments:
-//   "hero" mirrors the desktop h1 (off-white fill, red outline, blue shadow)
-//   "flat" is a single accent fill, for sizes where the outline goes sub-pixel
+// The site mark. One vector, three treatments:
+//   "hero"  mirrors the desktop h1 (off-white fill, red outline, blue shadow)
+//   "plain" the same off-white fill with neither extra pass
+//   "flat"  a single accent fill, for sizes where the outline goes sub-pixel
+// The three colours are custom properties (--logo-ink / --logo-outline /
+// --logo-shadow) falling back to the theme, so an instance can be recoloured
+// without a second component.
 interface Props {
-  variant?: 'hero' | 'flat';
+  variant?: 'hero' | 'plain' | 'flat';
   size?: number | string;
   class?: string;
+  ink?: string;
+  outline?: string;
+  shadow?: string;
 }
 import { LOGO_MARK_D } from './logo-mark';
 
-const { variant = 'hero', size = 28, class: className = '' } = Astro.props;
+const { variant = 'hero', size = 28, class: className = '', ink, outline, shadow } = Astro.props;
 const px = typeof size === 'number' ? `${size}px` : size;
+const vars = [ink && `--logo-ink:${ink}`, outline && `--logo-outline:${outline}`,
+               shadow && `--logo-shadow:${shadow}`].filter(Boolean).join(';');
 ---
 <svg
   class={`site-logo site-logo-${variant} ${className}`.trim()}
+  style={vars || undefined}
   viewBox="-70 -70 1246 1246"
   width={px}
   height={px}
