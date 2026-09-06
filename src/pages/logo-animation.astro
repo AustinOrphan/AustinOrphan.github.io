@@ -1,0 +1,178 @@
+---
+// Demo route for the animated mark. Not linked from navigation.
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Logo from '../components/Logo.astro';
+import LogoAnimated from '../components/LogoAnimated.astro';
+---
+<BaseLayout title="Logo animation — Austin Orphan" description="The AO mark, written on."
+            bodyClass="logo-anim-demo" robots="noindex, nofollow">
+  <main class="la-demo">
+    <div class="la-demo-row">
+      <figure class="la-demo-cell">
+        <LogoAnimated variant="hero" size="min(480px, 42vw)" id="la-demo" />
+        <figcaption>LogoAnimated</figcaption>
+      </figure>
+      <figure class="la-demo-cell">
+        <Logo variant="hero" size="min(480px, 42vw)" />
+        <figcaption>Logo (static)</figcaption>
+      </figure>
+    </div>
+    <div class="la-demo-controls">
+      <button type="button" class="la-demo-replay" data-la-replay>Replay</button>
+      <label class="la-demo-scrub">
+        <span>Scrub</span>
+        <input type="range" min="0" max="1300" step="1" value="1300" data-la-scrub>
+        <output data-la-time>1.30s</output>
+      </label>
+    </div>
+    <div class="la-demo-row la-demo-small">
+      <LogoAnimated variant="hero" size={44} id="la-demo-s1" />
+      <LogoAnimated variant="flat" size={28} id="la-demo-s2" />
+      <LogoAnimated variant="flat" size={120} id="la-demo-s3" />
+      <span class="la-demo-note">44 / 28 / 120 px</span>
+    </div>
+    <div class="la-demo-row">
+      <figure class="la-demo-cell">
+        <LogoAnimated variant="hero" size="min(300px, 26vw)" id="la-treat-on" class="la-treat-on" />
+        <figcaption>variant="hero" — outline and shadow</figcaption>
+      </figure>
+      <figure class="la-demo-cell">
+        <LogoAnimated variant="plain" size="min(300px, 26vw)" id="la-treat-off" class="la-treat-off" />
+        <figcaption>variant="plain" — neither</figcaption>
+      </figure>
+      <figure class="la-demo-cell">
+        <LogoAnimated variant="flat" size="min(300px, 26vw)" id="la-treat-flat" class="la-treat-flat" />
+        <figcaption>variant="flat" — accent fill</figcaption>
+      </figure>
+    </div>
+    <div class="la-demo-row">
+      <figure class="la-demo-cell">
+        <LogoAnimated variant="hero" size="min(220px, 20vw)" id="la-sp-half" class="la-sp-half" speed={0.5} />
+        <figcaption>speed=0.5 — 2.60s</figcaption>
+      </figure>
+      <figure class="la-demo-cell">
+        <LogoAnimated variant="hero" size="min(220px, 20vw)" id="la-sp-one" class="la-sp-one" />
+        <figcaption>speed=1 — 1.30s</figcaption>
+      </figure>
+      <figure class="la-demo-cell">
+        <LogoAnimated variant="hero" size="min(220px, 20vw)" id="la-sp-two" class="la-sp-two" speed={2} />
+        <figcaption>speed=2 — 0.65s</figcaption>
+      </figure>
+      <figure class="la-demo-cell">
+        <LogoAnimated variant="hero" size="min(220px, 20vw)" id="la-col" class="la-col" ink="#EEE5E9" outline="#2892D7" shadow="#D16666" />
+        <figcaption>ink / outline / shadow swapped</figcaption>
+      </figure>
+    </div>
+    <div class="la-demo-row">
+      <figure class="la-demo-cell">
+        <LogoAnimated variant="hero" size="min(400px, 34vw)" id="la-mode-swash" class="la-mode-swash" trail="swash" />
+        <figcaption>trail="swash" (default)</figcaption>
+      </figure>
+      <figure class="la-demo-cell">
+        <LogoAnimated variant="hero" size="min(400px, 34vw)" id="la-mode-stroke" class="la-mode-stroke" trail="stroke" />
+        <figcaption>trail="stroke" (what the clip draws)</figcaption>
+      </figure>
+    </div>
+  </main>
+</BaseLayout>
+
+<style is:global>
+  .logo-anim-demo {
+    background: var(--color-background);
+    color: var(--color-primary);
+    min-height: 100vh;
+    margin: 0;
+  }
+  .la-demo {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 2rem 1rem 3rem;
+    font-family: 'Comfortaa', sans-serif;
+  }
+  .la-demo-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 3rem;
+  }
+  .la-demo-cell {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .la-demo-cell figcaption {
+    font-size: 0.85rem;
+    opacity: 0.7;
+  }
+  .la-demo-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1.5rem;
+  }
+  .la-demo-replay {
+    font: inherit;
+    font-weight: 700;
+    padding: 0.6rem 1.4rem;
+    border-radius: 999px;
+    border: 2px solid var(--color-accent);
+    background: transparent;
+    color: var(--color-primary);
+    cursor: pointer;
+  }
+  .la-demo-replay:hover { background: var(--color-accent); }
+  .la-demo-scrub {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 0.85rem;
+  }
+  .la-demo-scrub input { width: 16rem; }
+  .la-demo-scrub output {
+    font-variant-numeric: tabular-nums;
+    min-width: 3.5em;
+  }
+  .la-demo-small { gap: 1.5rem; }
+  .la-demo-note { font-size: 0.8rem; opacity: 0.6; }
+</style>
+
+<script>
+  // Replay by re-applying the class that carries the animations. Every
+  // LogoAnimated on the page restarts together.
+  const marks = Array.from(document.querySelectorAll<SVGSVGElement>('.site-logo-anim'));
+  const animationsOf = (el: Element) =>
+    document.getAnimations().filter((a) => {
+      const target = (a.effect as KeyframeEffect | null)?.target;
+      return target instanceof Element && el.contains(target);
+    });
+
+  const replay = () => {
+    for (const m of marks) {
+      m.classList.remove('la-play');
+      void m.getBoundingClientRect();
+      m.classList.add('la-play');
+    }
+  };
+  document.querySelector('[data-la-replay]')?.addEventListener('click', replay);
+  (window as unknown as { __laReplay: () => void }).__laReplay = replay;
+
+  // Scrubber: pause the big mark's animations and seek them. Replay resumes.
+  const scrub = document.querySelector<HTMLInputElement>('[data-la-scrub]');
+  const time = document.querySelector<HTMLOutputElement>('[data-la-time]');
+  const big = marks[0];
+  scrub?.addEventListener('input', () => {
+    if (!big) return;
+    big.classList.add('la-play');
+    const ms = Number(scrub.value);
+    for (const a of animationsOf(big)) {
+      a.pause();
+      a.currentTime = ms;
+    }
+    if (time) time.value = `${(ms / 1000).toFixed(2)}s`;
+  });
+</script>

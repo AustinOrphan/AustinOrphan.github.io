@@ -1,0 +1,397 @@
+---
+// A bench for the animated mark: every prop as a control, plus the three places
+// the logo actually appears on the site rendered at their real sizes.
+//
+// The props are build-time, so each (variant, trail) pair is rendered once and
+// the controls show one and hide the rest. Everything else — size, speed, the
+// three colours — is a custom property or an attribute, so it is set live on
+// the chosen instance. That way the thing on screen is the real component's
+// own output and not a mock-up of it.
+//
+// Not linked from anywhere; noindex.
+import BaseLayout from '../layouts/BaseLayout.astro';
+import LogoAnimated from '../components/LogoAnimated.astro';
+import Hero from '../components/Hero.astro';
+
+const VARIANTS = ['hero', 'plain', 'flat'] as const;
+const TRAILS = ['swash', 'stroke'] as const;
+---
+
+<BaseLayout
+  title="Logo lab — Austin Orphan"
+  description="Knobs for the animated AO mark."
+  bodyClass="logo-lab"
+  robots="noindex, nofollow"
+>
+  <main class="lab">
+    <h1>Logo lab</h1>
+
+    <section class="lab-stage-wrap">
+      <div class="lab-stage" data-stage data-bg="site">
+        {VARIANTS.map((v) => TRAILS.map((t) => (
+          <div class="lab-slot" data-variant={v} data-trail={t} hidden>
+            <LogoAnimated variant={v} trail={t} size={280} autoplay={false} id={`lab-${v}-${t}`} />
+          </div>
+        )))}
+      </div>
+
+      <div class="lab-controls">
+        <fieldset>
+          <legend>variant</legend>
+          {VARIANTS.map((v, i) => (
+            <label><input type="radio" name="variant" value={v} checked={i === 0} /> {v}</label>
+          ))}
+          <p class="lab-hint" data-variant-hint></p>
+        </fieldset>
+
+        <fieldset>
+          <legend>trail</legend>
+          {TRAILS.map((t, i) => (
+            <label><input type="radio" name="trail" value={t} checked={i === 0} /> {t}</label>
+          ))}
+        </fieldset>
+
+        <fieldset>
+          <legend>size</legend>
+          <label class="lab-range">
+            <input type="range" name="size" min="16" max="520" step="1" value="280" />
+            <output data-out="size">280px</output>
+          </label>
+          <div class="lab-presets">
+            <button type="button" data-size="26">26 blog nav</button>
+            <button type="button" data-size="44">44 footer</button>
+            <button type="button" data-size="120">120</button>
+            <button type="button" data-size="280">280</button>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>speed</legend>
+          <label class="lab-range">
+            <input type="range" name="speed" min="0.25" max="4" step="0.05" value="1" />
+            <output data-out="speed">1.00× · 1.30s</output>
+          </label>
+          <div class="lab-presets">
+            <button type="button" data-speed="0.5">0.5</button>
+            <button type="button" data-speed="1">1</button>
+            <button type="button" data-speed="2">2</button>
+            <button type="button" data-speed="3">3</button>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>colour</legend>
+          <label class="lab-colour"><span>ink</span><input type="color" name="ink" value="#EEE5E9" /></label>
+          <label class="lab-colour"><span>outline</span><input type="color" name="outline" value="#D16666" /></label>
+          <label class="lab-colour"><span>shadow</span><input type="color" name="shadow" value="#2892D7" /></label>
+          <div class="lab-presets">
+            <button type="button" data-colours="theme">theme</button>
+            <button type="button" data-colours="swap">swap red/blue</button>
+            <button type="button" data-colours="mono">mono</button>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>ground</legend>
+          <div class="lab-presets">
+            <button type="button" data-bg="site">site</button>
+            <button type="button" data-bg="ink">near-black</button>
+            <button type="button" data-bg="light">light</button>
+            <button type="button" data-bg="accent">accent</button>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>play</legend>
+          <div class="lab-presets">
+            <button type="button" data-play>replay</button>
+            <button type="button" data-pause>pause</button>
+          </div>
+          <label><input type="checkbox" data-loop /> loop</label>
+          <label class="lab-range">
+            <input type="range" name="scrub" min="0" max="1300" step="1" value="1300" />
+            <output data-out="scrub">1.300s</output>
+          </label>
+          <p class="lab-hint">Scrubbing pauses. Replay resumes from the top.</p>
+        </fieldset>
+      </div>
+    </section>
+
+    <section class="lab-situ">
+      <h2>In the places the mark already sits</h2>
+      <p class="lab-hint">
+        Real sizes and real surroundings, so the small ones can be judged where they
+        actually have to work. Each replays on click.
+      </p>
+
+      <figure class="situ situ-nav">
+        <figcaption>blog nav — <code>variant="hero" size=&#123;26&#125;</code></figcaption>
+        <div class="situ-frame">
+          <nav class="blog-site-nav">
+            <a href="#" class="blog-nav-home" data-situ>
+              <LogoAnimated variant="hero" size={26} autoplay={false} id="situ-nav" />Austin Orphan
+            </a>
+            <span class="nav-sep">/</span>
+            <a href="#">Blog</a>
+          </nav>
+        </div>
+      </figure>
+
+      <figure class="situ situ-footer">
+        <figcaption>footer — <code>variant="hero" size=&#123;44&#125;</code></figcaption>
+        <div class="situ-frame">
+          <div class="situ-footer-row">
+            <span data-situ><LogoAnimated variant="hero" size={44} autoplay={false} id="situ-footer" /></span>
+            <span class="situ-dim">© 2026 Austin Orphan</span>
+          </div>
+        </div>
+      </figure>
+
+      <figure class="situ situ-hero">
+        <figcaption>
+          hero backdrop — the <em>real</em> hero (src/components/Hero.astro, the same one
+          index.astro renders), with its backdrop drawn by LogoAnimated
+        </figcaption>
+        <div class="situ-frame situ-hero-frame" data-situ>
+          <Hero>
+            <LogoAnimated slot="backdrop" variant="flat" autoplay={false} id="situ-hero" />
+          </Hero>
+        </div>
+        <p class="lab-hint">
+          The backdrop is forced visible here. On the live page it is opacity 0 for the whole
+          write-on — the draw finishes about a second before anything shows — so using it there
+          needs the play triggered on reveal rather than on load.
+        </p>
+      </figure>
+    </section>
+  </main>
+</BaseLayout>
+
+<style is:global>
+  .logo-lab { background: var(--color-background); color: var(--color-primary); }
+  .lab { max-width: 1180px; margin: 0 auto; padding: 84px 24px 96px; }
+  /* Direct children only: the in-situ panel renders the real hero, whose own h1 is
+     styled by the bare `h1` rule in global.css. A descendant selector here outranks
+     it and shrank the wordmark to 24px. */
+  .lab > h1 { font-size: 1.5rem; margin: 0 0 24px; letter-spacing: 0.02em; }
+  .lab > section > h2, .lab > h2 { font-size: 1.1rem; margin: 56px 0 8px; }
+  .lab-hint { color: rgba(var(--color-primary-rgb), 0.55); font-size: 0.82rem; margin: 6px 0 0; }
+
+  .lab-stage-wrap { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 28px; align-items: start; }
+  @media (max-width: 900px) { .lab-stage-wrap { grid-template-columns: 1fr; } }
+
+  .lab-stage {
+    display: grid; place-items: center; min-height: 560px; border-radius: 10px;
+    border: 1px solid rgba(var(--color-primary-rgb), 0.12); overflow: hidden;
+  }
+  .lab-stage[data-bg="site"]   { background: var(--color-background); }
+  .lab-stage[data-bg="ink"]    { background: #0b1116; }
+  .lab-stage[data-bg="light"]  { background: #EEE5E9; }
+  .lab-stage[data-bg="accent"] { background: var(--color-accent); }
+  .lab-slot[hidden] { display: none; }
+
+  .lab-controls { display: grid; gap: 14px; }
+  .lab-controls fieldset {
+    border: 1px solid rgba(var(--color-primary-rgb), 0.14); border-radius: 8px;
+    padding: 10px 12px 12px; margin: 0; display: grid; gap: 8px;
+  }
+  .lab-controls legend { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em;
+    color: rgba(var(--color-primary-rgb), 0.55); padding: 0 4px; }
+  .lab-controls label { display: flex; align-items: center; gap: 8px; font-size: 0.86rem; }
+  .lab-range { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; }
+  .lab-range input[type="range"] { width: 100%; }
+  .lab-range output { font-family: ui-monospace, monospace; font-size: 0.76rem;
+    color: rgba(var(--color-primary-rgb), 0.7); min-width: 8ch; text-align: right; }
+  .lab-colour { justify-content: space-between; }
+  .lab-colour input[type="color"] { width: 46px; height: 24px; padding: 0; border: 0; background: none; }
+  .lab-presets { display: flex; flex-wrap: wrap; gap: 6px; }
+  .lab-presets button {
+    font: inherit; font-size: 0.76rem; padding: 3px 9px; border-radius: 999px; cursor: pointer;
+    color: var(--color-primary); background: transparent;
+    border: 1px solid rgba(var(--color-primary-rgb), 0.28);
+  }
+  .lab-presets button:hover { border-color: var(--color-accent); color: var(--color-accent); }
+
+  .situ { margin: 22px 0 0; }
+  .situ figcaption { font-size: 0.8rem; color: rgba(var(--color-primary-rgb), 0.6); margin-bottom: 6px; }
+  .situ code { font-size: 0.76rem; color: rgba(var(--color-primary-rgb), 0.8); }
+  .situ-frame {
+    border: 1px solid rgba(var(--color-primary-rgb), 0.12); border-radius: 8px;
+    background: var(--color-background); padding: 14px 18px; cursor: pointer;
+    position: relative;
+  }
+  /* The real .blog-site-nav is position:fixed, so dropped in here it escapes the
+     frame and pins itself to the top of the lab. Everything else about it is left
+     alone -- the point is to judge the 26px mark against the nav's own type and
+     spacing, not a re-creation of them. */
+  .situ-frame .blog-site-nav {
+    position: static; padding: 0; border-bottom: 0; background: none; z-index: auto;
+  }
+  .situ-footer-row { display: flex; align-items: center; gap: 16px; }
+  .situ-dim { color: rgba(var(--color-primary-rgb), 0.5); font-size: 0.82rem; }
+  /* The real hero is full-height and its backdrop is revealed by index.astro's own
+     scroll handler, which does not run here — so it is forced visible and the section
+     is scaled down to sit in a panel. Everything else is the hero's own CSS. */
+  .situ-hero-frame { padding: 0; overflow: hidden; position: relative; }
+  .situ-hero-frame .hero-section { min-height: 0; height: 78vh; }
+  .situ-hero-frame .scroll-indicator { display: none; }
+  /* Three things the real page does with script or chrome that the panel has to
+     stand in for. None of them touch the mark itself, which is the thing being
+     judged here; they are called out so the panel is not mistaken for the live
+     page's behaviour.
+       1. index.astro's own script writes style.animation on the h1 and #cbar to
+          reveal them; global.css holds both at opacity 0 until it does.
+       2. the backdrop is revealed by that same script, and stays at opacity 0
+          through the whole write-on on the live page (see the note above).
+       3. #linkBar is position:fixed, so inside a panel it pins itself to the
+          viewport instead of sitting in the hero. */
+  .situ-hero-frame .hero-section h1,
+  .situ-hero-frame .hero-section #cbar { opacity: 1; }
+  .situ-hero-frame .hero-logo-backdrop { opacity: 0.34; }
+  .situ-hero-frame #linkBar { position: static; margin-top: 28px; opacity: 1; transform: none; }
+</style>
+
+<script>
+  // The stage holds one rendered instance per (variant, trail); the controls reveal one.
+  // Size, speed and the three colours are set on the SVG itself, not on a wrapper:
+  // LogoAnimated declares --la-speed on .site-logo-anim, and a declaration on the element
+  // beats a value inherited from an ancestor, so setting it on a parent would do nothing.
+  const stage = document.querySelector<HTMLElement>('[data-stage]')!;
+  const slots = [...stage.querySelectorAll<HTMLElement>('.lab-slot')];
+  const svgs = slots.map((s) => s.querySelector<SVGSVGElement>('svg')!);
+  const $ = <T extends Element>(sel: string) => document.querySelector<T>(sel)!;
+  const out = (name: string) => $<HTMLOutputElement>(`[data-out="${name}"]`);
+
+  const HINT: Record<string, string> = {
+    hero: 'off-white ink, red outline, blue offset — the treatment settles in after the draw (1.30s)',
+    plain: 'the same ink, neither extra pass (1.10s)',
+    flat: 'a single accent fill, for sizes where an outline goes sub-pixel (1.10s)',
+  };
+
+  const state = {
+    variant: 'hero', trail: 'swash', size: 280, speed: 1,
+    ink: '', outline: '', shadow: '', loop: false,
+  };
+
+  const currentSvg = () => {
+    const i = slots.findIndex((s) => s.dataset.variant === state.variant && s.dataset.trail === state.trail);
+    return svgs[i];
+  };
+  const totalMs = () => Math.round((state.variant === 'hero' ? 1300 : 1100) / state.speed);
+
+  function apply() {
+    slots.forEach((s) => {
+      s.hidden = !(s.dataset.variant === state.variant && s.dataset.trail === state.trail);
+    });
+    for (const svg of svgs) {
+      svg.style.width = `${state.size}px`;
+      svg.style.height = `${state.size}px`;
+      svg.style.setProperty('--la-speed', String(state.speed));
+      for (const [k, v] of Object.entries({ ink: state.ink, outline: state.outline, shadow: state.shadow })) {
+        if (v) svg.style.setProperty(`--logo-${k}`, v);
+        else svg.style.removeProperty(`--logo-${k}`);
+      }
+    }
+    out('size').value = `${state.size}px`;
+    out('speed').value = `${state.speed.toFixed(2)}× · ${(totalMs() / 1000).toFixed(2)}s`;
+    $<HTMLElement>('[data-variant-hint]').textContent = HINT[state.variant];
+    const scrub = $<HTMLInputElement>('input[name="scrub"]');
+    scrub.max = String(totalMs());
+    scrub.value = scrub.max;
+    out('scrub').value = `${(totalMs() / 1000).toFixed(3)}s`;
+  }
+
+  function play(svg: SVGSVGElement) {
+    svg.classList.remove('la-play');
+    void svg.getBoundingClientRect();                       // force the restart
+    svg.classList.add('la-play');
+  }
+
+  function pause() {
+    for (const a of currentSvg().getAnimations({ subtree: true })) a.pause();
+  }
+
+  $<HTMLElement>('[data-play]').addEventListener('click', () => play(currentSvg()));
+  $<HTMLElement>('[data-pause]').addEventListener('click', pause);
+  $<HTMLInputElement>('[data-loop]').addEventListener('change', (e) => {
+    state.loop = (e.target as HTMLInputElement).checked;
+    if (state.loop) play(currentSvg());
+  });
+
+  // Looping: the component drops la-play once every animation has finished, which is
+  // exactly the moment to start again.
+  for (const svg of svgs) {
+    svg.addEventListener('animationend', () => {
+      if (!state.loop || svg !== currentSvg()) return;
+      if (svg.getAnimations({ subtree: true }).every((a) => a.playState === 'finished')) {
+        setTimeout(() => { if (state.loop) play(svg); }, 260);
+      }
+    });
+  }
+
+  for (const r of document.querySelectorAll<HTMLInputElement>('input[name="variant"]')) {
+    r.addEventListener('change', () => { state.variant = r.value; apply(); play(currentSvg()); });
+  }
+  for (const r of document.querySelectorAll<HTMLInputElement>('input[name="trail"]')) {
+    r.addEventListener('change', () => { state.trail = r.value; apply(); play(currentSvg()); });
+  }
+  $<HTMLInputElement>('input[name="size"]').addEventListener('input', (e) => {
+    state.size = Number((e.target as HTMLInputElement).value); apply();
+  });
+  $<HTMLInputElement>('input[name="speed"]').addEventListener('input', (e) => {
+    state.speed = Number((e.target as HTMLInputElement).value); apply();
+  });
+  $<HTMLInputElement>('input[name="scrub"]').addEventListener('input', (e) => {
+    const svg = currentSvg();
+    if (!svg.classList.contains('la-play')) play(svg);
+    const ms = Number((e.target as HTMLInputElement).value);
+    for (const a of svg.getAnimations({ subtree: true })) { a.pause(); a.currentTime = ms; }
+    out('scrub').value = `${(ms / 1000).toFixed(3)}s`;
+  });
+  for (const name of ['ink', 'outline', 'shadow'] as const) {
+    $<HTMLInputElement>(`input[name="${name}"]`).addEventListener('input', (e) => {
+      state[name] = (e.target as HTMLInputElement).value; apply();
+    });
+  }
+  for (const b of document.querySelectorAll<HTMLButtonElement>('[data-size]')) {
+    b.addEventListener('click', () => {
+      state.size = Number(b.dataset.size);
+      $<HTMLInputElement>('input[name="size"]').value = String(state.size); apply();
+    });
+  }
+  for (const b of document.querySelectorAll<HTMLButtonElement>('[data-speed]')) {
+    b.addEventListener('click', () => {
+      state.speed = Number(b.dataset.speed);
+      $<HTMLInputElement>('input[name="speed"]').value = String(state.speed);
+      apply(); play(currentSvg());
+    });
+  }
+  const PALETTES: Record<string, [string, string, string]> = {
+    theme: ['', '', ''],
+    swap: ['#EEE5E9', '#2892D7', '#D16666'],
+    mono: ['#EEE5E9', '#8fa0ad', '#4a5c6a'],
+  };
+  for (const b of document.querySelectorAll<HTMLButtonElement>('[data-colours]')) {
+    b.addEventListener('click', () => {
+      const [i, o, s] = PALETTES[b.dataset.colours!];
+      state.ink = i; state.outline = o; state.shadow = s;
+      if (i) $<HTMLInputElement>('input[name="ink"]').value = i;
+      if (o) $<HTMLInputElement>('input[name="outline"]').value = o;
+      if (s) $<HTMLInputElement>('input[name="shadow"]').value = s;
+      apply();
+    });
+  }
+  for (const b of document.querySelectorAll<HTMLButtonElement>('[data-bg]')) {
+    b.addEventListener('click', () => { stage.dataset.bg = b.dataset.bg!; });
+  }
+
+  // The in-situ panels replay on click, at their own real sizes.
+  for (const holder of document.querySelectorAll<HTMLElement>('[data-situ]')) {
+    const svg = holder.querySelector<SVGSVGElement>('svg')!;
+    const frame = holder.closest('.situ-frame') ?? holder;
+    frame.addEventListener('click', (e) => { e.preventDefault(); play(svg); });
+  }
+
+  apply();
+  play(currentSvg());
+</script>
