@@ -1,0 +1,59 @@
+---
+// The hero, lifted out of index.astro unchanged so it has exactly one definition.
+// /logo-lab renders this same component to judge the animated mark against the
+// real wordmark, link bar and backdrop sizing, rather than against a mock-up of
+// them that would drift the first time the hero changed.
+//
+// The body below is master's own hero block, copied verbatim and dedented; the
+// only edit is the backdrop.
+//
+// The backdrop is a SLOT, not a prop, and deliberately: importing LogoAnimated
+// here would put its stylesheet on the homepage even with the animated version
+// switched off, because Astro ships a component's CSS once it is imported and
+// not only when it renders. Caught by diffing dist/index.html before and after
+// the extraction -- the only change was an extra <link> to LogoAnimated's css.
+// With a slot the homepage's output is byte for byte what it was.
+import Logo from './Logo.astro';
+import ProjectsMenu from './ProjectsMenu.astro';
+---
+<section id="hero" class="hero-section">
+  <div class="hero-logo-backdrop" aria-hidden="true">
+    <slot name="backdrop"><Logo variant="flat" /></slot>
+  </div>
+  <div class="page-wrapper">
+    <div class="content-wrapper">
+      <h1 data-particle-target>Austin Orphan</h1>
+      <p id="cbar">
+        Creative <span class="divider"> | </span>Competitive <span class="divider"> | </span> Curious
+      </p>
+      <div id="linkBar">
+        <a href="https://github.com/austinorphan" target="_blank" rel="noopener noreferrer" aria-label="GitHub Profile">
+          <i class="icon ph-duotone ph-github-logo"></i>
+        </a>
+        <a href="https://www.linkedin.com/in/austinorphan/" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn Profile">
+          <i class="icon ph-duotone ph-linkedin-logo"></i>
+        </a>
+        <a href="/AustinOrphanResume.pdf" download aria-label="Download Resume">
+          <i class="icon ph-duotone ph-read-cv-logo"></i>
+        </a>
+        <!-- Goes to the contact form, not to a mailto:. The section nav's
+             envelope reveals on the first pixel of scroll and sits on screen
+             alongside this bar; when one was a mailto: and the other an
+             anchor, two envelope glyphs a few hundred pixels apart meant
+             different things. They agree now. -->
+        <a href="#contact" aria-label="Go to contact form">
+          <i class="icon ph-duotone ph-envelope-simple"></i>
+        </a>
+        <a href="/blog/" aria-label="Blog">
+          <i class="icon ph-duotone ph-book-open-text"></i>
+        </a>
+        <ProjectsMenu />
+      </div>
+    </div>
+    <div class="scroll-indicator">
+      <a href="#about" aria-label="Scroll to About">
+        <i class="ph-duotone ph-arrow-down"></i>
+      </a>
+    </div>
+  </div>
+</section>
