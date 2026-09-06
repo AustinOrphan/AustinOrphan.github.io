@@ -1,0 +1,106 @@
+name: Publish resume
+
+# Manual only, deliberately. The resume is authored as a live Google Doc, so a
+# schedule would publish whatever state it happens to be in at the time,
+# including mid-edit. Running this workflow IS the publish gate: the version on
+# the site is the version you last pressed the button for.
+#
+# Setup, once:
+#   1. Share the Doc with "anyone with the link" (it is already public as a PDF
+#      on the site, so this gives nothing away).
+#   2. Add the Doc id as a repository secret named RESUME_DOC_ID. It is in the
+#      URL: docs.google.com/document/d/<THIS>/edit
+#      A secret rather than a variable only so the public repo does not
+#      advertise a link to the editable document.
+on:
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'What changed (goes in the commit message)'
+        required: false
+        default: 'Refresh from Google Docs'
+      dry_run:
+        description: 'Fetch and check, but do not commit'
+        type: boolean
+        default: false
+
+# Needed to push the refreshed PDF back to master, which is what triggers the
+# deploy workflow.
+permissions:
+  contents: write
+
+concurrency:
+  group: publish-resume
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Install pdftotext
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq poppler-utils
+
+      - name: Fetch the current export
+        env:
+          DOC_ID: ${{ secrets.RESUME_DOC_ID }}
+        run: |
+          set -euo pipefail
+          if [ -z "${DOC_ID}" ]; then
+            echo "::error::RESUME_DOC_ID is not set. See the comment at the top of this workflow."
+            exit 1
+          fi
+          # --fail is deliberately NOT used: Google answers 200 with an HTML
+          # sign-in page when sharing has drifted, so the status code proves
+          # nothing and the real check is on the bytes, below.
+          code=$(curl -sSL --max-time 60 -w '%{http_code}' -o resume.new.pdf \
+            "https://docs.google.com/document/d/${DOC_ID}/export?format=pdf")
+          echo "HTTP ${code}"
+          if [ "${code}" != "200" ]; then
+            echo "::error::Export returned HTTP ${code}"
+            exit 1
+          fi
+
+      - name: Check it is really the resume
+        env:
+          # Keep in step with the address in src/layouts/BaseLayout.astro and
+          # src/components/Contact.astro. The point of asserting it here is
+          # that the site and the downloadable file cannot drift apart.
+          EXPECT_EMAIL: austin@austinorphan.com
+        run: node scripts/check-resume-pdf.mjs resume.new.pdf --expect-email "$EXPECT_EMAIL"
+
+      - name: Commit if it changed
+        if: ${{ !inputs.dry_run }}
+        env:
+          # Via the environment, never interpolated into the script: a
+          # workflow input is untrusted text and ${{ }} inside run: is a
+          # shell-injection seam.
+          REASON: ${{ inputs.reason }}
+        run: |
+          set -euo pipefail
+          if cmp -s resume.new.pdf public/AustinOrphanResume.pdf; then
+            echo "Identical to the committed copy; nothing to do."
+            exit 0
+          fi
+          mv resume.new.pdf public/AustinOrphanResume.pdf
+          git config user.name  'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add public/AustinOrphanResume.pdf
+          git commit -m 'chore(resume): refresh from Google Docs' -m "${REASON}"
+          git push
+          echo "Pushed. The deploy workflow picks it up from here."
+
+      - name: Report a dry run
+        if: ${{ inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          if cmp -s resume.new.pdf public/AustinOrphanResume.pdf; then
+            echo "Dry run: identical to the committed copy."
+          else
+            echo "Dry run: the export differs from the committed copy and would be pushed."
+          fi
