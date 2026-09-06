@@ -139,10 +139,12 @@ const at = (list: [number, number][]) => list.map(([f, pct]) => `${dash(f)} ${pc
 const easeHead = `linear(${dash(0)}, ${at(HEAD_STOPS)}, ${trail === 'swash' ? 1 : dash(1)})`;
 const easeTail = `linear(${dash(0)}, ${at(TAIL_STOPS)}, 1)`;
 
-// The ring is a plain circle while animating: it grows as a hairline about the
-// outer circle's centre (5523.1, 5424.9), thickens to the ring's mean weight
-// (390) at the centre-line radius 4038, and the final layer's fade-in brings
-// the displaced counter. No separate true-ring piece is needed.
+// The ring grows as its OWN geometry: a hairline about the outer circle's centre
+// (5523.1, 5424.9) that thickens into the real ring -- outer circle plus the counter R1
+// displaces 233 units at 45.08 deg -- landing on it exactly, so the final layer's fade-in
+// has nothing left to change. It used to be a stroked circle, whose counter is concentric
+// and whose weight is uniform; that ended on the right outer edge and the right AVERAGE
+// inner edge, so the counter jumped and the 157-to-623 modulation appeared at the cross-fade.
 ---
 <svg
   style={`--la-ease-head-l:${easeHead};--la-ease-tail-l:${easeTail}${vars ? ';' + vars : ''}`}
@@ -155,6 +157,13 @@ const easeTail = `linear(${dash(0)}, ${at(TAIL_STOPS)}, 1)`;
   focusable="false"
 >
   <defs>
+    <!-- The O. Two circles in a MASK, not two filled siblings: fill-rule subtracts within one
+         path, not across a group, so as siblings they simply both filled and the ring came out
+         a solid disc. White grows the outer edge, black cuts the counter. -->
+    <mask id={`${uid}-o`} maskUnits="userSpaceOnUse" x="1000" y="900" width="9100" height="9100">
+      <circle class="la-ring-out" cx="5523.1" cy="5424.9" r="0" fill="#fff" />
+      <circle class="la-ring-in" cx="5523.1" cy="5424.9" r="0" fill="#000" />
+    </mask>
     <mask id={`${uid}-l`} maskUnits="userSpaceOnUse" x="-600" y="-600" width="13000" height="13000">
       <path class="la-mask la-leg-l" d={LEG_L} pathLength="1" stroke-width={LEG_L_W} />
     </mask>
@@ -182,7 +191,7 @@ const easeTail = `linear(${dash(0)}, ${at(TAIL_STOPS)}, 1)`;
   </g>
 
   <g class="la-pieces" transform="translate(0,1084) scale(0.1,-0.1)">
-    <circle class="la-circle" cx="5523.1" cy="5424.9" r="0" />
+    <rect class="la-ring" x="1000" y="900" width="9100" height="9100" mask={`url(#${uid}-o)`} />
     <path class="la-leg" d={LEG_L_QUAD} mask={`url(#${uid}-l)`} />
     <path class="la-leg" d={LEG_R_QUAD} mask={`url(#${uid}-r)`} />
     <path class="la-bar" d={BAR} mask={`url(#${uid}-b)`} />
@@ -223,12 +232,14 @@ const easeTail = `linear(${dash(0)}, ${at(TAIL_STOPS)}, 1)`;
   .site-logo-anim .la-leg,
   .site-logo-anim .la-bar,
   .site-logo-anim .la-trail-swash { fill: currentColor; }
-  .site-logo-anim .la-trail-line,
-  .site-logo-anim .la-circle {
+  .site-logo-anim .la-trail-line {
     fill: none;
     stroke: currentColor;
     stroke-linecap: round;
   }
+  /* The ring is a filled rect seen through its own mask, not a stroked circle: a stroke's
+     counter is concentric, and this one is displaced. */
+  .site-logo-anim .la-ring { fill: currentColor; }
 
   .site-logo-anim .la-mask {
     fill: none;
@@ -265,7 +276,6 @@ const easeTail = `linear(${dash(0)}, ${at(TAIL_STOPS)}, 1)`;
     stroke-dasharray: 0 2;
     stroke-dashoffset: 0;
   }
-  .site-logo-anim .la-circle { stroke-width: 60; }
 
   /* THE TIMELINE. Seconds from the start of play; every animation below takes
      its delay and duration from here and nowhere else. Read off the clip frame
@@ -276,7 +286,8 @@ const easeTail = `linear(${dash(0)}, ${at(TAIL_STOPS)}, 1)`;
     --la-t-leg-r: calc(0.36s / var(--la-speed));    --la-d-leg-r: calc(0.135s / var(--la-speed));  /* right leg, apex down to foot */
     --la-t-trail: calc(0.48s / var(--la-speed));    --la-d-trail: calc(0.32s / var(--la-speed));   /* trail head, foot to hook tip */
     --la-t-circle: calc(0.535s / var(--la-speed));  --la-d-circle: calc(0.565s / var(--la-speed)); /* thin circle grows */
-    --la-t-thicken: calc(0.73s / var(--la-speed));  --la-d-thicken: calc(0.35s / var(--la-speed)); /* circle thickens to ring weight */
+    /* the circle's thicken beat is baked into la-ring-in's stops (34.5%-96.5% of the
+       circle's own window), so it no longer needs its own delay and duration */
     --la-t-bar: calc(0.80s / var(--la-speed));      --la-d-bar: calc(0.23s / var(--la-speed));     /* bar inks in, hook to hook */
     --la-t-tail: calc(0.80s / var(--la-speed));     --la-d-tail: calc(0.21s / var(--la-speed));    /* trail retracts, foot to hook tip */
     --la-t-final: calc(1.02s / var(--la-speed));    --la-d-final: calc(0.08s / var(--la-speed));   /* final layer fades in */
@@ -350,19 +361,66 @@ const easeTail = `linear(${dash(0)}, ${at(TAIL_STOPS)}, 1)`;
       animation: la-outline var(--la-d-treat) var(--la-ease-grow) var(--la-t-treat) forwards;
     }
     .la-play .la-bar-m { animation: la-draw var(--la-d-bar) var(--la-ease-bar) var(--la-t-bar) forwards; }
-    .la-play .la-circle {
-      animation:
-        la-grow var(--la-d-circle) var(--la-ease-grow) var(--la-t-circle) forwards,
-        la-thicken var(--la-d-thicken) linear var(--la-t-thicken) forwards;
-    }
+    /* Linear timing on purpose: ease-grow's stops are baked into the keyframe values so the
+       two circles share one progress. See the keyframes. */
+    .la-play .la-ring-out { animation: la-ring-out var(--la-d-circle) linear var(--la-t-circle) forwards; }
+    .la-play .la-ring-in  { animation: la-ring-in  var(--la-d-circle) linear var(--la-t-circle) forwards; }
   }
 
   @keyframes la-draw { to { stroke-dashoffset: 0; } }
   @keyframes la-fade { to { opacity: 0; } }
   @keyframes la-show { to { opacity: 1; } }
   @keyframes la-hide { from { opacity: 1; } to { opacity: 0; } }
-  @keyframes la-grow { from { r: 0px; } to { r: 4038px; } }
-  @keyframes la-thicken { from { stroke-width: 60px; } to { stroke-width: 390px; } }
+  /* GENERATED. The O is drawn as its REAL ring -- outer circle plus the counter, which R1
+     DISPLACES by 233 units at 45.08 deg -- not as a stroked circle, whose counter is
+     concentric and whose weight is uniform.
+     The inner circle's radius is DERIVED from the outer's, outer - band, rather than
+     interpolated beside it: interpolating it independently while the outer followed
+     ease-grow (which decelerates) made the inner lag, and the band bulged to 568 units
+     mid-growth against the ring's own 390 before closing back. The band now goes 60 ->
+     390 and nothing else.
+     Linear timing with ease-grow's stops baked into the values: a shared easing is applied
+     per-interval, and these two need different stop counts, so they would drift. */
+  @keyframes la-ring-out {
+    0% { cx: 5523.1px; cy: 5424.9px; r: 0.0px; }
+    17.5% { cx: 5523.1px; cy: 5424.9px; r: 889.0px; }
+    23% { cx: 5523.1px; cy: 5424.9px; r: 1227.7px; }
+    29% { cx: 5523.1px; cy: 5424.9px; r: 1566.4px; }
+    34.513% { cx: 5523.1px; cy: 5424.9px; r: 1838.7px; }
+    35% { cx: 5523.1px; cy: 5424.9px; r: 1862.7px; }
+    41% { cx: 5523.1px; cy: 5424.9px; r: 2286.1px; }
+    47% { cx: 5523.1px; cy: 5424.9px; r: 2540.1px; }
+    53% { cx: 5523.1px; cy: 5424.9px; r: 2857.6px; }
+    59% { cx: 5523.1px; cy: 5424.9px; r: 3090.5px; }
+    65% { cx: 5523.1px; cy: 5424.9px; r: 3386.8px; }
+    71% { cx: 5523.1px; cy: 5424.9px; r: 3598.5px; }
+    77% { cx: 5523.1px; cy: 5424.9px; r: 3810.2px; }
+    82% { cx: 5523.1px; cy: 5424.9px; r: 3979.5px; }
+    88% { cx: 5523.1px; cy: 5424.9px; r: 4106.5px; }
+    94% { cx: 5523.1px; cy: 5424.9px; r: 4191.2px; }
+    96.46% { cx: 5523.1px; cy: 5424.9px; r: 4208.5px; }
+    100% { cx: 5523.1px; cy: 5424.9px; r: 4233.5px; }
+  }
+  @keyframes la-ring-in {
+    0% { cx: 5523.1px; cy: 5424.9px; r: 0.0px; }
+    17.5% { cx: 5523.1px; cy: 5424.9px; r: 829.0px; }
+    23% { cx: 5523.1px; cy: 5424.9px; r: 1167.7px; }
+    29% { cx: 5523.1px; cy: 5424.9px; r: 1506.4px; }
+    34.513% { cx: 5523.1px; cy: 5424.9px; r: 1778.7px; }
+    35% { cx: 5524.4px; cy: 5426.2px; r: 1800.2px; }
+    41% { cx: 5540.4px; cy: 5442.2px; r: 2191.5px; }
+    47% { cx: 5556.3px; cy: 5458.2px; r: 2413.5px; }
+    53% { cx: 5572.3px; cy: 5474.2px; r: 2699.1px; }
+    59% { cx: 5588.2px; cy: 5490.2px; r: 2899.9px; }
+    65% { cx: 5604.2px; cy: 5506.2px; r: 3164.3px; }
+    71% { cx: 5620.1px; cy: 5522.1px; r: 3344.0px; }
+    77% { cx: 5636.1px; cy: 5538.1px; r: 3523.6px; }
+    82% { cx: 5649.4px; cy: 5551.5px; r: 3666.3px; }
+    88% { cx: 5665.3px; cy: 5567.5px; r: 3761.3px; }
+    94% { cx: 5681.3px; cy: 5583.5px; r: 3814.0px; }
+    96.46% { cx: 5687.8px; cy: 5590.0px; r: 3818.3px; }
+    100% { cx: 5687.8px; cy: 5590.0px; r: 3843.2px; }
+  }
   /* The offsets Logo.astro sets as attributes; the keyframes must LAND on them exactly, or
      the resting render stops matching Logo's. translate is origin-independent, so no
      transform-box/transform-origin is needed on the SVG group. */
