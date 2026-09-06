@@ -1,7 +1,7 @@
 ---
 import Logo from '../../components/Logo.astro';
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import BlogFooter from '../../components/BlogFooter.astro';
+import Footer from '../../components/Footer.astro';
 import { getCollection } from 'astro:content';
 import { getReadingTime } from '../../utils/reading-time';
 
@@ -42,5 +42,5 @@ const posts = allPosts.sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.
 
     <a href="/rss.xml" class="rss-link">↗ RSS feed</a>
   </div>
-  <BlogFooter />
+  <Footer variant="static" />
 </BaseLayout>
