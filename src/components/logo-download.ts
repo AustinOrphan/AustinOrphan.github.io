@@ -214,8 +214,25 @@ export function animationDuration(svg: SVGSVGElement): number {
   return end;
 }
 
+/**
+ * When the write-on stops drawing and the finished mark takes over, in ms.
+ *
+ * Read off the final layer's own fade-in rather than assumed, so it follows --la-speed and
+ * any future retiming.
+ */
+function handOffAt(svg: SVGSVGElement, anims: Animation[]): number {
+  const fin = svg.querySelector('.la-final');
+  for (const a of anims) {
+    const eff = a.effect;
+    if (!(eff instanceof KeyframeEffect) || eff.target !== fin) continue;
+    return Number(eff.getComputedTiming().delay || 0);
+  }
+  return Infinity;
+}
+
 /** A still SVG of this instant, with the animated values written in. */
-function frameAt(svg: SVGSVGElement, anims: Animation[], ms: number, size: number): string {
+function frameAt(svg: SVGSVGElement, anims: Animation[], ms: number, size: number,
+                 handOff: number): string {
   for (const a of anims) a.currentTime = ms;
   const clone = svg.cloneNode(true) as SVGSVGElement;
   bake(svg, clone);
@@ -230,7 +247,11 @@ function frameAt(svg: SVGSVGElement, anims: Animation[], ms: number, size: numbe
   const fin = clone.querySelector<SVGElement>('.la-final');
   const pieces = clone.querySelector<SVGElement>('.la-pieces');
   if (fin && pieces) {
-    const handed = parseFloat(getComputedStyle(svg.querySelector('.la-final') as Element).opacity) >= 0.5;
+    // At the hand-off exactly, not at the fade's midpoint: the drawn pieces are finished but
+    // still an approximation, and holding them for the fade's first half showed their ring
+    // meeting the circle short and their leg points blunt -- for 80ms live, but twice that at
+    // half speed, which is long enough to read.
+    const handed = ms >= handOff;
     fin.style.opacity = handed ? '1' : '0';
     pieces.style.opacity = handed ? '0' : '1';
   }
@@ -301,8 +322,9 @@ export async function recordVideo(svg: SVGSVGElement, opts: VideoOptions = {}): 
   // bake every frame up front: rasterising is far slower than the frame interval
   const frames: HTMLImageElement[] = [];
   for (const a of anims) a.pause();
+  const handOff = handOffAt(svg, anims);
   for (let i = 0; i < count; i++) {
-    frames.push(await load(frameAt(svg, anims, (i / (count - 1)) * total, size)));
+    frames.push(await load(frameAt(svg, anims, (i / (count - 1)) * total, size, handOff)));
     onProgress?.(i + 1, count);
   }
 
@@ -311,8 +333,12 @@ export async function recordVideo(svg: SVGSVGElement, opts: VideoOptions = {}): 
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('no 2d context');
 
-  const stream = canvas.captureStream(0);
-  const track = stream.getVideoTracks()[0] as CanvasCaptureMediaStreamTrack;
+  // Let the browser SAMPLE the canvas at fps rather than pushing frames at it. Driving a
+  // zero-fps stream with requestFrame() outran the encoder and it silently dropped 11 of 82
+  // frames, which both shortened the clip and moved every timestamp off the moment of the
+  // choreography it was supposed to hold. Sampling makes the recorder's clock the one that
+  // matters, and a repaint that is late is merely sampled twice instead of lost.
+  const stream = canvas.captureStream(fps);
   const chunks: Blob[] = [];
   const rec = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: bitrate });
   rec.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
@@ -320,13 +346,25 @@ export async function recordVideo(svg: SVGSVGElement, opts: VideoOptions = {}): 
   rec.start();
 
   const step = (1000 / fps) * slow;
-  for (const img of frames) {
+  const runFor = step * frames.length;
+  const paint = (img: HTMLImageElement) => {
     ctx.clearRect(0, 0, size, size);
     if (background) { ctx.fillStyle = background; ctx.fillRect(0, 0, size, size); }
     ctx.drawImage(img, 0, 0, size, size);
-    track.requestFrame();
-    await new Promise((r) => setTimeout(r, step));
-  }
+  };
+  paint(frames[0]);
+  await new Promise<void>((resolve) => {
+    const t0 = performance.now();
+    let last = -1;
+    const tick = () => {
+      const elapsed = performance.now() - t0;
+      const i = Math.min(frames.length - 1, Math.floor(elapsed / step));
+      if (i !== last) { paint(frames[i]); last = i; }
+      if (elapsed >= runFor) { resolve(); return; }
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  });
   rec.stop();
   await done;
 
