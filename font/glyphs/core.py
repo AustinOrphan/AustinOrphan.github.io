@@ -36,6 +36,7 @@ HERE = os.path.dirname(os.path.abspath(__file__)); FONT = os.path.dirname(HERE)
 sys.path.insert(0, os.path.join(FONT, 'lib'))
 from pen import *
 from metrics import *
+import rules   # for RING_W / RING_OFF, so the O follows the weight and contrast knobs
 
 SRC = json.load(open(os.path.join(FONT, 'source', 'ai_objects.json')))['AO'][0]
 OBJ = {o['role']: o for o in SRC['objects']}
@@ -178,16 +179,31 @@ def _ring_tails(vertices, width_end):
     return out
 
 def build_O():
+    """The mark's ring.
+
+    Its counter is DERIVED, not transcribed. The traced ring is exactly two circles -- outer
+    360.000 and inner 326.813, which is 360 - RING_W, displaced by exactly RING_OFF -- so
+    r_in = r_out - RING_W reproduces the source to the last bit at the mark's own numbers and,
+    unlike the traced value, follows the WEIGHT and PUSH knobs. Transcribing it left the O
+    frozen while every other glyph moved: on the weight axis the whole face thickened around
+    an O that did not.
+
+    The outer radius stays the traced one. It is the letter's silhouette and the face's widest
+    round; nothing about weight should move it.
+    """
     outer, inner = OBJ['ring']['outer'], OBJ['ring']['inner']          # [cx, cy, r, fit_sd]
     s = (CAP + 2*OVER_ROUND) / (2*outer[2])
-    r_out, r_in = outer[2]*s, inner[2]*s
-    off = ((inner[0]-outer[0])*s, (inner[1]-outer[1])*s)
+    r_out = outer[2]*s
+    r_in  = r_out - rules.RING_W
+    off   = tuple(rules.RING_OFF)
     c = (SB_ROUND + r_out, CAP/2)
     contours = [circle_contour(c, r_out, ccw=True), circle_contour(add(c, off), r_in, ccw=False)]
     return dict(cp=ord('O'), adv=round(2*SB_ROUND + 2*r_out), contours=contours,
                 notes=dict(scale=s, centre=c, r_out=r_out, r_in=r_in, offset=off, offset_len=norm(off), offset_dir_deg=ang(off),
                            width_thick=r_out-r_in+norm(off), width_thin=r_out-r_in-norm(off), width_mean=r_out-r_in,
-                           source_outer=outer[:3], source_inner=inner[:3]))
+                           source_outer=outer[:3], source_inner=inner[:3],
+                           traced_r_in=inner[2]*s,
+                           traced_offset=((inner[0]-outer[0])*s, (inner[1]-outer[1])*s)))
 
 def build_A(tuck=True, slide=False, name='A', cp=ord('A'), clip_legs=True):
     global O_THIN

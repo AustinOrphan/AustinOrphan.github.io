@@ -86,7 +86,7 @@ own geometry.
 import math, os, sys
 HERE = os.path.dirname(os.path.abspath(__file__)); FONT = os.path.dirname(HERE)
 sys.path.insert(0, os.path.join(FONT, 'lib'))
-from pen import (add, sub, mul, dot, perp, from_ang, ang, line, line_2pt, line_circle, circle_circle,
+from pen import (add, sub, mul, dot, perp, from_ang, ang, line, line_2pt, offset_line, line_circle, circle_circle,
                  from_poly, ccw)
 from metrics import CAP, SB_STRAIGHT, SB_ROUND
 from rules import (glyph, stem, diagonal, horizontal, arm, round_arc, RING_W, RING_OFF, CUT_DEG, HORIZ_MID, HORIZ_JOIN,
@@ -190,22 +190,46 @@ def _bury(bar, outer, c, r, T, x1):
 
 
 # ---- the two round-to-horizontal joins ------------------------------------------------
-def _bowl(right, below, cap=True, above=None):
+def _bowl(right, below, cap=True, above=None, _tol=1e-9):
     """One half round, R1, solved from its right extreme and the horizontals it joins.
     `below` / `above` are (outer edge, inner edge) line pairs of the horizontals under and over
-    it; the counter is tangent to each inner edge.  cap=True replaces `above` with tangency to
-    the cap line.  The arc runs from a0, where the outer circle crosses the lower horizontal's
-    OUTER edge on the right, to a1: 90 (the cap) or the ray through the upper tangent point."""
-    conds = [(+1, below[1]), ('cap',) if cap else (-1, above[1])]
-    r, cy = _solve_bowl(right, conds)
-    c = (right - r, cy); ci = add(c, RING_OFF); ri = r - RING_W
-    Po = line_circle(below[0], c, r, pick='max')          # where the outline hands off to the arc
-    a0 = ang(sub(Po, c))
-    Pi = line_circle(line(c, from_ang(a0)), ci, ri, pick='max')
+    it; cap=True replaces `above` with tangency to the cap line.  The arc runs from a0, where
+    the outer circle crosses the lower horizontal's OUTER edge on the right, to a1: 90 (the cap)
+    or the ray through the upper tangent point.
+
+    The join is solved for the HAND-OFF, not for tangency.  Solving the counter tangent to the
+    inner edge is one condition; the outline actually leaves the horizontal where the OUTER
+    circle meets the OUTER edge, at Po, and the counter's own hand-off Pi is the point on the
+    ray through Po.  Those are two different places on the circle, so tangency leaves Pi off the
+    inner edge by a step -- a ledge in the counter exactly where the eye follows it into the
+    bowl.  At the mark's own weight and displacement that step is under a unit and was recorded
+    and tolerated; it does not shrink when the stroke does, so at lighter weights it is
+    proportionally worse, and away from the mark's displacement it grows until the letter fails
+    to solve at all.  Driving it to zero costs one scalar: the tangency line is offset until Pi
+    lands on the inner edge, which is what tangency was standing in for.
+    """
+    d, step = 0.0, None
+    prev = None
+    for _ in range(80):
+        line_lo = offset_line(below[1], d)
+        conds = [(+1, line_lo), ('cap',) if cap else (-1, above[1])]
+        r, cy = _solve_bowl(right, conds)
+        c = (right - r, cy); ci = add(c, RING_OFF); ri = r - RING_W
+        Po = line_circle(below[0], c, r, pick='max')      # where the outline hands off to the arc
+        a0 = ang(sub(Po, c))
+        Pi = line_circle(line(c, from_ang(a0)), ci, ri, pick='max')
+        step = _sdist(below[1], Pi)
+        if abs(step) < _tol: break
+        # secant on the offset; the first move is the step itself, which is the right scale
+        if prev is None or abs(step - prev[1]) < 1e-15:
+            d_next = d - step
+        else:
+            d_next = d - step * (d - prev[0]) / (step - prev[1])
+        prev = (d, step); d = d_next
     hi = (c[0], float(CAP)) if cap else _touch(above[1], ci, ri, -1)
     a1 = 90.0 if cap else ang(sub(hi, c))
     return dict(c=c, r=r, ci=ci, ri=ri, a0=a0, a1=a1, Po=Po, Pi=Pi, hi=hi,
-                lo=_touch(below[1], ci, ri, +1), step=_sdist(below[1], Pi))
+                lo=_touch(below[1], ci, ri, +1), step=step, solve_offset=d)
 
 def _bar_bowl(right, y_c, x0=STEM_X, cap=True, above=None):
     """A round standing on a rules.horizontal centred on y_c and running from x0.  The
@@ -264,12 +288,16 @@ def _top_arm(b):
 
 def _check(b):
     """The join is what it claims: the hand-off point is on both the outer circle and the
-    horizontal's outer edge, the counter is tangent to the horizontal's inner edge, and what is
-    left of the R1-vs-R4 thickness difference is under a unit."""
+    horizontal's outer edge, and the counter's own hand-off is on the horizontal's inner edge,
+    so the outline runs into the bowl with no ledge in it."""
     assert abs(math.dist(b['Po'], b['c']) - b['r']) < 1e-6, 'hand-off not on the outer circle'
     assert abs(_sdist(b['below'][0], b['Po'])) < 1e-6, 'hand-off not on the outer edge'
-    assert abs(_sdist(b['below'][1], b['ci']) - b['ri']) < 1e-6, 'counter not tangent to the inner edge'
-    assert 0 <= b['step'] < 1.0, f"step {b['step']}"
+    # Tangency to the inner edge WAS the condition; the hand-off is now, and the two cannot
+    # both hold -- they are different points on the circle. What must be exact is the one the
+    # outline actually travels through.
+    assert abs(_sdist(b['below'][1], b['Pi']) ) < 1e-6, 'counter hand-off not on the inner edge'
+    # The hand-off is solved, so this is now an exactness check, not a tolerance.
+    assert abs(b['step']) < 1e-6, f"hand-off not on the inner edge: step {b['step']}"
     return b
 
 def _leg(tip, y_top):
