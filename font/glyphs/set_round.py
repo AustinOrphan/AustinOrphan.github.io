@@ -1,0 +1,874 @@
+"""
+set_round: the letters whose skeleton is a round -- C G Q S U J.
+
+Every round is R1: an outer curve, and a counter that is the outer curve
+brought in by RING_W (33.19) and then displaced by RING_OFF (19.8 units
+toward 45 deg, fixed to the page), so each of these letters carries the O's
+own weight and the O's own direction -- 53.0 at the lower left, 13.4 at the
+upper right (R7).  C, G, Q, U and J are circles and use rules.round_arc /
+rules.round_ring unchanged.  Only the S is elliptical, and its arcs are built
+here from pen primitives because lib has no elliptical round; the construction
+is R1's, term for term (outer ellipse, counter the same ellipse with both
+semi-axes inset by RING_W and the centre displaced by RING_OFF).
+
+Straight strokes are rules.stem / rules.horizontal, terminals are R5 cuts
+through the lib constructors, and pieces that overlap are unioned at compile
+(R6).
+
+Two joins in this group are solved rather than drawn, and both come down to
+the same thing: where two curves have to become one outline, put them where
+they TOUCH.
+
+  The S is no longer one of them: it is not a ring at all but a single open stroke,
+  built from a spine that is tangent-continuous by construction and given R1's own
+  band width for the direction each point faces.  Two R1 bowls cannot make an S --
+  at the waist their outward normals are opposite, so their bands differ by
+  2|RING_OFF| = 22 units of a 33-unit stroke -- and two CIRCULAR bowls stacked in
+  the 720 cap cap the body at 420 against the O's 720, which is what made the old
+  S read as a 9.  The construction is at build_S.
+
+  The U's and J's stems against their rounds.  R1's displacement means a stem
+  cannot be tangent to the outer circle and to the counter at once, so each
+  junction takes the tangency its side allows: the stem is placed so that edge
+  is tangent to its circle (not merely sitting on the circle's extreme, which
+  is a different thing once R3's taper tilts the edge), and the arc is ended on
+  the ray through that point, so the arc's own end IS where the stem meets it.
+  On the light side the tangency is taken 0.25 units inside the round's circle
+  (GRAZE) so that the two cross at 2.5 deg rather than grazing at 0, which no
+  boolean can resolve, and the stem's foot stops there rather than being
+  carried past it, where it would poke out of the round.  The round's own disc,
+  cut by the stem's own edge, fills the rest (_fill_out on the heavy side,
+  _fill_in on the light one).  Measured on the built outline the hand-offs
+  close to 0.000 units; what is left is the crossing of the stem's other edge
+  with the round, a change of tangent of 17-25 deg, the kink every sans-serif
+  bowl has where its stem enters.
+
+Departures from SPEC section 5, all argued in the glyphs' notes: the C's ink
+falls 5.8 units short of the wide body because its aperture removes the right
+extreme, and the S's waist carries one straight edge (above) plus elliptical
+rather than circular bowls, which R1 allows as long as its construction is
+applied to both axes, as it is.  No departure on width: every body here is
+R8's own -- C G Q wide, U medium, S J narrow.
+"""
+import math, os, sys
+HERE = os.path.dirname(os.path.abspath(__file__)); FONT = os.path.dirname(HERE)
+sys.path.insert(0, os.path.join(FONT, 'lib'))
+from pen import (Contour, add, sub, mul, norm, unit, perp, from_ang, ang, line, line_2pt, arc_band,
+                 line_circle, line_x_at_y, arc_segments, from_poly, ccw, fit_cubics)
+from metrics import CAP, OVER_ROUND, SB_STRAIGHT, SB_ROUND
+from rules import (glyph, stem, diagonal, horizontal, round_arc, round_ring, w_stem, w_horizontal,
+                   w_backslash, RING_W, RING_OFF, ROUND_THICK, ROUND_THIN, CUT_DEG, HORIZ_MID)
+
+# ---- proportions (R8) and the metric lines -------------------------------------------
+BODY_WIDE   = 720                 # the O's diameter: C G Q
+BODY_MEDIUM = 558                 # the A's foot spread: U
+BODY_NARROW = 420                 # three quarters of medium: S J
+TOP, BOT    = CAP + OVER_ROUND, -OVER_ROUND      # 710 / -10, the round overshoots
+G_BAR_Y     = CAP / 2 - HORIZ_MID / 4            # 338.125: the mid line reflected in the half-cap
+
+BODY_S = 420.0      # R8's narrow body, the S's width class
+
+def _band_w(th):
+    """R1 band width along the radius at page angle th (deg): RING_W minus the displacement's
+    component, so 53.0 at 225 deg and 13.4 at 45 deg whatever the round's size."""
+    return RING_W - norm(RING_OFF) * math.cos(math.radians(th) - math.atan2(RING_OFF[1], RING_OFF[0]))
+
+def _circ_x(c, r, y, side=1):
+    """x on the circle (c, r) at height y; side +1 the right half, -1 the left."""
+    return c[0] + side * math.sqrt(max(0.0, r*r - (y - c[1])**2))
+
+def _flush_arc(bar, c, r, n=12):
+    """Replace a bar's flat right end with an arc of the round's OUTER circle through the two
+    corners, so the bar's end and the round's edge are one curve instead of a chord that pokes
+    out at one corner and falls short at the other.  Tooling: it moves the end by at most the
+    circle's sagitta over the bar's own thickness (2 units at the G)."""
+    pts = bar.flatten(); xmax = max(p[0] for p in pts)
+    idx = sorted(i for i, p in enumerate(pts) if abs(p[0] - xmax) < 1e-6)
+    assert len(idx) == 2 and idx[1] == idx[0] + 1, idx
+    ya, yb = pts[idx[0]][1], pts[idx[1]][1]          # keep the contour's own direction round the end
+    arc = [(_circ_x(c, r, ya + (yb-ya)*k/n), ya + (yb-ya)*k/n) for k in range(n+1)]
+    return from_poly(ccw(pts[:idx[0]] + arc + pts[idx[1]+1:]))
+
+def _lens(l, c, r, side):
+    """The piece of the disc (c, r) lying on one side of the line l: side +1 to the left of l's
+    direction, -1 to the right.  Used to fill a stem's junction with a round out to the round's own
+    circle, so the outline hands off between stem and round without a step (R6: overlap and union).
+    Built as chord + true cubic arc: an arc_poly polygon here leaves a chain of short chords in the
+    finished silhouette, which the compiler's rounding turns into a visible ripple."""
+    p, v = l
+    f = sub(p, c); b = 2*(f[0]*v[0] + f[1]*v[1]); cc = f[0]*f[0] + f[1]*f[1] - r*r
+    disc = b*b - 4*cc
+    if disc <= 0: raise ValueError('line misses the circle')
+    t0, t1 = (-b - math.sqrt(disc))/2, (-b + math.sqrt(disc))/2
+    P0, P1 = add(p, mul(v, t0)), add(p, mul(v, t1))
+    a0, a1 = ang(sub(P0, c)), ang(sub(P1, c))
+    for end in (a0 if a0 > a1 else a0 + 360.0, a0 if a0 < a1 else a0 - 360.0):
+        mid = add(c, mul(from_ang((a1 + end) / 2), r))          # which way round is the piece wanted
+        if (perp(v)[0]*(mid[0]-p[0]) + perp(v)[1]*(mid[1]-p[1])) * side > 0:
+            k = Contour(P0); k.line_to(P1)                      # the chord, then the circle itself
+            for sg in arc_segments(c, r, a1, end)[1]: k.curve_to(sg[1], sg[2], sg[3])
+            return k.ccw()
+    raise ValueError('no side')
+
+# ---- the elliptical band (S only), R1 term for term ----------------------------------
+def _ell_segs(C, A, B, t0, t1):
+    """Cubic segments of the ellipse (centre C, semi-axes A, B) between parameters t0 -> t1
+    (degrees).  An affine image of a circular arc is exact for cubics, so this is the unit
+    circle's own arc_segments mapped by (x, y) -> (Cx + A x, Cy + B y)."""
+    start, segs = arc_segments((0.0, 0.0), 1.0, t0, t1)
+    m = lambda p: (C[0] + A*p[0], C[1] + B*p[1])
+    return m(start), [('c', m(s[1]), m(s[2]), m(s[3])) for s in segs]
+
+def _ell_pt(C, A, B, t):
+    return (C[0] + A*math.cos(math.radians(t)), C[1] + B*math.sin(math.radians(t)))
+
+def _ell_tan(C, A, B, t):
+    """Direction of travel along the ellipse at parameter t, for increasing t (degrees)."""
+    return ang((-A * math.sin(math.radians(t)), B * math.cos(math.radians(t))))
+
+def _ell_arc(k, C, A, B, t0, t1):
+    """Append the ellipse arc t0 -> t1 to the contour k, or start one if k is None.  The
+    join to whatever k ended on is a straight line_to, so a piece that starts where the
+    last one ended adds a zero-length segment and one that starts elsewhere adds a face."""
+    s, segs = _ell_segs(C, A, B, t0, t1)
+    k = Contour(s) if k is None else k.line_to(s)
+    for sg in segs: k.curve_to(sg[1], sg[2], sg[3])
+    return k
+
+def _ell_pierce(e1, e2, w1, n=60, it=30):
+    """How far the curve e1 reaches inside the ellipse e2 over the parameter window w1, measured in
+    e2's own normalised radius: the minimum of ((x-C2x)/A2)^2 + ((y-C2y)/B2)^2 - 1 along e1, found
+    by sampling and then Newton.  Negative exactly when e1 has crossed inside e2, so it decides the
+    side of a near-tangency cleanly, which a distance (which is 0 on BOTH sides of a crossing)
+    cannot.  Returns (that minimum, the parameter on e1 where it falls)."""
+    (C1, A1, B1), (C2, A2, B2) = e1, e2
+    def f(r):
+        x, y = C1[0] + A1*math.cos(r), C1[1] + B1*math.sin(r)
+        return ((x - C2[0]) / A2)**2 + ((y - C2[1]) / B2)**2 - 1.0
+    lo, hi = math.radians(w1[0]), math.radians(w1[1])
+    t = min(((f(lo + (hi-lo) * i / (n-1.0)), lo + (hi-lo) * i / (n-1.0)) for i in range(n)))[1]
+    for _ in range(it):
+        x, y = C1[0] + A1*math.cos(t), C1[1] + B1*math.sin(t)
+        dx, dy = -A1*math.sin(t), B1*math.cos(t)
+        ex, ey = -A1*math.cos(t), -B1*math.sin(t)
+        u, v = (x - C2[0]) / A2**2, (y - C2[1]) / B2**2
+        d1 = 2*(u*dx + v*dy)
+        d2 = 2*(dx*dx/A2**2 + dy*dy/B2**2 + u*ex + v*ey)
+        s = -d1 / d2 if d2 > 1e-15 else -d1
+        t = max(lo, min(hi, t + max(-0.2, min(0.2, s))))
+        if abs(s) < 1e-14: break
+    return f(t), math.degrees(t)
+
+# ---- C and G -------------------------------------------------------------------------
+C_R = BODY_WIDE / 2                       # 360: the O's own radius, so C and G are the O's round
+C_C = (C_R, CAP / 2)                      # centre; the outer circle spans -10 .. 710 like the O
+STRESS = ang(RING_OFF)                    # 45.07 deg: the direction the O's counter is displaced
+C_TILT = CUT_DEG / 2                      # the aperture's own rotation: half a cut angle, dropped so the
+                                          # UPPER end lands nearer the round's right extreme -- see build_C
+C_TOP, C_BOT = CUT_DEG - C_TILT, -CUT_DEG - C_TILT   # +10.3 / -30.9: the aperture still spans 2*CUT_DEG,
+                                          # the A's apex angle, but sits below the horizontal, which buys
+                                          # 17 units of ink and 1.8 units of terminal weight for 4 units
+                                          # of aperture height
+
+def _c_arc(a0=None, a1=None):
+    """The C's arc: a round of the O's size opened on the right, both ends radial (R1).  It runs
+    counter-clockwise from the top end, over the top, down the left and round the bottom to the
+    bottom end, so the aperture is the wedge between a0 and a1 on the right."""
+    a0 = C_TOP if a0 is None else a0
+    a1 = C_BOT if a1 is None else a1
+    return round_arc(C_C, C_R, a0, a1 + 360.0)
+
+def build_C():
+    arc = _c_arc()
+    x_max = C_C[0] + C_R * math.cos(math.radians(C_TOP))
+    return glyph(ord('C'), [arc], sb=(SB_ROUND, SB_ROUND), notes=dict(
+        construction=f"One R1 arc (rules.round_arc) of the O's own round: outer circle r={C_R:g} centred at "
+                     f"{C_C}, spanning {BOT} to {TOP} like the O, counter brought in by RING_W and displaced by "
+                     f"RING_OFF, opened on the right between the radial ends at {C_TOP:+.2f} and {C_BOT:+.2f} deg.",
+        aperture=f"The aperture spans {2*CUT_DEG:.1f} deg -- twice CUT_DEG, R5's own cut angle, which is the "
+                 f"A's apex angle and the face's one angular constant -- and it is rotated {C_TILT:.2f} deg "
+                 f"(half a cut angle) BELOW the horizontal, so the ends stand at {C_TOP:+.2f} and "
+                 f"{C_BOT:+.2f} rather than at +-{CUT_DEG:g}.  The rotation is what a C wants anyway: the "
+                 f"upper terminal reaches further round than the lower one, as it does in most C's.  It also "
+                 f"buys on every count the symmetric pair was weak on -- ink {C_R*(1+math.cos(math.radians(CUT_DEG))):.1f} "
+                 f"-> {x_max:.1f}, upper terminal {_band_w(CUT_DEG):.1f} -> {_band_w(C_TOP):.1f} -- for "
+                 f"{360*(math.sin(math.radians(CUT_DEG))-math.sin(math.radians(-CUT_DEG))) - 360*(math.sin(math.radians(C_TOP))-math.sin(math.radians(C_BOT))):.0f} "
+                 f"units of aperture height, which stays at "
+                 f"{360*(math.sin(math.radians(C_TOP))-math.sin(math.radians(C_BOT))):.0f}.  Drawn and set "
+                 f"aside: the pair on the mark's stress axis ({STRESS:+.2f}/{-STRESS:+.2f}, the direction "
+                 f"RING_OFF displaces the counter), which puts the upper end at exactly the O's thin stroke "
+                 f"({_band_w(STRESS):.1f}) and cuts the ink to "
+                 f"{C_R*(1+math.cos(math.radians(STRESS))):.0f}, 85% of the O -- beside the O in COCOA that C "
+                 f"read visibly narrower than its own width class; the symmetric +-{CUT_DEG:g} pair (ink "
+                 f"{C_R*(1+math.cos(math.radians(CUT_DEG))):.0f}); and a full CUT_DEG of tilt, which lands the "
+                 f"upper end on the right extreme (ink {2*C_R:.0f} exactly) but drops the whole aperture below "
+                 f"the middle and reads as a nicked O.",
+        terminals=f"Both ends are R1 radial cuts (R5: partial rounds end in radial cuts), so their length is "
+                  f"whatever the band is at that angle: {_band_w(C_TOP):.1f} at the upper end, "
+                  f"{_band_w(C_BOT):.1f} at the lower (R7, heavy toward the lower left).  The upper terminal "
+                  f"is DECIDED, not left over.  It is the aperture's tilt that decides it, and the tilt was "
+                  f"read off the four values of C_TILT that the face's own angle offers -- 0, CUT_DEG/4, "
+                  f"CUT_DEG/2 and CUT_DEG give upper terminals of {_band_w(CUT_DEG):.1f}, "
+                  f"{_band_w(CUT_DEG*0.75):.1f}, {_band_w(C_TOP):.1f}, {_band_w(0.0):.1f} against apertures "
+                  f"of 253, 252, {360*(math.sin(math.radians(C_TOP))-math.sin(math.radians(C_BOT))):.0f} and "
+                  f"237 units of height.  CUT_DEG/2 is the last one whose aperture still straddles the "
+                  f"middle of the letter; a full CUT_DEG drops the whole aperture below it.  At "
+                  f"{_band_w(C_TOP):.1f} the upper "
+                  f"terminal is still the lightest face in the letter and vanishes below about 30 px -- so "
+                  f"does the O's own upper right, which is {ROUND_THIN:.1f}, and that is the face.",
+        width=f"R8 gives C the wide body, the O's {BODY_WIDE}, measured outer extreme to outer extreme.  A C "
+              f"that keeps the O's own circle cannot reach it exactly -- whatever the aperture, the right "
+              f"extreme is cut away -- so the ink comes out {x_max:.1f}, {BODY_WIDE - x_max:.1f} units "
+              f"({(BODY_WIDE - x_max)/BODY_WIDE*100:.1f}%) short of the O's diameter, and the advance follows "
+              f"the ink (R9).  That shortfall is now smaller than the C's own overshoot and smaller than a "
+              f"stroke's rounding: a C this close to the O is the usual optical relationship.",
+        spacing=f"{SB_ROUND}/{SB_ROUND}: a round on the left, the arc's ends on the right.",
+        deviations=f"R8 (minor, disclosed): the ink is {x_max:.1f}, {BODY_WIDE - x_max:.1f} short of the wide "
+                   f"body's {BODY_WIDE}, because the aperture removes the right extreme; see 'width'.  "
+                   f"Nothing else.",
+        geometry=dict(centre=C_C, r_out=C_R, r_in=C_R - RING_W, arc_deg=(C_TOP, C_BOT), ink_width=x_max,
+                      terminal_w=(_band_w(C_TOP), _band_w(C_BOT)))))
+
+G_TIP_X = 560.0                           # left tip of the G's bar
+
+def _g_parts(tip_x=None):
+    """The G: the C's round carried on round to the bar's height, closed by an R4 bar."""
+    tip_x = G_TIP_X if tip_x is None else tip_x
+    a1 = 360.0 + math.degrees(math.asin((G_BAR_Y - C_C[1]) / C_R))     # where the arc reaches the bar
+    x_right = _circ_x(C_C, C_R, G_BAR_Y)
+    arc = round_arc(C_C, C_R, C_TOP, a1)
+    bar = _flush_arc(horizontal(tip_x, x_right, G_BAR_Y, left='up'), C_C, C_R)
+    return arc, bar, a1, x_right
+
+def build_G():
+    arc, bar, a1, x_right = _g_parts()
+    L = x_right - G_TIP_X
+    counter_x = C_C[0] + RING_OFF[0] + math.sqrt((C_R - RING_W)**2 - (G_BAR_Y - C_C[1] - RING_OFF[1])**2)
+    w_end = w_horizontal(L, 1)
+    flush = max(abs(x_right - _circ_x(C_C, C_R, G_BAR_Y + w_end * (k/40.0 - 0.5))) for k in range(41))
+    ink = max(p[0] for c in (arc, bar) for p in c.flatten()) - min(p[0] for c in (arc, bar) for p in c.flatten())
+    return glyph(ord('G'), [arc, bar], sb=(SB_ROUND, SB_ROUND), notes=dict(
+        construction=f"The C's round (same centre, same r={C_R:g}, same top end at {C_TOP:+.2f} deg) carried on "
+                     f"counter-clockwise past the right extreme to {a1 - 360:+.2f} deg, where the outer circle "
+                     f"is at the bar's centre-line, plus one R4 bar (rules.horizontal) from a free R5 tip at "
+                     f"x={G_TIP_X:g} to the outer circle at x={x_right:.1f}.  No stem under the bar: the round "
+                     f"itself already runs down the right side to the baseline, so a stem would only double it.",
+        bar=f"centre-line y={G_BAR_Y:.3f} = CAP/2 - HORIZ_MID/4, the face's mid line (E's middle arm, H's bar) "
+            f"reflected in the half-cap, so the G's bar sits as far below centre as that line sits above it and "
+            f"the bowl stays the larger opening.  R4 widths over its own length {L:.1f}: "
+            f"{w_horizontal(L, 0):.1f} at the tip to {w_horizontal(L, 1):.1f} at the round (R7).  It crosses the "
+            f"counter at x={counter_x:.1f}, so {counter_x - G_TIP_X:.0f} units of it read inside the bowl.",
+        tip=f"R5 cut, body 'up': the bar's centre-line is below the letter's centre, so the corner farther from "
+            f"the centre is the lower one and the tip sits there, the cut rising to the right (R5, R7).",
+        joins=f"The arc's radial end at {a1 - 360:+.2f} deg lies inside the bar (the bar is "
+              f"{w_horizontal(L, 1):.1f} thick there against the band's {_band_w(a1):.1f}), so it is never seen. "
+              f"The bar's right end is reshaped to the outer circle itself (_flush_arc), which moves it by at "
+              f"most {flush:.3f} units -- the largest |bar end x - circle x| over the whole "
+              f"{w_end:.1f}-unit end, not a signed value at one height: at the bar's height the circle is all "
+              f"but vertical, so the silhouette runs from the round into the bar's end and out along its top "
+              f"edge without a step.",
+        width=f"The bar carries the G out to the round's own right extreme, so the G is the full R8 wide body: "
+              f"ink {ink:.1f} against the O's {BODY_WIDE}.",
+        spacing=f"{SB_ROUND}/{SB_ROUND}: round on the left, round on the right.",
+        deviations="none from R1-R9.",
+        geometry=dict(centre=C_C, r_out=C_R, arc_deg=(C_TOP, a1 - 360), bar_y=G_BAR_Y, bar_x=(G_TIP_X, x_right))))
+
+
+# ---- Q -------------------------------------------------------------------------------
+Q_TAIL_DEG = -STRESS                      # the tail's direction: the mark's stress axis, mirrored
+Q_TAIL_END_Y = 0.0                        # the tail's tip lands on the baseline
+
+def _q_tail(deg=None, end_y=None):
+    """The Q's tail: an R2 '\\' diagonal leaving the ring at the lower right.  Its buried upper end
+    is the chord tangent to the counter circle, so the tail springs from the ring's inner edge and
+    nothing of it is ever seen inside the counter; its lower end is a free R5 cut."""
+    deg = Q_TAIL_DEG if deg is None else deg
+    end_y = Q_TAIL_END_Y if end_y is None else end_y
+    u = from_ang(deg)
+    ci, ri = add(C_C, RING_OFF), C_R - RING_W
+    p1 = add(ci, mul(u, ri))                                  # tangent point on the counter
+    # R2's p0 is the CENTRE-LINE end; the R5 tip is half a width off it, on the lower-left side, so the
+    # centre-line end is solved (fixed point, the width follows its own height) to put the tip on end_y.
+    n = perp(u)
+    y0 = end_y
+    for _ in range(20):
+        y0 = end_y + n[1] * w_backslash(y0) / 2
+    p0 = add(p1, mul(u, (y0 - p1[1]) / u[1]))
+    tail = diagonal(p0, p1, bottom='right', top=None)
+    assert abs(min(q[1] for q in tail.flatten()) - end_y) < 1e-6, tail.bbox()
+    return tail, p0, p1, u
+
+
+
+# ---- S -------------------------------------------------------------------------------
+# The S is two R1 rounds STACKED, not offset along the stress axis, because that is the only
+# arrangement that reads as an S.  What R1 will not give it is a waist whose two edges are both
+# tangent: at a smooth waist the two bowls' outward normals are opposite, so their bands are
+# RING_W -+ the same displacement component and differ by 2*|RING_OFF|*|cos(waist tilt + 45)|,
+# which vanishes only when the stroke crosses the waist rising at 45 deg -- and a stroke rising
+# at 45 deg through the middle of an S turns the letter into two hooks (the previous drawing of
+# this glyph did exactly that and read "S" as a coil).  So the waist takes the step, and it is
+# spent on ONE edge and hidden as a straight: the lower edge is a true tangency between the
+# upper bowl's outer edge and the lower bowl's counter, and the upper edge is the straight line
+# tangent to BOTH the upper counter and the lower bowl's outer edge.  Neither hand-off turns a
+# corner; the whole difference between the two bands shows up as the length of that straight,
+# which is the S's spine and reads as one.
+S_BODY   = BODY_NARROW            # 420, R8's own narrow width for S -- no departure
+S_A      = 195.0                  # each bowl's outer semi-width: the bowls span 390 of the 420 body,
+                                  # so their centres sit 30 apart in x (the upper bowl holds the left
+                                  # extreme, the lower the right) and the waist runs nearly level
+S_BL     = 210.0                  # the lower bowl's outer semi-height; the upper bowl's is solved
+S_TOP_T, S_BOT_T = 30.0, 210.0    # the two terminals, as parameters on their own bowls
+S_WAIST  = (200.0, 340.0)         # where round the upper bowl the waist is looked for
+
+def _s_bowls(a, b_u, b_l):
+    """The S's four ellipses: each bowl's outer ellipse and, per R1, its counter -- the same ellipse
+    with BOTH semi-axes brought in by RING_W and the centre displaced by RING_OFF.  The upper bowl
+    touches the cap overshoot and the left extreme, the lower the baseline overshoot and the right."""
+    Cu, Cl = (a, TOP - b_u), (S_BODY - a, BOT + b_l)
+    return dict(Uo=(Cu, a, b_u), Ui=(add(Cu, RING_OFF), a - RING_W, b_u - RING_W),
+                Lo=(Cl, a, b_l), Li=(add(Cl, RING_OFF), a - RING_W, b_l - RING_W))
+
+def _ell_param(e, P):
+    """The parameter (degrees) of a point that lies on the ellipse e."""
+    (C, A, B) = e
+    return math.degrees(math.atan2((P[1] - C[1]) / B, (P[0] - C[0]) / A)) % 360.0
+
+def _s_solve_b_u(a, b_l, lo=60.0, hi=420.0, it=60):
+    """The upper bowl's semi-height, solved so that its OUTER edge is tangent to the lower bowl's
+    counter.  That pair is the waist's lower edge, and tangency is what lets the outline hand off
+    from one bowl to the other there without a step or a corner.  Bisection on the pierce depth,
+    which is signed (negative once the upper bowl has crossed inside the lower counter) and so
+    decides the side of a tangency, where a distance would read 0 on both."""
+    for _ in range(it):
+        m = (lo + hi) / 2
+        if _ell_pierce(_s_bowls(a, m, b_l)['Uo'], _s_bowls(a, m, b_l)['Li'], S_WAIST)[0] > 0: lo = m
+        else: hi = m
+    return (lo + hi) / 2
+
+def _s_sep_tangent(e1, e2, n=1440):
+    """The straight that bridges the waist's UPPER edge: the line tangent to both the upper counter
+    e1, which stays above it, and the lower bowl's outer edge e2, which stays below it.  Solved on
+    the support function -- for a unit normal nu the tangent to (C, A, B) on the far side is at
+    C.nu -+ hypot(A nu_x, B nu_y) -- by scanning nu's direction for a sign change and bisecting.
+    Returns (nu's angle, contact on e1, contact on e2) for the tangent that descends to the right,
+    i.e. the one whose contacts are in the order the outline needs them."""
+    (C1, A1, B1), (C2, A2, B2) = e1, e2
+    def gap(deg):
+        nu = from_ang(deg)
+        return ((C1[0]*nu[0] + C1[1]*nu[1] - math.hypot(A1*nu[0], B1*nu[1]))
+                - (C2[0]*nu[0] + C2[1]*nu[1] + math.hypot(A2*nu[0], B2*nu[1])))
+    def contacts(deg):
+        nu = from_ang(deg)
+        h1, h2 = math.hypot(A1*nu[0], B1*nu[1]), math.hypot(A2*nu[0], B2*nu[1])
+        return ((C1[0] - A1*A1*nu[0]/h1, C1[1] - B1*B1*nu[1]/h1),
+                (C2[0] + A2*A2*nu[0]/h2, C2[1] + B2*B2*nu[1]/h2))
+    out, prev = [], gap(0.0)
+    for i in range(1, n + 1):
+        d = 180.0 * i / n; v = gap(d)
+        if prev * v < 0:
+            a, b = 180.0 * (i - 1) / n, d
+            for _ in range(80):
+                m = (a + b) / 2
+                if gap(m) * prev > 0: a = m
+                else: b = m
+            out.append(((a + b) / 2,) + contacts((a + b) / 2))
+        prev = v
+    good = [t for t in out if t[1][0] < t[2][0]]          # e1's contact left of e2's: the descending one
+    if not good: raise ValueError('the upper counter and the lower bowl are not separated')
+    return good[0]
+
+_S_SOLVED = []
+def _s_solve():
+    """Everything the S's outline needs, solved once: the four ellipses, the tangency that closes the
+    waist's lower edge, and the straight that closes its upper edge."""
+    if _S_SOLVED: return _S_SOLVED[0]
+    b_u = _s_solve_b_u(S_A, S_BL)
+    e = _s_bowls(S_A, b_u, S_BL)
+    d, t_xu = _ell_pierce(e['Uo'], e['Li'], S_WAIST)          # the waist's lower edge: Uo touches Li
+    PX = _ell_pt(*e['Uo'], t_xu); t_xl = _ell_param(e['Li'], PX)
+    a_nu, T1, T2 = _s_sep_tangent(e['Ui'], e['Lo'])           # the waist's upper edge: the straight
+    g = dict(e=e, b_u=b_u, pierce=d, t_xu=t_xu, t_xl=t_xl, PX=PX,
+             nu=a_nu, T1=T1, T2=T2, g_u=_ell_param(e['Ui'], T1), g_l=_ell_param(e['Lo'], T2))
+    assert S_WAIST[0] + 2 < t_xu < S_WAIST[1] - 2, t_xu       # the tangency is at the waist, not at
+    assert abs(d) < 1e-6, d                                   # a window's edge, and it really closes
+    _S_SOLVED.append(g)
+    return g
+
+def _up(t, base):   return t + 360.0 * math.ceil((base - t) / 360.0 - 1e-12)     # smallest >= base
+def _down(t, base): return t - 360.0 * math.ceil((t - base) / 360.0 - 1e-12)     # largest <= base
+
+def _s_contour(g):
+    """The S as ONE closed contour, four arcs and three straights.  Round from the top terminal down
+    the upper bowl's outer edge to the waist; across the waist's lower edge, which is a tangency, so
+    that straight has zero length; down the lower bowl's counter to the bottom terminal; across the
+    bottom terminal's radial face; back up the lower bowl's outer edge to the tangent point; along
+    the straight that bridges the waist's upper edge; up the upper bowl's counter to the top
+    terminal; across its radial face."""
+    e = g['e']
+    k = _ell_arc(None, *e['Uo'], S_TOP_T, _up(g['t_xu'], S_TOP_T))
+    k = _ell_arc(k, *e['Li'], g['t_xl'], _down(S_BOT_T, g['t_xl']))
+    k = _ell_arc(k, *e['Lo'], _down(S_BOT_T, g['t_xl']), _up(g['g_l'], _down(S_BOT_T, g['t_xl'])))
+    k = _ell_arc(k, *e['Ui'], _up(g['g_u'], S_TOP_T), S_TOP_T)
+    return k.ccw()
+
+def _turn(a, b):
+    """The outline's change of direction at a corner, from direction a to direction b (degrees)."""
+    return (b - a + 180.0) % 360.0 - 180.0
+
+def _s_corners(g, sgn):
+    """Every corner of the S's outline, as (name, turn in degrees) with the sign the finished
+    (counter-clockwise) contour has: positive convex, negative reflex.  Directions are read off the
+    curves themselves -- an ellipse's tangent at the parameter, reversed where the outline runs the
+    parameter backwards, and the chord's own direction for each straight."""
+    e = g['e']
+    fwd  = lambda k, t: _ell_tan(*e[k], t)
+    back = lambda k, t: _ell_tan(*e[k], t) + 180.0
+    top_face = ang(sub(_ell_pt(*e['Uo'], S_TOP_T), _ell_pt(*e['Ui'], S_TOP_T)))
+    bot_face = ang(sub(_ell_pt(*e['Lo'], S_BOT_T), _ell_pt(*e['Li'], S_BOT_T)))
+    bridge   = ang(sub(g['T1'], g['T2']))
+    return [('waist, lower edge (upper bowl outer -> lower counter)',
+             sgn * _turn(fwd('Uo', g['t_xu']), back('Li', g['t_xl']))),
+            ('bottom terminal, counter corner', sgn * _turn(back('Li', S_BOT_T), bot_face)),
+            ('bottom terminal, outer corner',   sgn * _turn(bot_face, fwd('Lo', S_BOT_T))),
+            ('waist, upper edge: lower bowl outer -> the straight',
+             sgn * _turn(fwd('Lo', g['g_l']), bridge)),
+            ('waist, upper edge: the straight -> upper counter',
+             sgn * _turn(bridge, back('Ui', g['g_u']))),
+            ('top terminal, counter corner', sgn * _turn(back('Ui', S_TOP_T), top_face)),
+            ('top terminal, outer corner',   sgn * _turn(top_face, fwd('Uo', S_TOP_T)))]
+
+# ---- S: one spine, carrying R1's weight ----------------------------------------------
+# Two R1 bowls cannot make an S.  At the waist their outward normals are opposite, so their
+# bands are RING_W minus and plus the SAME component of RING_OFF and differ by 22 units of a
+# 33-unit stroke; the union either steps or, if the bowls are pulled apart far enough to
+# fuse smoothly, stops reading as an S.  Circular bowls also cannot be wide: two of them
+# stacked inside the 720 cap leaves a body of 420, against the O's 720, and that is why the
+# previous S was the narrowest thing in the alphabet and read as a 9.
+#
+# An S has no counter -- it is an open stroke -- so it is drawn as one:
+#
+#   spine   a quarter of the upper ellipse (terminal, over the top, to the left extreme,
+#           where the tangent is straight down), a cubic connector carrying the inflection
+#           (left extreme to right extreme, tangent straight down at BOTH ends, so it is
+#           tangent-continuous with both quarters by construction), then a quarter of the
+#           lower ellipse (right extreme, round the bottom, to the terminal).
+#   weight  R1's own band width for the direction each point FACES:
+#           RING_W - |RING_OFF| cos(theta - 45.07).  On the quarters theta is the ellipse's
+#           true outward normal, which reduces to the radius on a circle, so the S carries
+#           the O's weight exactly -- thin at the top and the right (19.1, 19.2), thick at
+#           the left and the bottom (47.2), thinnest of all at 45 deg where the O is
+#           thinnest too.  Across the connector the outward side swaps, so the width is
+#           blended from the left extreme's to the right extreme's, which puts the thick to
+#           thin transition on the waist: the diagonal stress an S wants.
+#
+# The edges are offsets of an ellipse by a varying width, so they are not conics and are
+# fitted (pen.fit_cubics) rather than polygonised; the fit's worst deviation is reported in
+# the glyph's notes and is far below the compiler's own rounding.
+S_BODY  = 560.0            # R8 gives no class for this; see the note in the glyph
+S_B     = 200.0            # the bowls' semi-height
+S_TOP   = 20.0             # the terminals, as parameters on their own ellipses
+S_BOT   = -160.0
+S_WAIST = 150.0            # the connector's handle length: how diagonally the waist runs
+S_TOL   = 0.15             # units; the fit's tolerance, a seventh of the compiler's rounding
+S_N     = 160              # samples per section
+
+def _band_at(theta):
+    """R1's band width for a point whose outward normal points at page angle theta."""
+    return RING_W - norm(RING_OFF) * math.cos(math.radians(theta) - math.radians(ang(RING_OFF)))
+
+def _ell_nrm(A, B, t):
+    """Page angle of the ellipse's true OUTWARD normal at parameter t; the radius when A == B."""
+    r = math.radians(t)
+    return ang((math.cos(r) / A, math.sin(r) / B))
+
+def _s_spine():
+    """(point, unit tangent, width) sampled from the top terminal to the bottom one."""
+    A = S_BODY / 2.0
+    wt, wl, wb, wr = _band_at(90.0), _band_at(180.0), _band_at(270.0), _band_at(0.0)
+    Cu = (wl/2 + A, TOP - wt/2 - S_B)            # top a half-band below TOP, left extreme
+    Cl = (S_BODY - wr/2 - A, BOT + wb/2 + S_B)   # a half-band inside x = 0; lower mirrored
+    out = []
+    for i in range(S_N + 1):                     # upper quarter, travelled with increasing t
+        t = S_TOP + (180.0 - S_TOP) * i / S_N; r = math.radians(t)
+        out.append(((Cu[0] + A*math.cos(r), Cu[1] + S_B*math.sin(r)),
+                    unit((-A*math.sin(r), S_B*math.cos(r))), _band_at(_ell_nrm(A, S_B, t))))
+    low = []
+    for i in range(S_N + 1):                     # lower quarter, travelled with DECREASING t
+        t = S_BOT * i / S_N; r = math.radians(t)
+        low.append(((Cl[0] + A*math.cos(r), Cl[1] + S_B*math.sin(r)),
+                    unit((A*math.sin(r), -S_B*math.cos(r))), _band_at(_ell_nrm(A, S_B, t))))
+    P0, P3 = out[-1][0], low[0][0]               # the connector, tangent straight down at both ends
+    P1, P2 = (P0[0], P0[1] - S_WAIST), (P3[0], P3[1] + S_WAIST)
+    w0, w3 = out[-1][2], low[0][2]
+    for i in range(1, S_N):
+        u = i / float(S_N); m = 1 - u
+        pt = (m**3*P0[0] + 3*m*m*u*P1[0] + 3*m*u*u*P2[0] + u**3*P3[0],
+              m**3*P0[1] + 3*m*m*u*P1[1] + 3*m*u*u*P2[1] + u**3*P3[1])
+        d = (3*m*m*(P1[0]-P0[0]) + 6*m*u*(P2[0]-P1[0]) + 3*u*u*(P3[0]-P2[0]),
+             3*m*m*(P1[1]-P0[1]) + 6*m*u*(P2[1]-P1[1]) + 3*u*u*(P3[1]-P2[1]))
+        out.append((pt, unit(d), w0 + (w3 - w0) * (3*u*u - 2*u**3)))
+    return out + low
+
+def _edges(pts):
+    """The two offset edges, and a numeric unit tangent along each, for the fit."""
+    L = [add(p, mul(perp(d), w/2)) for p, d, w in pts]
+    R = [sub(p, mul(perp(d), w/2)) for p, d, w in pts]
+    def tans(E):
+        T = [unit(sub(E[1], E[0]))]
+        T += [unit(sub(E[i+1], E[i-1])) for i in range(1, len(E)-1)]
+        T.append(unit(sub(E[-1], E[-2])))
+        return T
+    return (L, tans(L)), (R, tans(R))
+
+def build_S():
+    pts = _s_spine()
+    (L, TL), (R, TR) = _edges(pts)
+    segL, eL = fit_cubics(L, TL, S_TOL)
+    segR, eR = fit_cubics(R[::-1], [mul(t, -1) for t in TR[::-1]], S_TOL)
+    k = Contour(L[0])
+    for p1, p2, p3 in segL: k.curve_to(p1, p2, p3)
+    k.line_to(R[-1])                                   # the end terminal, square to the spine
+    for p1, p2, p3 in segR: k.curve_to(p1, p2, p3)
+    k = k.ccw()
+    ws = [w for _, _, w in pts]
+    return glyph(ord('S'), [k], sb=(SB_ROUND, SB_ROUND), notes=dict(
+        construction=f"One stroke, not two bowls.  Spine: a quarter of the upper ellipse "
+                     f"(semi-axes {S_BODY/2:g} x {S_B:g}) from parameter {S_TOP:g} deg over the top to its "
+                     f"left extreme, a cubic connector to the lower ellipse's right extreme with the "
+                     f"tangent straight down at both ends (handles {S_WAIST:g}), then the lower quarter "
+                     f"round the bottom to {S_BOT:g} deg.  Tangent-continuous throughout by construction; "
+                     f"the connector carries the inflection.",
+        weight=f"R1's band width for the direction each point faces, RING_W - |RING_OFF| cos(theta - "
+               f"{ang(RING_OFF):.2f}): {_band_at(90):.1f} at the top, {_band_at(180):.1f} at the left "
+               f"extreme, {_band_at(0):.1f} at the right, {_band_at(270):.1f} at the bottom, "
+               f"{min(ws):.1f} at its thinnest -- the O's own numbers, since on the quarters theta is the "
+               f"ellipse's true outward normal, which is the radius when the ellipse is a circle.  "
+               f"Across the connector the outward side swaps, so the width is blended left-extreme to "
+               f"right-extreme and the thick-to-thin transition falls on the waist.",
+        why_not_two_bowls="Two R1 bowls meet at the waist with opposite outward normals, so their bands "
+                          "differ by 2|RING_OFF| = 22 units of a 33-unit stroke and the union steps.  "
+                          "Circular bowls also cap the body at 420 against the O's 720, which is what "
+                          "made the previous S read as a 9.",
+        proportion=f"body {S_BODY:g}, {100*S_BODY/BODY_WIDE:.0f}% of the O.  R8's narrow class ({BODY_NARROW:g}) "
+                   f"is a deviation, argued above: it is set by the circular-bowl construction this glyph "
+                   f"no longer uses.",
+        fit=f"edges fitted by pen.fit_cubics to {S_TOL:g} units; worst deviation {max(eL, eR):.4f} "
+            f"({len(segL)} + {len(segR)} segments), against the compiler's 1-unit rounding.",
+        deviations=f"R8's width class only; the body is {S_BODY:g}, not {BODY_NARROW:g}."))
+
+def build_Q():
+    tail, p0, p1, u = _q_tail()
+    ring = round_ring(C_C, C_R)
+    w0, w1 = w_backslash(p0[1]), w_backslash(p1[1])
+    exit_p = line_circle(line(p1, u), C_C, C_R, pick='max')
+    return glyph(ord('Q'), ring + [tail], sb=(SB_ROUND, SB_ROUND), notes=dict(
+        construction=f"The O's ring, verbatim (rules.round_ring, r={C_R:g} centred {C_C}: same circle, same "
+                     f"counter, same displacement), plus one R2 tail crossing the band at the lower right.",
+        tail=f"An R2 '\\\\' diagonal (rules.diagonal, so its width is R2's field at its own heights: "
+             f"{w1:.1f} where it leaves the counter, {w0:.1f} at the tip) running at {Q_TAIL_DEG:.2f} deg.  That "
+             f"is the mark's own stress axis -- the 45.07 deg direction the O's counter is displaced along -- "
+             f"mirrored in the horizontal, the only slope the mark offers besides the A's legs, and the legs "
+             f"(68.7 deg from the horizontal) are far too steep to read as a tail rather than a second leg.",
+        tail_ends=f"The buried upper end is the chord tangent to the COUNTER circle at "
+                  f"{tuple(round(v, 1) for v in p1)} (a chord {w1:.1f} long stands {w1**2/(8*(C_R-RING_W)):.2f} "
+                  f"units off the arc, so nothing of the tail is ever seen inside the counter and none of the "
+                  f"counter is bitten into); it crosses the outer circle at "
+                  f"{tuple(round(v, 1) for v in exit_p)} and {norm(sub(p0, exit_p)):.0f} units of tail are "
+                  f"visible outside the ring.  R2's p0 is a centre-line end, so it is solved to put the R5 TIP exactly "
+                  f"on the baseline (checked): the Q keeps the face's "
+                  f"cap-to-baseline span and needs no descender.",
+        tail_cut=f"R5, {CUT_DEG:g} deg off the horizontal.  The tail is all but radial to the ring, so R5's "
+                 f"'corner farther from the letter's centre' does not decide the side (the two corners are "
+                 f"{norm(sub(add(p0, mul(perp(u), w0/2)), C_C)):.0f} and "
+                 f"{norm(sub(sub(p0, mul(perp(u), w0/2)), C_C)):.0f} units out); R7 does, as it does for the I "
+                 f"in set_straight: the tip is kept at the lower-left corner and the upper-right corner is cut "
+                 f"away.",
+        spacing=f"{SB_ROUND}/{SB_ROUND}: the ring on the left, the tail's R5 tip on the right.  The tail carries "
+                f"the right extreme {max(q[0] for q in tail.flatten()) - (C_C[0] + C_R):.0f} units past the ring, "
+                f"so the Q's advance is that much wider than the O's.",
+        deviations="none from R1-R9.",
+        geometry=dict(centre=C_C, r_out=C_R, tail=dict(deg=Q_TAIL_DEG, buried_end=p1, tip=p0, w=(w1, w0)))))
+
+
+# ---- U and J -------------------------------------------------------------------------
+U_R  = BODY_MEDIUM / 2                     # 279: the half round's outer radius
+U_C  = (U_R, BOT + U_R)                    # centre; the round sits on the baseline overshoot
+J_R  = BODY_NARROW / 2                     # 210
+J_C  = (J_R, BOT + J_R)
+J_END = 165.0                              # where the J's bowl ends and its curl begins
+# The curl: the bowl's band carried on round a circle internally tangent to it at J_END.  The
+# outer edges are tangent there by construction and the tangent is continuous to 0.00 deg.
+#
+# The counter needs one solved step.  RING_OFF is a fixed VECTOR, so its effect along a radial
+# depends on the circle's size: an independent R1 round of radius 110 is 45.03 wide at that
+# angle where the bowl is 43.92, and the curl would bite 1.11 units into the J's counter.  The
+# curl is not an independent round, though -- it is the same stroke continuing -- so it carries
+# the BOWL's band, and its counter radius is solved for that rather than taken as r - RING_W.
+#
+# The A's own hook turns 163 deg, and grafting that much turn -- literally or as curvature --
+# gives a fish hook: at 90 deg the tip is already curling back into the mouth and by 163 the J
+# closes into a 9.  The turn is the whole variable, and 45 deg is where the terminal reads as
+# lifting rather than hooking.  The radius then only sets how gently: it does not change the
+# turn, but it does set the one defect this construction has, a notch where the curl's counter
+# meets the bowl's.  That notch is RING_W/r of the radius difference, so a wide curl is both
+# gentler AND cleaner -- 3.42 units at r=70, 0.55 at r=140, which is under the compiler's own
+# 1-unit rounding and therefore disappears on compile rather than needing a solved hand-off.
+J_CURL_R    = 110.0                        # the curl's outer radius
+J_CURL_TURN = 45.0                         # degrees of turn past J_END
+
+def _band_depth(c, r, r_in, th):
+    """How far in from the outer circle the R1 counter (c + RING_OFF, r_in) lies, along the
+    radial at page angle th: the band's width there."""
+    u = from_ang(th); b = u[0]*RING_OFF[0] + u[1]*RING_OFF[1]
+    return r - (b + math.sqrt(max(0.0, r_in*r_in - norm(RING_OFF)**2 + b*b)))
+
+def _curl_counter_r(c2, r2, th):
+    """The curl's counter radius, solved so its band at `th` equals the bowl's there, which is
+    what makes the two counters meet exactly instead of the curl biting into the J's."""
+    d = r2 - _band_depth(J_C, J_R, J_R - RING_W, th)
+    return norm(sub(mul(from_ang(th), d), RING_OFF))
+BURY = 20.0                                # how far a stem's flat end runs on past the junction, buried
+OVERLAP = 1.0                              # how far a fill reaches into the stem it abuts, so the union
+                                           # never has to resolve two contours that only touch along a line
+
+def _stem_edge(x_c, side, y0=0.0, y1=CAP):
+    """The line of an R3 stem's left (-1) or right (+1) edge.  Stems taper, so it is not vertical."""
+    return line_2pt((x_c + side * w_stem(y0) / 2, y0), (x_c + side * w_stem(y1) / 2, y1))
+
+def _stem_tangent_x(c, r, edge, at_left):
+    """The stem centre x at which the stem's `edge` (-1 its left edge, +1 its right) runs TANGENT to
+    the circle (c, r), the circle's centre lying to the left of that edge (at_left +1) or to its
+    right (-1).  R3's stems taper, so a stem edge is not vertical and tangency is not the same thing
+    as putting the edge on the circle's extreme: setting the edge on the extreme leaves the two
+    curves a fraction of a unit apart everywhere else, which is a small step in the finished outline
+    (0.6 units on the U's counter, 1.1 on the J's silhouette).  Solving for the tangency instead
+    makes the hand-off exact -- no step and no change of tangent at the point they touch."""
+    p, v = _stem_edge(0.0, edge)
+    n = perp(v)                                     # points to the left of the edge's direction (up)
+    d0 = n[0] * (c[0] - p[0]) + n[1] * (c[1] - p[1])
+    return (d0 - at_left * r) / n[0]
+
+def _stem_x_on_extreme(c, r, side, inner=False):
+    """The placement this module used before _stem_tangent_x: a stem's edge set ON the circle's own
+    extreme rather than tangent to the circle.  Kept only so the notes can say what the difference
+    between the two is worth in units."""
+    if inner: return c[0] + RING_OFF[0] + side * (r - RING_W + w_stem(c[1]) / 2)
+    return c[0] + side * (r - w_stem(c[1]) / 2)
+
+GRAZE = 0.25    # how far INSIDE its circle a stem's edge is set tangent at a junction.  Tangent to
+                # the circle itself is the exact answer geometrically, but a tangent line lies
+                # outside its circle everywhere but the one touch point, so stem and round would
+                # meet at a zero-angle contact and overlap in nothing -- which a boolean union
+                # cannot resolve (fontforge's overlap remover fails outright: "winding number did
+                # not return to 0" on the J, and a zero-area spike on the U's counter).  Set tangent
+                # 0.25 units inside instead and the stem's edge CROSSES its circle at a real angle,
+                # sqrt(2*GRAZE/r) = 2.4 to 2.8 deg here, with area to spare on both sides of it.
+                # The hand-off stays stepless, because the arc is ended exactly at that crossing;
+                # what the 0.25 costs is that much bite into the counter on the heavy side, over
+                # about 11 units of the stem's run -- 0.06 px at the 240 px proof.
+
+def _light_junction(c, r, side):
+    """The junction where the round's band is NARROWER than the stem (the light, upper-right side).
+    Returns the stem's centre x, the ray the round's arc must end on, and the height the stem's
+    buried foot stops at.  The stem's outer edge is set tangent to the circle GRAZE units inside the
+    round's own, so it crosses the round's circle at a shallow but real angle; the arc is ended on
+    the ray through that crossing, so the silhouette hands off with no step; and the foot stops at
+    the inner circle's tangency, which is inside the round's circle, so no ink pokes out of the
+    silhouette (the old foot, carried 20 units past the junction, poked out by about a unit)."""
+    x = _stem_tangent_x(c, r - GRAZE, side, side)
+    q = line_circle(_stem_edge(x, side), c, r, pick='max')     # the upper of the two crossings
+    return x, ang(sub(q, c)), _touch_y(_touch_deg(x, side, c, r - GRAZE, c), c, r - GRAZE)
+
+def _heavy_junction(c, r, side):
+    """The junction where the round's band is WIDER than the stem (the heavy, lower-left side).
+    Returns the stem's centre x and the ray the round's arc must end on.  The mirror of
+    _light_junction: the stem's inner edge is set tangent to the circle GRAZE units inside the
+    COUNTER's, so it crosses the counter at a real angle (2.6 deg) instead of grazing it -- an
+    exact tangency there leaves the union a zero-area spike at the touch point -- and the arc is
+    ended on the ray through that crossing, so the counter hands off with no step.  The stem bites
+    GRAZE units into the counter over about 11 units of its run, which is below any raster."""
+    ci, ri = add(c, RING_OFF), r - RING_W
+    x = _stem_tangent_x(ci, ri - GRAZE, -side, side)
+    q = line_circle(_stem_edge(x, -side), ci, ri, pick='min')   # the lower of the two crossings
+    return x, ang(sub(q, c))
+
+def _touch_deg(x_c, edge, c, r, at):
+    """The polar angle, measured at the point `at`, of the place where a stem's `edge` touches the
+    circle (c, r): the foot of the perpendicular from c to that edge line.  Ending a round's arc on
+    THIS ray, rather than at the circle's own extreme, puts the arc's end exactly where the stem's
+    edge meets it, so the two hand off with neither a step nor a change of tangent.  (arc_band
+    measures its end rays at the outer centre even for the counter, hence `at`.)"""
+    p, v = _stem_edge(x_c, edge)
+    n = perp(v)
+    d = n[0] * (c[0] - p[0]) + n[1] * (c[1] - p[1])
+    return ang(sub(sub(c, mul(n, d)), at))
+
+def _touch_y(deg, c, r):
+    """The height of the point on the circle (c, r) at polar angle deg -- where a stem's edge is
+    tangent to it, so where that stem's buried foot has to stop: a tangent line lies OUTSIDE its
+    circle everywhere but the one point, so a stem carried past the tangency pokes out of the
+    round's silhouette (0.9 units at the U's old foot, 1.1 at the J's) and the outline steps back
+    at the foot.  Stopping OVERLAP short of it leaves the ink OVERLAP^2 / 2r = 0.002 units proud,
+    while still overlapping the round in area, which the union needs."""
+    return c[1] + r * math.sin(math.radians(deg))
+
+def _handoff_out(x_c, c, r):
+    """Height at which a LEFT stem's outer edge crosses the round's outer circle: above it the stem
+    carries the silhouette, below it the round does."""
+    return line_circle(_stem_edge(x_c, -1), c, r, pick='max')[1]
+
+def _handoff_in(x_c, c, r):
+    """Height at which a RIGHT stem's inner edge crosses the counter: above it the stem carries the
+    counter's edge, below it the counter's own curve does."""
+    return line_circle(_stem_edge(x_c, -1), add(c, RING_OFF), r - RING_W, pick='min')[1]
+
+def _fill_in(x_c, c, r):
+    """For a stem on the letter's RIGHT.  The round's disc inside the stem's inner edge: it carries the stem's inner edge on
+    down into the round until the counter's own curve crosses it, so the counter turns a corner instead
+    of stepping.  Bounded by the stem's edge and the round's outer circle, so it adds nothing outside
+    either."""
+    return _lens(_stem_edge(x_c, -1), c, r, -1)
+
+def _fill_out(x_c, c, r):
+    """For a stem on the letter's LEFT.  The round's disc outside the stem's outer edge: it carries the round's own circle up to
+    where the stem's outer edge crosses it, so the silhouette hands off without a step.  The edge is
+    moved OVERLAP into the stem so the two contours overlap in area rather than touching along a line."""
+    l = _stem_edge(x_c, -1)
+    return _lens((add(l[0], (OVERLAP, 0.0)), l[1]), c, r, +1)
+
+def _kink(x_c, edge, c, r, pick):
+    """The change of tangent where a stem's `edge` crosses a round's circle (c, r), in degrees: the
+    angle between the circle's own tangent there and the stem's edge."""
+    l = _stem_edge(x_c, edge)
+    q = line_circle(l, c, r, pick=pick)
+    a = abs((ang(l[1]) - ang(perp(sub(q, c))) + 180.0) % 360.0 - 180.0)
+    return min(a, 180.0 - a)
+
+_JOIN_NOTE = (
+    "R1 against R3 is the one join these letters cannot dodge: the band is {left:.1f} wide at the round's "
+    "left extreme and {right:.1f} at its right, against a stem of {stem:.1f} at that height, and the "
+    "counter's displacement means a stem cannot be tangent to the outer circle and to the counter at once.  "
+    "So each side takes the tangency it can, and the round's own disc fills the rest (R6: overlap and "
+    "union).  Two things are solved rather than assumed.  First, the stem is placed by tangency to its "
+    "circle -- the outer circle on the light side, the counter on the heavy one -- not by sitting its edge "
+    "on that circle's extreme, which is a different thing once R3's taper tilts the edge ({tang_err:.2f} "
+    "units apart on the heavy side here) and which used to show in the finished outline.  Second, the arc "
+    "is ended on the ray through that point, so the arc's own end IS where the stem meets it: measured on "
+    "the built outline both hand-offs close to {step:.3f} units, no step in the silhouette and none in the "
+    "counter.  The tangency is taken {graze:g} units inside each circle (GRAZE) rather than on it, so that "
+    "stem and round cross at {graze_l:.1f} deg on the heavy side and {graze_r:.1f} deg on the light one "
+    "instead of grazing at 0 -- a zero-angle contact is not something a boolean union can resolve -- and "
+    "the light-side stem's foot stops at its tangency instead of being carried on down, where it would "
+    "poke about a unit out of the round and the silhouette would step back at the foot.  What is left at "
+    "each junction is the crossing of the stem's OTHER edge with the round, a change of tangent of "
+    "{kink_l:.1f} deg on the heavy side and {kink_r:.1f} deg on the light one: the kink every sans-serif "
+    "bowl has where its stem enters, and the only thing R1 against R3 leaves behind.")
+
+def build_U():
+    xl, a0 = _heavy_junction(U_C, U_R, -1)                           # counter crossing, left
+    xr, a1, y0r = _light_junction(U_C, U_R, +1)                      # silhouette crossing, right
+    a1 += 360.0
+    y0 = U_C[1] - BURY
+    left  = stem(xl, y0,  CAP, bottom=None, top='right')
+    right = stem(xr, y0r, CAP, bottom=None, top='left')
+    arc   = round_arc(U_C, U_R, a0, a1)
+    fills = [_fill_out(xl, U_C, U_R), _fill_in(xr, U_C, U_R)]
+    hand_l, hand_r = _handoff_out(xl, U_C, U_R), _handoff_in(xr, U_C, U_R)
+    end_l = line_circle(line(U_C, from_ang(a0)), add(U_C, RING_OFF), U_R - RING_W, pick='max')
+    end_r = add(U_C, mul(from_ang(a1), U_R))                   # the arc's own two ends at the stems
+    step_l = abs(end_l[0] - line_x_at_y(_stem_edge(xl, +1), end_l[1]))
+    step_r = abs(end_r[0] - line_x_at_y(_stem_edge(xr, +1), end_r[1]))
+    return glyph(ord('U'), [arc, left, right] + fills, sb=(SB_ROUND, SB_ROUND), notes=dict(
+        construction=f"Medium body {BODY_MEDIUM}: two R3 stems (rules.stem) from the cap down into a lower half "
+                     f"round (rules.round_arc, r={U_R:g} centred {U_C}, {a0:.2f} to {a1 - 360:.2f} deg) that "
+                     f"sits on the baseline overshoot and whose outer circle spans the body.  The stems' tops "
+                     f"are free R5 cuts with the body toward each other, so the tips are the two upper corners "
+                     f"and the cuts fall inward.",
+        joins=_JOIN_NOTE.format(left=_band_w(180), right=_band_w(0), stem=w_stem(U_C[1]),
+                                tang_err=abs(xl - _stem_x_on_extreme(U_C, U_R, -1, inner=True)),
+                                step=max(step_l, step_r), graze=GRAZE,
+                                graze_l=_kink(xl, +1, add(U_C, RING_OFF), U_R - RING_W, 'min'),
+                                graze_r=_kink(xr, +1, U_C, U_R, 'max'),
+                                kink_l=_kink(xl, -1, U_C, U_R, 'max'),
+                                kink_r=_kink(xr, -1, add(U_C, RING_OFF), U_R - RING_W, 'min')) +
+              f"  Here the arc ends on the rays at {a0:.2f} deg (the counter's crossing with the left stem's "
+              f"inner edge) and {a1 - 360:.2f} deg (the circle's crossing with the right stem's outer edge), "
+              f"and the two crossings are at y={hand_l:.0f} on the left and y={hand_r:.0f} on the right; the "
+              f"left stem's outer edge stands {xl - w_stem(U_C[1])/2:.1f} units inside the round's left "
+              f"extreme, which is why the round shows on the left a little higher than on the right -- R1's "
+              f"displacement, made visible.",
+        stem_feet=f"the left stem's foot is flat and buried {BURY:g} units past the junction at y={y0:.0f}, "
+                  f"inside the round's own band: its outer edge stands at x={xl - w_stem(y0)/2:.1f} there "
+                  f"against the circle's own {_circ_x(U_C, U_R, y0, -1):.1f}, well inside the silhouette.  The "
+                  f"right stem's foot stops at y={y0r:.1f}, the tangency with the circle {GRAZE:g} units "
+                  f"inside the round's, which is the last height at which the whole foot is still inside the "
+                  f"silhouette; carried down to the round's centre as it was, its outer corner stood 0.9 "
+                  f"units outside the round and the silhouette stepped back there.",
+        spacing=f"{SB_ROUND}/{SB_ROUND}: BOTH extremes are the round's own circle, so both sides take a "
+                f"round's bearing.  On the left the outer circle reaches x=0 at y={U_C[1]:.0f} while the left "
+                f"stem's outer edge stands {xl - w_stem(U_C[1])/2:.1f} units inside it; on the right the stem's "
+                f"outer edge meets the circle within a quarter of a unit of its extreme, so there stem and "
+                f"round hold the extreme together.  The letter's two sides are the same shape -- a stem "
+                f"running down into the round -- and 40/60 (R9 read literally off which of the two owns the "
+                f"extreme) put the ink {abs(SB_STRAIGHT - SB_ROUND)/2:.0f} units left of centre in the advance, "
+                f"which showed against the symmetric V, X and Y.  40 on both sides is the same reading applied "
+                f"to the same shape twice.",
+        deviations="none from R1-R9; the two fills are junction tooling (R6), each bounded by the round's own "
+                   "circle and a stem's own edge, so no new curve or weight is introduced.",
+        geometry=dict(centre=U_C, r_out=U_R, stems=(xl, xr), stem_bottom=y0, arc_deg=(a0, a1 - 360),
+                      handoff=(hand_l, hand_r), handoff_step=(step_l, step_r))))
+
+def build_J():
+    x_s, a1, y0 = _light_junction(J_C, J_R, +1)                      # silhouette crossing at the stem
+    a1 += 360.0
+    st  = stem(x_s, y0, CAP, bottom=None, top='left')
+    arc = round_arc(J_C, J_R, J_END, a1)
+    c2 = add(J_C, mul(from_ang(J_END), J_R - J_CURL_R))          # internally tangent at J_END
+    ri2 = _curl_counter_r(c2, J_CURL_R, J_END)
+    curl = arc_band(c2, J_CURL_R, ri2, RING_OFF, J_END, J_END - J_CURL_TURN)
+    fill = _fill_in(x_s, J_C, J_R)
+    tip = add(c2, mul(from_ang(J_END - J_CURL_TURN), J_CURL_R))
+    notch = abs(_band_depth(c2, J_CURL_R, ri2, J_END) - _band_depth(J_C, J_R, J_R - RING_W, J_END))
+    r1_notch = abs(_band_depth(c2, J_CURL_R, J_CURL_R - RING_W, J_END)
+                   - _band_depth(J_C, J_R, J_R - RING_W, J_END))
+    return glyph(ord('J'), [arc, curl, st, fill], sb=(SB_ROUND, SB_STRAIGHT), notes=dict(
+        construction=f"Narrow body {BODY_NARROW}: one R3 stem (rules.stem) down the right and a hook that is an "
+                     f"R1 arc (rules.round_arc, r={J_R:g} centred {J_C}) from {J_END:g} deg round the bottom to "
+                     f"the stem, sitting on the baseline overshoot.",
+        curl=f"The bowl ends at {J_END:g} deg and the band is carried on round a circle of radius "
+             f"{J_CURL_R:g} internally tangent to it there, through {J_CURL_TURN:g} deg of turn, ending on "
+             f"R1's radial cut.  It is the A's hook as a GESTURE, not as an outline.  The outer edges are "
+             f"tangent at the join by construction and the tangent is continuous to 0.00 deg.  "
+             f"The A's own hook turns 163 deg and that much turn -- "
+             f"grafted or rebuilt -- curls the tip back into the mouth and closes the J into a 9; "
+             f"{J_CURL_TURN:g} deg is where the terminal lifts instead of hooking.  RING_OFF is a fixed "
+             f"vector, so an INDEPENDENT R1 round of radius {J_CURL_R:g} would be "
+             f"{_band_depth(c2, J_CURL_R, J_CURL_R - RING_W, J_END):.2f} wide at the join against the bowl's "
+             f"{_band_depth(J_C, J_R, J_R - RING_W, J_END):.2f}, and would bite {r1_notch:.2f} units into the "
+             f"J's counter; the curl is the same stroke continuing, not an independent round, so its counter "
+             f"radius is solved to carry the BOWL's band ({ri2:.2f}, against {J_CURL_R - RING_W:.2f} for a "
+             f"free-standing R1 round) and the two counters meet to {notch:.3f} units.  The free tip is at "
+             f"{tuple(round(v, 1) for v in tip)}.",
+        stem_top=f"free R5 cut with the body to the left: the tip is the upper-right corner, the corner farther "
+                 f"from the letter's centre (R5), the same cut the H's and the U's right stems take.",
+        joins=f"The stem meets the round on its light side, the U's right junction exactly (_light_junction): "
+              f"its outer edge is solved tangent to the circle {GRAZE:g} units inside the round's own -- not "
+              f"set on the round's extreme, which is {abs(x_s - _stem_x_on_extreme(J_C, J_R, +1)):.2f} units "
+              f"away once R3's taper tilts the edge, and which used to leave the stem's foot a unit outside "
+              f"the round -- so it crosses the round's circle at {_kink(x_s, +1, J_C, J_R, 'max'):.1f} deg, a "
+              f"shallow but real crossing the union can resolve.  The arc is ended on the ray at "
+              f"{a1 - 360:.2f} deg through that crossing, so the arc's own end is exactly where the stem's "
+              f"edge meets it: measured on the built outline the hand-off closes to "
+              f"{abs(add(J_C, mul(from_ang(a1), J_R))[0] - line_x_at_y(_stem_edge(x_s, +1), add(J_C, mul(from_ang(a1), J_R))[1])):.3f} "
+              f"units, and the stem's foot stops at y={y0:.1f}, still inside the silhouette.  The stem is then "
+              f"carried on down inside the round to y={_handoff_in(x_s, J_C, J_R):.0f}, where the counter "
+              f"crosses its inner edge (_fill_in) and the outline turns "
+              f"{_kink(x_s, -1, add(J_C, RING_OFF), J_R - RING_W, 'min'):.1f} deg -- a change of tangent, not "
+              f"a step.  The band is only "
+              f"{_band_w(0):.1f} against the stem's {w_stem(J_C[1]):.1f} there, which is R1 against R3.",
+        spacing=f"{SB_ROUND} beside the hook, {SB_STRAIGHT} beside the stem.",
+        deviations="none from R1-R9.",
+        geometry=dict(centre=J_C, r_out=J_R, stem_x=x_s, stem_bottom=y0, arc_deg=(J_END, a1 - 360.0))))
+
+GLYPHS = {'C': build_C, 'G': build_G, 'Q': build_Q, 'S': build_S, 'U': build_U, 'J': build_J}
