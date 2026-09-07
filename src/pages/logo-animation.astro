@@ -74,52 +74,55 @@ import LogoAnimated from '../components/LogoAnimated.astro';
       </figure>
     </div>
 
-    <!-- The three static treatments, each shown at the size it is downloaded from, so what
-         you pick is what you get. The animated download is taken from the mark at the top. -->
+    <!-- One configured mark, exported. The controls drive both previews, so what you set is
+         what the file gets: treatment and colours are the component's own props expressed as
+         classes and custom properties, and speed and trail belong to the animated one. -->
     <section class="la-dl" aria-labelledby="la-dl-h">
       <h2 id="la-dl-h">Download</h2>
+
+      <div class="la-dl-controls">
+        <label>treatment
+          <select data-dl-treat>
+            <option value="hero">hero — ink, outline, shadow</option>
+            <option value="plain">plain — ink only</option>
+            <option value="flat">flat — one fill</option>
+          </select>
+        </label>
+        <label>ink <input type="color" data-dl-var="ink" value="#EEE5E9"></label>
+        <label data-dl-when="hero">outline <input type="color" data-dl-var="outline" value="#D16666"></label>
+        <label data-dl-when="hero">shadow <input type="color" data-dl-var="shadow" value="#2892D7"></label>
+        <label>speed <input type="number" data-dl-speed min="0.25" max="4" step="0.25" value="1"></label>
+        <button type="button" data-dl-reset>reset</button>
+      </div>
+
       <div class="la-dl-row">
         <figure class="la-dl-cell">
-          <Logo variant="hero" size={92} id="la-dl-hero" />
-          <figcaption>hero<br><small>ink + red outline + blue shadow</small></figcaption>
+          <Logo variant="hero" size={132} id="la-dl-still" />
+          <figcaption>still</figcaption>
           <div class="la-dl-btns">
-            <button type="button" data-dl="svg" data-sel="#la-dl-hero" data-name="ao-mark-hero">SVG</button>
-            <button type="button" data-dl="png" data-sel="#la-dl-hero" data-name="ao-mark-hero" data-size="512">512</button>
-            <button type="button" data-dl="png" data-sel="#la-dl-hero" data-name="ao-mark-hero" data-size="1024">1024</button>
+            <button type="button" data-dl="svg" data-sel="#la-dl-still" data-name="ao-mark">SVG</button>
+            <button type="button" data-dl="png" data-sel="#la-dl-still" data-name="ao-mark" data-size="512">512</button>
+            <button type="button" data-dl="png" data-sel="#la-dl-still" data-name="ao-mark" data-size="1024">1024</button>
           </div>
         </figure>
         <figure class="la-dl-cell">
-          <Logo variant="plain" size={92} id="la-dl-plain" />
-          <figcaption>plain<br><small>ink only, no outline or shadow</small></figcaption>
+          <LogoAnimated variant="hero" size={132} id="la-dl-sw" class="la-dl-live" />
+          <figcaption>animated</figcaption>
           <div class="la-dl-btns">
-            <button type="button" data-dl="svg" data-sel="#la-dl-plain" data-name="ao-mark-plain">SVG</button>
-            <button type="button" data-dl="png" data-sel="#la-dl-plain" data-name="ao-mark-plain" data-size="512">512</button>
-            <button type="button" data-dl="png" data-sel="#la-dl-plain" data-name="ao-mark-plain" data-size="1024">1024</button>
-          </div>
-        </figure>
-        <figure class="la-dl-cell">
-          <Logo variant="flat" size={92} id="la-dl-flat" />
-          <figcaption>flat<br><small>one accent fill, for small sizes</small></figcaption>
-          <div class="la-dl-btns">
-            <button type="button" data-dl="svg" data-sel="#la-dl-flat" data-name="ao-mark-flat">SVG</button>
-            <button type="button" data-dl="png" data-sel="#la-dl-flat" data-name="ao-mark-flat" data-size="512">512</button>
-            <button type="button" data-dl="png" data-sel="#la-dl-flat" data-name="ao-mark-flat" data-size="1024">1024</button>
-          </div>
-        </figure>
-        <figure class="la-dl-cell">
-          <Logo variant="hero" size={92} />
-          <figcaption>the write-on<br><small>hero, animated</small></figcaption>
-          <div class="la-dl-btns">
-            <button type="button" data-dl="anim" data-sel=".la-demo-main" data-name="ao-mark-animated">animated SVG</button>
+            <button type="button" data-dl="anim" data-name="ao-mark-animated">SVG</button>
+            <button type="button" data-dl="video" data-name="ao-mark" data-slow="1">video</button>
+            <button type="button" data-dl="video" data-name="ao-mark-slow" data-slow="4">&frac14;&times;</button>
+            <button type="button" data-dl-replay>replay</button>
           </div>
         </figure>
       </div>
+
       <p class="la-dl-note">
         One vector, three treatments. <em>plain</em> and <em>flat</em> are the same drawing and
-        differ only in fill, so an explicit <code>ink</code> makes them identical. SVG files
-        carry their paint on the elements themselves and need no stylesheet; the animated file
-        carries the write-on's own CSS and plays when opened. All are transparent, so the
-        off-white ink of <em>hero</em> and <em>plain</em> wants a dark background.
+        differ only in fill, so setting <em>ink</em> makes them identical. SVG files carry their
+        paint on the elements themselves and need no stylesheet; the animated file carries the
+        write-on's own CSS and plays when opened. All are transparent, so a light ink wants a
+        dark background &mdash; the video is given one.
       </p>
     </section>
   </main>
@@ -191,7 +194,7 @@ import LogoAnimated from '../components/LogoAnimated.astro';
 </style>
 
 <script>
-  import { downloadSvg, downloadPng } from '../components/logo-download';
+  import { downloadSvg, downloadPng, downloadVideo, videoMimeType } from '../components/logo-download';
   // Replay by re-applying the class that carries the animations. Every
   // LogoAnimated on the page restarts together.
   const marks = Array.from(document.querySelectorAll<SVGSVGElement>('.site-logo-anim'));
@@ -226,17 +229,74 @@ import LogoAnimated from '../components/LogoAnimated.astro';
     if (time) time.value = `${(ms / 1000).toFixed(2)}s`;
   });
 
-  // Downloads. Each button names its source mark and what to make of it.
+  // ---- Downloads -----------------------------------------------------------------
+  // The controls write to the two previews, and the export reads whatever is on them, so
+  // there is one source of truth: treatment is a class swap, colours and speed are custom
+  // properties, and trail is a choice between two instances because the two draw different
+  // markup and cannot be switched with a property.
+  const TREATMENTS = ['hero', 'plain', 'flat'] as const;
+  const still = document.querySelector<SVGSVGElement>('#la-dl-still');
+  const live = document.querySelector<SVGSVGElement>('#la-dl-sw');
+  const treatSel = document.querySelector<HTMLSelectElement>('[data-dl-treat]');
+  const speedIn = document.querySelector<HTMLInputElement>('[data-dl-speed]');
+  const colourIns = Array.from(document.querySelectorAll<HTMLInputElement>('[data-dl-var]'));
+
+  const liveMark = (): SVGSVGElement | null => live;
+
+  function apply(): void {
+    const treat = treatSel?.value ?? 'hero';
+    const marks: (SVGSVGElement | null)[] = [still, live];
+    for (const el of marks) {
+      if (!el) continue;
+      for (const t of TREATMENTS) {
+        el.classList.toggle(`site-logo-${t}`, t === treat);
+        if (el !== still) el.classList.toggle(`site-logo-anim-${t}`, t === treat);
+      }
+      for (const input of colourIns) el.style.setProperty(`--logo-${input.dataset.dlVar}`, input.value);
+      if (el !== still) el.style.setProperty('--la-speed', String(speedIn?.value || 1));
+    }
+    // outline and shadow exist only on hero, so hide the controls that would do nothing
+    document.querySelectorAll<HTMLElement>('[data-dl-when]').forEach((el) => {
+      el.hidden = el.dataset.dlWhen !== treat;
+    });
+  }
+
+  const replayLive = (): void => {
+    const m = liveMark();
+    if (!m) return;
+    m.classList.remove('la-play');
+    void m.getBoundingClientRect();
+    m.classList.add('la-play');
+  };
+
+  [treatSel, speedIn, ...colourIns].forEach((el) =>
+    el?.addEventListener('input', () => { apply(); replayLive(); }));
+  document.querySelector('[data-dl-reset]')?.addEventListener('click', () => {
+    if (treatSel) treatSel.value = 'hero';
+    if (speedIn) speedIn.value = '1';
+    colourIns.forEach((i) => { i.value = i.defaultValue; });
+    apply(); replayLive();
+  });
+  document.querySelector('[data-dl-replay]')?.addEventListener('click', replayLive);
+  apply();
+
+  // Safari has only recently been able to record at all; say so rather than fail on click.
+  if (!videoMimeType()) {
+    document.querySelectorAll<HTMLButtonElement>('[data-dl="video"]').forEach((b) => {
+      b.disabled = true;
+      b.title = 'this browser cannot record video';
+    });
+  }
+
   document.querySelectorAll<HTMLButtonElement>('[data-dl]').forEach((btn) => {
     btn.addEventListener('click', async () => {
-      // a selector, not an id: LogoAnimated's `id` prop is a mask-id prefix and never
-      // reaches the DOM, so the animated mark has to be addressed by class
-      const src = document.querySelector(btn.dataset.sel || '');
+      const src = btn.dataset.sel ? document.querySelector(btn.dataset.sel) : liveMark();
       if (!(src instanceof SVGSVGElement)) { console.error('no mark for', btn.dataset.sel); return; }
-      const name = btn.dataset.name || 'ao-mark';
+      const treat = treatSel?.value ?? 'hero';
+      const name = `${btn.dataset.name || 'ao-mark'}-${treat}`;
       const kind = btn.dataset.dl;
+      const was = btn.textContent;
       const done = (label: string) => {
-        const was = btn.textContent;
         btn.textContent = label;
         btn.disabled = true;
         setTimeout(() => { btn.textContent = was; btn.disabled = false; }, 1200);
@@ -245,9 +305,16 @@ import LogoAnimated from '../components/LogoAnimated.astro';
         if (kind === 'svg') { downloadSvg(src, `${name}.svg`); done('saved'); }
         else if (kind === 'anim') { downloadSvg(src, `${name}.svg`, { animated: true }); done('saved'); }
         else if (kind === 'png') {
-          const size = Number(btn.dataset.size || 1024);
           btn.disabled = true;
-          await downloadPng(src, `${name}-${size}.png`, size);
+          await downloadPng(src, `${name}-${btn.dataset.size}.png`, Number(btn.dataset.size || 1024));
+          done('saved');
+        } else if (kind === 'video') {
+          btn.disabled = true;
+          btn.textContent = 'baking';
+          await downloadVideo(src, name, {
+            slow: Number(btn.dataset.slow || 1), size: 512, fps: 30, background: '#1D2B35',
+            onProgress: (d, t) => { btn.textContent = `${Math.round((d / t) * 100)}%`; },
+          });
           done('saved');
         }
       } catch (err) {
@@ -304,6 +371,52 @@ import LogoAnimated from '../components/LogoAnimated.astro';
   }
   .la-dl-btns button:hover:not(:disabled) { background: var(--color-accent); }
   .la-dl-btns button:disabled { opacity: 0.6; cursor: default; }
+  .la-dl-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem 1.4rem;
+    font-size: 0.8rem;
+  }
+  .la-dl-controls label { display: flex; align-items: center; gap: 0.45rem; opacity: 0.85; }
+  .la-dl-controls select,
+  .la-dl-controls input[type="number"] {
+    font: inherit;
+    font-size: 0.78rem;
+    padding: 0.28rem 0.45rem;
+    border-radius: 0.4rem;
+    border: 1px solid rgb(238 229 233 / 0.3);
+    background: var(--color-background);
+    color: var(--color-primary);
+  }
+  .la-dl-controls input[type="number"] { width: 4.2rem; }
+  .la-dl-controls input[type="color"] {
+    width: 2rem; height: 1.6rem; padding: 0; cursor: pointer;
+    border: 1px solid rgb(238 229 233 / 0.3); border-radius: 0.3rem; background: transparent;
+  }
+  .la-dl-controls [data-dl-reset] {
+    font: inherit; font-size: 0.78rem; padding: 0.3rem 0.8rem; border-radius: 999px;
+    border: 1px solid rgb(238 229 233 / 0.3); background: transparent;
+    color: var(--color-primary); cursor: pointer;
+  }
+  .la-dl-anim {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+  }
+  .la-dl-anim label { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; opacity: 0.8; }
+  .la-dl-anim select {
+    font: inherit;
+    font-size: 0.78rem;
+    padding: 0.3rem 0.5rem;
+    border-radius: 0.4rem;
+    border: 1px solid rgb(238 229 233 / 0.3);
+    background: var(--color-background);
+    color: var(--color-primary);
+  }
   .la-dl-note {
     margin: 0;
     /* the page's global paragraph rule paints this accent blue otherwise */

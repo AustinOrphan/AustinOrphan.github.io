@@ -34,7 +34,9 @@ interface Props {
   /** Start playing on load. Off, the mark sits in its final state until
    *  something adds the `la-play` class. */
   autoplay?: boolean;
-  /** Prefix for the mask ids (`<id>-l`, `-r`, `-b`, and `-t` in the swash mode). Unique
+  /** The element's DOM id, AND the prefix for its mask ids (`<id>-l`, `-r`, `-b`, and `-t`
+   *  in the swash mode). It used to be the prefix only, which meant passing `id` gave you
+   *  something getElementById could not find. Unique
    *  per page. Defaults to `la1`, `la2`, ... in render order, so the built HTML
    *  is the same on every build; pass one when you need a stable name that
    *  does not depend on render order. */
@@ -147,6 +149,7 @@ const easeTail = `linear(${dash(0)}, ${at(TAIL_STOPS)}, 1)`;
 // inner edge, so the counter jumped and the 157-to-623 modulation appeared at the cross-fade.
 ---
 <svg
+  id={id}
   style={`--la-ease-head-l:${easeHead};--la-ease-tail-l:${easeTail}${vars ? ';' + vars : ''}`}
   class={`site-logo site-logo-${variant} site-logo-anim site-logo-anim-${variant} site-logo-anim-trail-${trail} ${autoplay ? 'la-play' : ''} ${className}`.trim()}
   viewBox="-70 -70 1246 1246"
