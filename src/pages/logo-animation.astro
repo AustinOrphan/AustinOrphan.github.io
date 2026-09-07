@@ -9,7 +9,7 @@ import LogoAnimated from '../components/LogoAnimated.astro';
   <main class="la-demo">
     <div class="la-demo-row">
       <figure class="la-demo-cell">
-        <LogoAnimated variant="hero" size="min(480px, 42vw)" id="la-demo" />
+        <LogoAnimated variant="hero" size="min(480px, 42vw)" id="la-demo" class="la-demo-main" />
         <figcaption>LogoAnimated</figcaption>
       </figure>
       <figure class="la-demo-cell">
@@ -73,6 +73,55 @@ import LogoAnimated from '../components/LogoAnimated.astro';
         <figcaption>trail="stroke" (what the clip draws)</figcaption>
       </figure>
     </div>
+
+    <!-- The three static treatments, each shown at the size it is downloaded from, so what
+         you pick is what you get. The animated download is taken from the mark at the top. -->
+    <section class="la-dl" aria-labelledby="la-dl-h">
+      <h2 id="la-dl-h">Download</h2>
+      <div class="la-dl-row">
+        <figure class="la-dl-cell">
+          <Logo variant="hero" size={92} id="la-dl-hero" />
+          <figcaption>hero<br><small>ink + red outline + blue shadow</small></figcaption>
+          <div class="la-dl-btns">
+            <button type="button" data-dl="svg" data-sel="#la-dl-hero" data-name="ao-mark-hero">SVG</button>
+            <button type="button" data-dl="png" data-sel="#la-dl-hero" data-name="ao-mark-hero" data-size="512">512</button>
+            <button type="button" data-dl="png" data-sel="#la-dl-hero" data-name="ao-mark-hero" data-size="1024">1024</button>
+          </div>
+        </figure>
+        <figure class="la-dl-cell">
+          <Logo variant="plain" size={92} id="la-dl-plain" />
+          <figcaption>plain<br><small>ink only, no outline or shadow</small></figcaption>
+          <div class="la-dl-btns">
+            <button type="button" data-dl="svg" data-sel="#la-dl-plain" data-name="ao-mark-plain">SVG</button>
+            <button type="button" data-dl="png" data-sel="#la-dl-plain" data-name="ao-mark-plain" data-size="512">512</button>
+            <button type="button" data-dl="png" data-sel="#la-dl-plain" data-name="ao-mark-plain" data-size="1024">1024</button>
+          </div>
+        </figure>
+        <figure class="la-dl-cell">
+          <Logo variant="flat" size={92} id="la-dl-flat" />
+          <figcaption>flat<br><small>one accent fill, for small sizes</small></figcaption>
+          <div class="la-dl-btns">
+            <button type="button" data-dl="svg" data-sel="#la-dl-flat" data-name="ao-mark-flat">SVG</button>
+            <button type="button" data-dl="png" data-sel="#la-dl-flat" data-name="ao-mark-flat" data-size="512">512</button>
+            <button type="button" data-dl="png" data-sel="#la-dl-flat" data-name="ao-mark-flat" data-size="1024">1024</button>
+          </div>
+        </figure>
+        <figure class="la-dl-cell">
+          <Logo variant="hero" size={92} />
+          <figcaption>the write-on<br><small>hero, animated</small></figcaption>
+          <div class="la-dl-btns">
+            <button type="button" data-dl="anim" data-sel=".la-demo-main" data-name="ao-mark-animated">animated SVG</button>
+          </div>
+        </figure>
+      </div>
+      <p class="la-dl-note">
+        One vector, three treatments. <em>plain</em> and <em>flat</em> are the same drawing and
+        differ only in fill, so an explicit <code>ink</code> makes them identical. SVG files
+        carry their paint on the elements themselves and need no stylesheet; the animated file
+        carries the write-on's own CSS and plays when opened. All are transparent, so the
+        off-white ink of <em>hero</em> and <em>plain</em> wants a dark background.
+      </p>
+    </section>
   </main>
 </BaseLayout>
 
@@ -142,6 +191,7 @@ import LogoAnimated from '../components/LogoAnimated.astro';
 </style>
 
 <script>
+  import { downloadSvg, downloadPng } from '../components/logo-download';
   // Replay by re-applying the class that carries the animations. Every
   // LogoAnimated on the page restarts together.
   const marks = Array.from(document.querySelectorAll<SVGSVGElement>('.site-logo-anim'));
@@ -175,4 +225,93 @@ import LogoAnimated from '../components/LogoAnimated.astro';
     }
     if (time) time.value = `${(ms / 1000).toFixed(2)}s`;
   });
+
+  // Downloads. Each button names its source mark and what to make of it.
+  document.querySelectorAll<HTMLButtonElement>('[data-dl]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      // a selector, not an id: LogoAnimated's `id` prop is a mask-id prefix and never
+      // reaches the DOM, so the animated mark has to be addressed by class
+      const src = document.querySelector(btn.dataset.sel || '');
+      if (!(src instanceof SVGSVGElement)) { console.error('no mark for', btn.dataset.sel); return; }
+      const name = btn.dataset.name || 'ao-mark';
+      const kind = btn.dataset.dl;
+      const done = (label: string) => {
+        const was = btn.textContent;
+        btn.textContent = label;
+        btn.disabled = true;
+        setTimeout(() => { btn.textContent = was; btn.disabled = false; }, 1200);
+      };
+      try {
+        if (kind === 'svg') { downloadSvg(src, `${name}.svg`); done('saved'); }
+        else if (kind === 'anim') { downloadSvg(src, `${name}.svg`, { animated: true }); done('saved'); }
+        else if (kind === 'png') {
+          const size = Number(btn.dataset.size || 1024);
+          btn.disabled = true;
+          await downloadPng(src, `${name}-${size}.png`, size);
+          done('saved');
+        }
+      } catch (err) {
+        console.error(err);
+        done('failed');
+      }
+    });
+  });
 </script>
+
+<style is:global>
+  .la-dl {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgb(238 229 233 / 0.15);
+    width: min(100%, 60rem);
+  }
+  .la-dl h2 {
+    margin: 0;
+    font-size: 1rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    opacity: 0.7;
+  }
+  .la-dl-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 2.5rem;
+  }
+  .la-dl-cell {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.6rem;
+  }
+  .la-dl-cell figcaption { font-size: 0.8rem; opacity: 0.75; text-align: center; line-height: 1.4; }
+  .la-dl-cell figcaption small { font-size: 0.72rem; opacity: 0.75; }
+  .la-dl-btns { display: flex; gap: 0.4rem; }
+  .la-dl-btns button {
+    font: inherit;
+    font-size: 0.78rem;
+    padding: 0.35rem 0.7rem;
+    border-radius: 999px;
+    border: 1px solid var(--color-accent);
+    background: transparent;
+    color: var(--color-primary);
+    cursor: pointer;
+    min-width: 3.4rem;
+  }
+  .la-dl-btns button:hover:not(:disabled) { background: var(--color-accent); }
+  .la-dl-btns button:disabled { opacity: 0.6; cursor: default; }
+  .la-dl-note {
+    margin: 0;
+    /* the page's global paragraph rule paints this accent blue otherwise */
+    color: var(--color-primary);
+    max-width: 44rem;
+    text-align: center;
+    font-size: 0.8rem;
+    opacity: 0.6;
+    line-height: 1.5;
+  }
+</style>

@@ -10,19 +10,22 @@ interface Props {
   variant?: 'hero' | 'plain' | 'flat';
   size?: number | string;
   class?: string;
+  /** For addressing one instance from script, as LogoAnimated already allows. */
+  id?: string;
   ink?: string;
   outline?: string;
   shadow?: string;
 }
 import { LOGO_MARK_D } from './logo-mark';
 
-const { variant = 'hero', size = 28, class: className = '', ink, outline, shadow } = Astro.props;
+const { variant = 'hero', size = 28, class: className = '', id, ink, outline, shadow } = Astro.props;
 const px = typeof size === 'number' ? `${size}px` : size;
 const vars = [ink && `--logo-ink:${ink}`, outline && `--logo-outline:${outline}`,
                shadow && `--logo-shadow:${shadow}`].filter(Boolean).join(';');
 ---
 <svg
   class={`site-logo site-logo-${variant} ${className}`.trim()}
+  id={id}
   style={vars || undefined}
   viewBox="-70 -70 1246 1246"
   width={px}
