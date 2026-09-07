@@ -300,19 +300,50 @@ it would put the mark on the line E, F, H, K, X and Y are built on — but the A
 is the mark, and the rest of the face borrows from it rather than the other way
 round. `ORPHAN_RING_DROP=1` builds that reading (RISE 100.09, tilt 19.93°).
 
-**The band stays constant, deliberately.** The mark's bar is not an offset
-band: its two edges are separately struck, the upper on a radius of **2118.2**
-units and the lower on **2742.8** (whole-edge circle fits to the drawn outline,
-max residual 0.074 and 0.100). So the mark's own bar swells toward midspan.
-It swells by **0.85 units** — over the 251-unit span the A gives it. Carrying
-the two radii onto a longer chord instead of the swell would put **4.13 units**
-into the middle of an H's 551-unit bar, +12% on a 33-unit stroke: an artefact of
-length, not something the mark does. That is the same trap the tilt rule was
-written to avoid, one step further on, so it takes the same answer — transplant
-the amount, not the geometry. And the amount is 0.85 units, which at any size
-this face is set at is below the resolution of the thing it would correct. So
-the band is built constant, from one radius, and the 0.85 is left on the table
-knowingly rather than by omission.
+**OPEN: how literally to take the ring.** What is built and shipped is reading
+**A** below. Readings B–E were measured and drawn but not landed, and the choice
+between them is deferred rather than settled. `measure/ring_readings.py` rebuilds
+all four; the sheets are in `measure/evidence/ring-*.png`.
+
+The rules above cap the chord's rise at the A's own 90.77, so a long chord
+flattens (an H's bar to 9.34°). That is one reading of "the horizontal is a chord
+of the ring", and the A cannot confirm it: its span, 251.1, is exactly where
+constant-rise and constant-angle cross, since the crossover *is* `RISE /
+tan(RING_TILT)` and both are measured off that same bar. The mark is silent here.
+Only the page decides.
+
+- **A — capped rise** (shipped). Tilt falls with span: 19.87° under 251 units,
+  9.34° at an H's 551. Band constant, R4's linear taper. The cost: at long spans
+  the bar leaves the ring — an H's bar ends sit ~54 units off the underlay.
+- **B — the ring's own angle.** Centre a chord on the ring and its tilt is
+  constant at **19.87°**, the rise scaling with span. This is what a real ring
+  behind the page does: a wider letter is a bigger window on the same object.
+  One rule, no cap, and the bar stays on the ring at every width. An H's bar
+  rises 199.4 units instead of 90.8.
+- **C — B, plus the ring's width profile.** Same ends as R4, but the middle
+  swells: ×1.016 on a G's bar, ×1.043 on the A's own, ×1.083 on an E's arm,
+  ×1.265 (+8.8 units) on an H's. Still R4's circular arch underneath.
+- **D — the annulus, weight normalised.** Both edges taken straight off the two
+  ellipses (§2.2) through `build_A`'s transform, so the arch is elliptical, its
+  curvature varies along the bar, and the edges are struck separately. Scaled
+  about its centre line so midspan meets R4's nominal: 27.1 / 33.2 / 25.4 across
+  an H's bar. **Note this overrides R7 for interior horizontals** — the ring's
+  band is near-symmetric about midspan, not weighted to the left, so the
+  directional taper R7 asks for is gone. That is a decision to take on purpose,
+  not to inherit.
+- **E — the annulus verbatim.** The mark's own weight, untouched: 40.8 / 50.0 /
+  38.3. Literally what the logo does — SPEC §2.2 records the bar as the mark's
+  heaviest stroke, 6.0–6.4 pt against the O's 4.2 — and a much darker face, with
+  every interior horizontal near 50 units against stems of 33.
+
+Two measurements that bear on the choice. The A's bar's edges really are
+separately struck, the upper on a radius of 2118.2 units and the lower on 2742.8
+(whole-edge circle fits to the drawn outline, max residual 0.074 and 0.100). And
+an H's bar at 551.6 units spans 69.9 pt of the ring, against the ring's own
+visible bar of about 70 pt — so an H shows very nearly the whole thing, where the
+A shows its middle 45%. The ring can supply chords up to 695 units and the widest
+interior horizontal in the face is the 4's crossbar at 558, so none of B–E
+degenerates anywhere.
 
 **R5. Terminals.** Every free end of a stem or diagonal is cut like the A's
 feet: **20.6° off the horizontal** (half the apex angle; measured 21.8° and

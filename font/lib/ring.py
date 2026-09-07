@@ -20,15 +20,16 @@ type; only the interior strokes are its to move.
 The chord pivots about the horizontal's own centre line, so a glyph's colour and its counters
 stay where the level rule put them, and only the gesture is new.
 
-The band is CONSTANT, and that is a decision rather than an omission. The mark's bar is not an
-offset band: its edges are separately struck, the upper on 2118.2 units and the lower on 2742.8
-(whole-edge circle fits to the drawn outline, max residual 0.074 and 0.100), so the mark's own
-bar swells toward midspan -- by 0.85 units, over the 251-unit span the A gives it. Carrying the
-two RADII onto a longer chord rather than the SWELL would put 4.13 units into the middle of an
-H's 551-unit bar, +12% on a 33-unit stroke, which is an artefact of length and not something the
-mark does. That is the tilt rule's trap one step on, so it takes the tilt rule's answer:
-transplant the amount, not the geometry. The amount is 0.85 units, below the resolution of the
-thing it would correct, so it is left on the table. See SPEC R4b.
+The band is CONSTANT and the rise is CAPPED, and both are one OPEN decision rather than a
+settled one -- see SPEC R4b, "how literally to take the ring". What is here is reading A. Four
+others were measured and drawn: B takes the ring's own constant 19.87 deg instead of capping the
+rise, C adds the ring's width profile on top, and D and E draw the chord as an actual piece of
+the annulus with both edges off the two ellipses, at the face's weight and at the mark's own.
+measure/ring_readings.py rebuilds all four; measure/evidence/ring-*.png are the sheets.
+
+The A cannot settle it. Its span, 251.11, is exactly where constant-rise and constant-angle
+cross -- the crossover IS RISE/tan(RING_TILT) and both are measured off that same bar -- so every
+reading reproduces the A and they diverge only on wider letters.
 """
 import math
 
