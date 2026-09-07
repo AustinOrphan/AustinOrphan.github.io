@@ -106,6 +106,33 @@ ring's **back half**, which in the mark disappears behind the O; the returns
 thin to about half the bar's width before they vanish. The fit lives in
 `source/ai_objects.json` under the bar object's `ring`.
 
+**What is derived rather than transcribed.** Three parts of the mark were
+carried into the font as literal outlines and so ignored the WEIGHT and PUSH
+knobs entirely: the O's counter, the A's crossbar, and the A's counter. All
+three are solved now.
+
+- **The O's counter** — `r_in = r_out - RING_W`, displaced by `RING_OFF`, which
+  reproduces the traced ring to the last bit at the mark's own numbers.
+- **The A's crossbar** — the ring is an annulus between two concentric coaxial
+  ellipses, so the outer stays traced (it is the silhouette) and the inner is
+  inset from it by R4's join weight, `RING_W + RING_OFF[1]`. That is the law
+  every chord in the face already scales by, so the A's bar and the letters
+  that borrow its ring now move together: 42.7 / 47.8 / 63.1 across the weight
+  axis against `HORIZ_JOIN`'s 42.3 / 47.2 / 62.2. It follows PUSH too, because
+  the band depends on the displacement. Where the ellipse fit and the drawn
+  outline disagree the drawing wins, so the inset carries one calibration
+  solved on the mean band over the visible span; the derived bar is then never
+  more than 0.84 units from the drawn one, inside the fit residual above.
+- **The A's counter** — the two outer edges inset by R2's widths. Both inner
+  edges come out straight, since R2's width is linear in y and the offset
+  direction is fixed along a straight leg, so the counter apex is simply where
+  they meet and each cut point is where an inner edge meets that foot's own
+  cut. Lands within **0.54 units** of the traced points.
+
+Only `A.open`, the unencoded alternate, keeps the traced bar with its hooks: it
+is a transcription of the mark rather than a stroke of a letter, so it is not
+the knobs' to move.
+
 ### 2.3 Composition, not letterform
 
 These belong to how the two letters are arranged in the mark, not to either
@@ -216,15 +243,29 @@ Partial rounds (C, G, S, U, the bowls of B, D, P, R, the digits) are arcs of
 that construction with radial cuts.
 
 **R2. Diagonals.** The A's legs, as a weight field over height: a stroke
-leaning like "/" is 39.5 units wide at the baseline and 27.1 at the cap line,
-one leaning like "\\" is 37.2 and 25.5, linear in between. Shorter diagonals
-take the widths at whatever heights they span. Applies to V, W, M, N, K, X, Y,
-Z, 4, 7.
+leaning like "/" is **39.90** units wide at the baseline and **25.99** at the
+cap line, one leaning like "\\" is **37.54** and **24.46**, linear in between.
+Shorter diagonals take the widths at whatever heights they span. Applies to V,
+W, M, N, K, X, Y, Z, 4, 7.
+
+Those four numbers were **39.5 / 27.1** and **37.2 / 25.5** until the A's
+counter was derived and the discrepancy surfaced. §2.2 measured the legs at the
+**foot cut** and the **counter apex** — y 20.1 and y 643.5 — and the rule stored
+them as if they were the baseline and the cap line. The values above are the
+same two measurements extrapolated from where they were actually taken. The
+correction is systematic: about 1% light at the foot, 4% heavy at the cap, and a
+taper flatter than the A's own. It also corrects §2.2's "the legs lose about
+1.6% of their length in width" — the 12.39-unit drop was divided by the whole
+768.4-unit leg but measured over only 669.1 of it. **The rate is 1.85%.**
 
 **R3. Verticals.** No exemplar exists, so a stem takes the left leg's profile:
-**39.5 at the baseline tapering to 27.1 at the cap line.** The check on that
-choice is the O: the O's mean stroke width (33.2) equals this profile's width
-at mid-height (33.3), so a stem beside an O carries the O's average weight.
+**39.90 at the baseline tapering to 25.99 at the cap line.** The check on that
+choice is the O: a stem beside an O should carry the O's average weight, and
+this profile's width at mid-height (**32.94**) sits within **0.73%** of the O's
+mean stroke (33.19). Under R2's old numbers it was 33.30, within 0.34%. The
+check is a corroboration with a tolerance of a unit or so, and both readings
+pass it comfortably; the old numbers landing nearer is not a reason to keep a
+derivation that was wrong about which heights it had measured.
 
 **R4. Horizontals.** From the bar: **47.5 units at mid-length, thinning 1.8%
 of its length from left to right**, and level. A horizontal whose outer edge

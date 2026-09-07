@@ -49,8 +49,24 @@ def round_arc(c, r_out, a0, a1):
 # Measured off the mark, then scaled with WEIGHT: R3 ties the stem at mid-cap to the O's mean
 # band, so if these did not move with RING_W a heavier cut would have heavy rounds on light
 # straights. The TAPER is a proportion of the width, so it survives the scaling unchanged.
-SLASH_BASE, SLASH_CAP = 39.5 * WEIGHT, 27.1 * WEIGHT   # strokes leaning like "/" and all vertical stems
-BACK_BASE,  BACK_CAP  = 37.2 * WEIGHT, 25.5 * WEIGHT   # strokes leaning like "\\"
+# R2's widths, at the heights the rule actually evaluates them at.
+#
+# SPEC 2.2 measured the A's legs at two places: the FOOT CUT and the COUNTER APEX. Those were
+# then stored as if they were the baseline and the cap line, which they are not -- the foot cut
+# sits at y 20.1 and the counter apex at y 643.5, not at 0 and 700. Read as base/cap the numbers
+# were 39.5/27.1 and 37.2/25.5; extrapolated from where they were actually taken they are the
+# ones below. The correction is small and systematic: about 1% light at the foot, 4% heavy at
+# the cap, and a taper flatter than the A's own.
+#
+# It also fixes SPEC 2.2's "the legs lose about 1.6% of their length in width": the 12.39-unit
+# drop was divided by the whole 768.4-unit leg, but measured over only 669.1 of it. It is 1.85%.
+#
+# The check this weakens is R3's, which corroborates borrowing the leg's profile for a stem by
+# noting the profile's mid-height matches the O's mean band. It still holds -- 32.94 against
+# 33.19, 0.75% -- where the old numbers gave 33.30, 0.34%. Both sit well inside any tolerance
+# that check can carry, and a wrong derivation is not worth keeping to make it land prettier.
+SLASH_BASE, SLASH_CAP = 39.899 * WEIGHT, 25.987 * WEIGHT   # strokes leaning "/" and all stems
+BACK_BASE,  BACK_CAP  = 37.544 * WEIGHT, 24.464 * WEIGHT   # strokes leaning like "\\"
 def w_slash(y):     return SLASH_BASE + (SLASH_CAP - SLASH_BASE) * (y / CAP)
 def w_backslash(y): return BACK_BASE  + (BACK_CAP  - BACK_BASE)  * (y / CAP)
 w_stem = w_slash

@@ -205,11 +205,114 @@ def build_O():
                            traced_r_in=inner[2]*s,
                            traced_offset=((inner[0]-outer[0])*s, (inner[1]-outer[1])*s)))
 
+# ---- the ring's band, derived rather than transcribed -------------------------------
+#
+# The A's crossbar is the front half of the mark's ring, and the ring is an annulus between two
+# concentric coaxial ellipses (SPEC 2.2: outer 51.46 x 11.32, inner 45.41 x 4.98, both centred
+# at 50.04, 51.52 and tilted 14.09 deg, fitting the drawn edges to 0.10 and 0.13 pt).
+#
+# Transcribing that band left the bar frozen, exactly as transcribing the counter left the O
+# frozen. It is worse for the bar than it was for the O, because R4b makes every interior
+# horizontal in the face a chord of this ring and those chords DO follow the knobs: at
+# WEIGHT 1.45 an H's bar is 62.2 while the A's own bar stayed 48.4, so the source of the rule
+# was lighter than everything derived from it.
+#
+# So the inner ellipse is derived. The OUTER stays traced -- it is the silhouette, the same
+# reasoning build_O gives for keeping the outer radius -- and the inner is inset from it by the
+# traced amount scaled by R4's own join weight. That law is not a new one: HORIZ_JOIN is
+# RING_W + RING_OFF[1], which is what every chord in the face already scales by, so the A's bar
+# and the chords that borrow from it now move together. At the mark's own knobs the factor is
+# exactly 1 and the derived band reproduces the traced ellipse.
+#
+# A.open keeps the traced outline with its hooks: it is a transcription of the mark rather than
+# a stroke of a letter, so it is not the knobs' to move.
+_RING_FIT   = OBJ['bar']['ring']
+_JOIN_AT_11 = 47.22547582144795         # RING_W + RING_OFF[1] at WEIGHT 1, PUSH 1
+
+# The ellipse pair is a FIT to the drawn edges, good to 0.10 and 0.13 pt mean, and it runs a
+# little thicker than the outline actually drawn. Where the fit and the drawing disagree the
+# drawing wins -- the drawing is the source and the fit is a reading of it -- so the inset
+# carries one calibration, solved so the derived band's MEAN over the visible span equals the
+# drawn band's mean. Solved on the mean rather than at a point because the drawing wanders
+# around its own ring: matched at one place it was 1.15 units out at another, matched on the
+# mean it is never more than 0.84 out, which is inside the fit residual SPEC 2.2 records.
+_BAR_CAL = 0.972933104
+
+def _band_k():
+    """R4's join weight against its value at the mark's own knobs."""
+    return (rules.RING_W + rules.RING_OFF[1]) / _JOIN_AT_11
+
+def _ring_ellipses():
+    """Outer (traced) and inner (derived) semi-axes of the ring, in source points."""
+    R = _RING_FIT
+    ao, bo, ai, bi = R['a_outer'], R['b_outer'], R['a_inner'], R['b_inner']
+    k = _band_k() * _BAR_CAL
+    return (ao, bo), (ao - (ao - ai) * k, bo - (bo - bi) * k)
+
+_BAR_ARC = (18.0, 152.0)   # theta range drawn, generous: the legs clip it back
+
+def _derived_bar():
+    """The bar as a piece of the ring's annulus, in SOURCE coordinates, so it goes through
+    build_A's own lean/scale untouched.  Upper edge on the outer ellipse, lower on the derived
+    inner one; the ends run well past the legs and are cut by clip_legs like the traced bar."""
+    R = _RING_FIT
+    C, tl = tuple(R['centre']), math.radians(R['tilt_deg'])
+    ct, st = math.cos(tl), math.sin(tl)
+    def E(a, b, th):
+        x, y = a*math.cos(th), b*math.sin(th)
+        return (C[0] + x*ct - y*st, C[1] + x*st + y*ct)
+    (ao, bo), (ai, bi) = _ring_ellipses()
+    t0, t1 = (math.radians(t) for t in _BAR_ARC)
+    N = 120
+    up = [E(ao, bo, t0 + (t1-t0)*i/N) for i in range(N+1)]
+    lo = [E(ai, bi, t0 + (t1-t0)*i/N) for i in range(N+1)]
+    tg = lambda P: [unit(sub(P[min(i+1, len(P)-1)], P[max(i-1, 0)])) for i in range(len(P))]
+    su, _ = fit_cubics(up, tg(up), tol=0.004)
+    sl, _ = fit_cubics(lo[::-1], tg(lo[::-1]), tol=0.004)
+    k = Contour(up[0])
+    for sg in su: k.curve_to(*sg)
+    k.line_to(lo[-1])
+    for sg in sl: k.curve_to(*sg)
+    return k.ccw()
+
+
+def _derive_counter(poly):
+    """The A's counter, from R2 rather than from the trace.
+
+    The three counter points were transcribed, so the counter never moved: at WEIGHT 1.45 the
+    A wore Light legs beside a heavy V, the same freeze the O had before build_O derived its
+    counter.  They are solved now -- the two outer edges inset by R2's own widths, which is
+    what every other diagonal in the face already does.
+
+    Both inner edges come out STRAIGHT, so there is nothing to fit: R2's width is linear in y
+    and the offset direction is fixed along a straight leg, so a varying inset still traces a
+    line.  The counter apex is where the two meet; each cut point is where an inner edge meets
+    that foot's own cut, whose direction stays the traced one (R5 sets it, not R2).
+    """
+    tipL, cutL, cApex, cutR, tipR, apex = poly
+    mid_x = (tipL[0] + tipR[0]) / 2
+    def inner(tip, wf):
+        u = unit(sub(apex, tip)); n = perp(u)
+        s = 1.0 if (mid_x - tip[0]) * n[0] > 0 else -1.0
+        def at(y):
+            t = (y - tip[1]) / (apex[1] - tip[1])
+            return add(add(tip, mul(sub(apex, tip), t)), mul(n, s * wf(y)))
+        return line_2pt(at(0.0), at(CAP))
+    Li, Ri = inner(tipL, rules.w_slash), inner(tipR, rules.w_backslash)
+    return [tipL,
+            isect(Li, line_2pt(tipL, cutL)),
+            isect(Li, Ri),
+            isect(Ri, line_2pt(tipR, cutR)),
+            tipR, apex]
+
+
 def build_A(tuck=True, slide=False, name='A', cp=ord('A'), clip_legs=True):
     global O_THIN
     O_THIN = build_O()['notes']['width_thin']
     tipL, cutL, cApex, cutR, tipR, apex = [tuple(v) for v in OBJ['A']['vertices']]
     (bar_src,) = source_contours(OBJ['bar']['items'])   # one closed outline: bar + both hooks
+    if clip_legs:
+        bar_src = _derived_bar()    # the encoded A's bar follows the knobs; A.open stays traced
     # -- 1. lean: bisector of the outer edges vs the vertical
     bis = unit(add(unit(sub(apex, tipL)), unit(sub(apex, tipR))))
     lean = ang(bis) - 90.0
@@ -230,6 +333,8 @@ def build_A(tuck=True, slide=False, name='A', cp=ord('A'), clip_legs=True):
     s = (CAP + OVER_POINT) / (apex[1] - y_feet)
     fp = lambda p: ((p[0] - apex[0]) * s, (p[1] - y_feet) * s)
     poly = [fp(p) for p in (tipL, cutL, cApex, cutR, tipR, apex)]
+    traced_counter = poly[1:4]
+    poly = _derive_counter(poly)
     bar_f = bar.map(fp).ccw()
     slid = {}
     if slide:
