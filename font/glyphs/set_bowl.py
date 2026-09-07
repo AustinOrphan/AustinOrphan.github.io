@@ -526,7 +526,20 @@ def build_P():
 
 def build_R():
     b, arc, top, x_top, bar = _p_parts()
-    leg, p0, p1 = _leg((float(BODY), 0.0), P_BAR_Y)
+    # The leg's top is buried on the bowl-bottom's CENTRE LINE. Level, that line is at
+    # P_BAR_Y everywhere and one call does it. As a chord it rises, and the leg meets it out
+    # near the bowl where it is highest -- so burying at P_BAR_Y would leave the leg's top
+    # short of the bar it is supposed to spring from. Its height and the chord's height at its
+    # own x each depend on the other, so they are solved together.
+    y_top = P_BAR_Y
+    if ring.RING:
+        x0, x1 = _RING_NOTES['P']['x']
+        for _ in range(30):
+            _l, _q0, q1 = _leg((float(BODY), 0.0), y_top)
+            yc = ring.chord_edge_point(x0, x1, P_BAR_Y, 0, q1[0])[0][1]
+            if abs(yc - y_top) < 1e-9: break
+            y_top = yc
+    leg, p0, p1 = _leg((float(BODY), 0.0), y_top)
     notes = _p_notes(b, x_top, extra=(
         f"Leg: rules.diagonal, a \"\\\" at {LEG_ANGLE:.2f} deg (the A's right leg, half the apex angle off the "
         f"stem), centre-line from ({p1[0]:.1f}, {p1[1]:.1f}) on the bowl-bottom's centre-line down to "
