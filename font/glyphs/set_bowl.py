@@ -88,6 +88,8 @@ HERE = os.path.dirname(os.path.abspath(__file__)); FONT = os.path.dirname(HERE)
 sys.path.insert(0, os.path.join(FONT, 'lib'))
 from pen import (add, sub, mul, dot, perp, from_ang, ang, line, line_2pt, offset_line, line_circle, circle_circle,
                  from_poly, ccw)
+import ring
+import rules
 from metrics import CAP, SB_STRAIGHT, SB_ROUND
 from rules import (glyph, stem, diagonal, horizontal, arm, round_arc, RING_W, RING_OFF, CUT_DEG, HORIZ_MID, HORIZ_JOIN,
                    HORIZ_TAPER, w_stem, w_horizontal, w_backslash, BACK_BASE, BACK_CAP)
@@ -115,7 +117,12 @@ FOOT    = (STEM_X - w_stem(0) / 2, 0.0)      # (0, 0)   the stem's lower-left co
 TOP     = (STEM_X - w_stem(CAP) / 2, CAP)    # (6.2, 700) the stem's upper-left corner
 P_BAR_Y = MID_LINE                           # P/R bowl-bottom centre-line
 B_WAIST_Y = MID_LINE + HORIZ_MID / 2         # 385.625: B waist centre-line; its underside on the mid line
-B_UPPER_INSET = RING_W                       # upper bowl's right extreme one round stroke inside the lower's
+# The upper bowl's right extreme sits this far inside the lower's. RING_W is one round stroke
+# and is what a level waist needs; a ring waist needs more, because the chord rises and the two
+# bowls' hand-offs move apart with it. ROUND_THICK -- R1's heavy band, already a number of this
+# face -- is the first face constant above the point where the upper bowl's hand-off stops being
+# buried, so it is what R4b takes.
+B_UPPER_INSET = rules.ROUND_THICK if ring.RING else RING_W
 BAND_BOT = RING_W + RING_OFF[1]              # 47.23: an R1 band at the bottom of a round (R7's heavy side)
 BAND_TOP = RING_W - RING_OFF[1]              # 19.15: and at the top
 RUN = RING_W                                 # how far a bottom join's buried end runs past the meeting point
@@ -130,10 +137,46 @@ def _sdist(l, p):
     """Signed distance of p from line l, positive to the left of its direction (above, for a +x line)."""
     return dot(sub(p, l[0]), perp(l[1]))
 
+# Where each edge's constraint line touches the real (arched) edge. Under R4b the bowl cannot be
+# solved against a chord of the horizontal, because the horizontal is not straight: it is a chord
+# of the ring, arched and tilted. So each edge is represented by its TANGENT at the point the
+# join actually happens -- which is not known until the bowl is solved, hence the fixed point in
+# _bar_bowl_ring below.
+_TANX = {1: None, -1: None}
+
 def _hline(x0, x1, y_c, edge, mid=HORIZ_JOIN):
-    """The top (+1) or bottom (-1) edge line of rules.horizontal(x0, x1, y_c)."""
+    """The top (+1) or bottom (-1) edge line of the horizontal running x0..x1 about y_c.
+
+    Level, that is a straight edge and the line is exact. Under R4b it is the tangent to the
+    chord's arched edge at the join point.
+    """
+    if ring.RING:
+        at = _TANX[edge] if _TANX[edge] is not None else x1
+        p, t = ring.chord_edge_point(x0, x1, y_c, edge, at, mid)
+        return (p, t)
     L = x1 - x0
     return line_2pt((x0, y_c + edge * w_horizontal(L, 0, mid) / 2), (x1, y_c + edge * w_horizontal(L, 1, mid) / 2))
+
+
+def _bar_bowl_ring(right, y_c, x0=None, cap=True, above=None):
+    """_bar_bowl with the tangent points settled.
+
+    The bowl is solved against the tangents to the chord's edges, and where those tangents touch
+    depends on where the bowl lands: the counter's tangency for the inner edge, the hand-off for
+    the outer. Iterating the pair converges in a handful of passes.
+    """
+    global _TANX
+    if x0 is None: x0 = STEM_X
+    if not ring.RING:
+        return _bar_bowl(right, y_c, x0=x0, cap=cap, above=above)
+    _TANX = {1: right - 140.0, -1: right - 140.0}
+    b = None
+    for _ in range(80):
+        b = _bar_bowl(right, y_c, x0=x0, cap=cap, above=above)
+        new = {1: b['lo'][0], -1: b['Po'][0]}
+        if max(abs(new[k] - _TANX[k]) for k in new) < 1e-9: break
+        _TANX = new
+    return b
 
 def _armline(x0, x1, outer, edge, mid=HORIZ_JOIN):
     """The outer (+1) or inner (-1) edge line of rules.arm(x0, x1, outer): the outer edge is level on
@@ -413,10 +456,31 @@ def build_D():
         stem=dict(x=STEM_X, w_foot=w_stem(0), w_cap=w_stem(CAP)), body_width=BODY))
 
 def _p_parts():
-    b = _check(_bar_bowl(BODY, P_BAR_Y))
+    if not ring.RING:
+        b = _check(_bar_bowl(BODY, P_BAR_Y))
+        arc = round_arc(b['c'], b['r'], b['a0'], b['a1'])
+        top, x_top = _top_arm(b)
+        return b, arc, top, x_top, _bar(b)
+
+    # The bar's left end lands on the stem's outer edge, which slopes, and its right end on the
+    # bowl -- so the span and the bowl are solved against each other before either is drawn.
+    x0 = ring.solve_span(STEM_X, 'left', BODY - 200, P_BAR_Y)
+    for _ in range(3):
+        b = _bar_bowl_ring(BODY, P_BAR_Y, x0)
+        x0 = ring.solve_span(STEM_X, 'left', b['x1'], P_BAR_Y)
+    b = _check(_bar_bowl_ring(BODY, P_BAR_Y, x0))
+    # The bar STOPS at the hand-off rather than running past it. A level bar could run on and be
+    # swallowed by the bowl; a rising one climbs out of the outer circle instead.
+    bar, bn = ring.ring_chord(x0, b['x1'], P_BAR_Y,
+                              end0=ring.stem_edge_line(STEM_X, 'left'),
+                              end1=((b['x1'], 0.0), (b['x1'], 1.0)))
+    _RING_NOTES['P'] = bn
     arc = round_arc(b['c'], b['r'], b['a0'], b['a1'])
     top, x_top = _top_arm(b)
-    return b, arc, top, x_top, _bar(b)
+    return b, arc, top, x_top, bar
+
+
+_RING_NOTES = {}
 
 def _p_notes(b, x_top, extra=""):
     L, Lt = b['x1'] - STEM_X, x_top - TOP[0]
@@ -481,13 +545,35 @@ def _b_parts(inset=B_UPPER_INSET):
     out of the one bar as smooth lines and the waist reads as a single junction.  The upper bowl is
     solved with the waist (its length ends where the outline hands off, as everywhere here); the
     lower bowl is then solved between that waist and its own baseline arm."""
-    up = _check(_bar_bowl(BODY - inset, B_WAIST_Y))
-    above = (up['below'][1], up['below'][0])          # the waist seen from below: its inner edge is its underside
+    if not ring.RING:
+        up = _check(_bar_bowl(BODY - inset, B_WAIST_Y))
+        above = (up['below'][1], up['below'][0])      # the waist from below: its inner edge is its underside
+        lo = _check(_arm_bowl(BODY, cap=False, above=above))
+        assert lo['hi'][0] < up['x1'], 'the lower bowl touches the waist past the end of the bar'
+        assert lo['c'][1] + lo['r'] < up['Pi'][1], 'the lower bowl is not buried inside the waist'
+        crotch = circle_circle(up['c'], up['r'], lo['c'], lo['r'], pick='max')
+        return up, lo, _bar(up), crotch
+
+    # B is the only letter whose interior horizontal has a bowl tangent on BOTH faces, so its
+    # waist is consumed by three separate solves: the upper bowl stands on it, the lower hangs
+    # from it, and the outline hands off across it. Level, all three are the same two straight
+    # lines and the sharing is free. As a chord they are three tangents to two arcs, and the
+    # span has to be settled against both bowls before either is drawn.
+    x0 = ring.solve_span(STEM_X, 'left', BODY - inset - 200, B_WAIST_Y)
+    for _ in range(3):
+        up = _bar_bowl_ring(BODY - inset, B_WAIST_Y, x0)
+        x0 = ring.solve_span(STEM_X, 'left', up['x1'], B_WAIST_Y)
+    up = _check(_bar_bowl_ring(BODY - inset, B_WAIST_Y, x0))
+    above = (up['below'][1], up['below'][0])
     lo = _check(_arm_bowl(BODY, cap=False, above=above))
     assert lo['hi'][0] < up['x1'], 'the lower bowl touches the waist past the end of the bar'
     assert lo['c'][1] + lo['r'] < up['Pi'][1], 'the lower bowl is not buried inside the waist'
     crotch = circle_circle(up['c'], up['r'], lo['c'], lo['r'], pick='max')
-    return up, lo, _bar(up), crotch
+    waist, wn = ring.ring_chord(x0, up['x1'], B_WAIST_Y,
+                                end0=ring.stem_edge_line(STEM_X, 'left'),
+                                end1=((up['x1'], 0.0), (up['x1'], 1.0)))
+    _RING_NOTES['B'] = wn
+    return up, lo, waist, crotch
 
 def build_B():
     up, lo, waist, crotch = _b_parts()

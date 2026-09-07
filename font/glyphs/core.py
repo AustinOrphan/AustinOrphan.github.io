@@ -31,7 +31,7 @@ A typeface forces four changes to the A, each recorded in the glyph's notes:
      own returns thin toward the planet.  The bar and hooks are verbatim.
      The bar without tails is kept as the unencoded alternate 'A.open'.
 """
-import json, math, os, sys
+import copy, json, math, os, sys
 HERE = os.path.dirname(os.path.abspath(__file__)); FONT = os.path.dirname(HERE)
 sys.path.insert(0, os.path.join(FONT, 'lib'))
 from pen import *
@@ -288,5 +288,78 @@ def build_A_open():
 
 def build_space():
     return dict(cp=32, adv=SPACE_ADV, contours=[], notes={})
+
+
+# ---- R4b: the ring the rest of the face borrows --------------------------------------
+#
+# The A's crossbar IS the mark's ring, clipped on the legs. So the ring's gesture can be read
+# straight off it: the two cut faces clip_legs leaves are its ends, and the line between their
+# midpoints is the chord the ring draws through this letter.
+#
+# Under R4b every INTERIOR horizontal in the face -- one lying on no metric line -- is a chord
+# of that same ring. What they share is the RISE, not the angle: one angle is not one gesture,
+# because an H bar spans 1.6x an E arm and the same tilt would give them different lifts. One
+# rise is. So tilt(L) = min(RING_TILT, atan(RISE / L)): a chord shorter than the A's own bar
+# takes the ring's angle verbatim, a longer one relaxes until its rise matches.
+#
+# The A itself does NOT move. Dropping its bar onto MID_Y was considered -- it would put the
+# mark on the line E F H K X Y are built on -- but the A is the mark, and the rest of the face
+# borrows from it rather than the other way round. ORPHAN_RING_DROP=1 tries the other reading.
+#
+# The drop is not a translation of the ring's gesture, so it does change these numbers: the bar
+# is an arc cut on the legs' outer edges, which converge upward, so lowering it cuts a wider
+# span. Undropped the ring gives RISE 90.77 and TILT 19.87; dropped, 100.09 and 19.93.
+#
+# CROSSOVER is where the two halves of the rule meet, and it equals the A's own span BY
+# CONSTRUCTION, not by coincidence: it is RISE/tan(RING_TILT), and both are measured off the
+# A's bar. It is worth stating plainly because it looks like a discovered fact and is not one.
+RING      = os.environ.get('ORPHAN_RING', '1') not in ('0', 'false', 'off')
+RING_DROP = os.environ.get('ORPHAN_RING_DROP', '0') not in ('0', 'false', 'off')
+
+MID_LINE = CAP / 2 + rules.HORIZ_MID / 4       # 361.81, the face's optical middle
+
+_BAR_SRC = copy.deepcopy(OBJ['bar'])
+
+def _drop_bar(d):
+    """Shift the SOURCE bar so that, once build_A stands the A upright, the bar has dropped d
+    straight down. Everything else about the A -- legs, clip, tails, advance -- is build_A's."""
+    n = build_A.__wrapped__ if hasattr(build_A, '__wrapped__') else None
+    b = copy.deepcopy(_BAR_SRC)
+    lean = _A_LEAN[0]
+    v = rot((0.0, -d / _A_SCALE[0]), lean)
+    sh = lambda p: (p[0] + v[0], p[1] + v[1])
+    b['items'] = [[it[0]] + [list(sh(p)) for p in it[1:]] for it in b['items']]
+    if 'ring' in b:
+        b['ring'] = dict(b['ring']); b['ring']['centre'] = list(sh(b['ring']['centre']))
+    OBJ['bar'] = b
+
+def bar_faces(A):
+    """Midpoints of the A's two cut faces -- the straight edges clip_legs leaves, each parallel
+    to the leg it was cut on. Left first."""
+    legs = A['notes']['leg_angles']
+    bar = A['contours'][1]
+    pts = [bar.start] + [sg[-1] for sg in bar.segs]
+    edges = [(pts[i], sg[-1], sg[0]) for i, sg in enumerate(bar.segs)] + [(pts[-1], pts[0], 'l')]
+    faces = [mul(add(p0, p1), 0.5) for p0, p1, kind in edges
+             if kind == 'l' and min(abs(ang(sub(p1, p0)) % 180 - legs[0]),
+                                    abs(ang(sub(p1, p0)) % 180 - legs[1])) < 1.0]
+    return sorted(faces, key=lambda p: p[0])
+
+_A0 = build_A()
+_A_LEAN, _A_SCALE = [_A0['notes']['lean_deg']], [_A0['notes']['scale']]
+ARC_R = 308.0 * _A_SCALE[0]        # SPEC 2.2: the bar's lower edge is an arc of about 308 pt
+
+A_DROP = 0.0
+if RING_DROP:
+    for _ in range(8):
+        _drop_bar(A_DROP)
+        _lo, _hi = bar_faces(build_A())
+        A_DROP += (_lo[1] + _hi[1]) / 2 - MID_LINE
+    _drop_bar(A_DROP)
+
+_lo, _hi = bar_faces(build_A())
+RISE      = _hi[1] - _lo[1]                                    # 100.09
+RING_TILT = ang(sub(_hi, _lo))                                 # 19.93 deg
+CROSSOVER = RISE / math.tan(math.radians(RING_TILT))           # 276.1 -- the A's own span
 
 GLYPHS = {'O': build_O, 'A': build_A, 'A.open': build_A_open, 'space': build_space}

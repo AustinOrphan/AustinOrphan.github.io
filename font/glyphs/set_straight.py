@@ -27,6 +27,8 @@ import math, os, sys
 HERE = os.path.dirname(os.path.abspath(__file__)); FONT = os.path.dirname(HERE)
 sys.path.insert(0, os.path.join(FONT, 'lib'))
 from metrics import CAP, SB_STRAIGHT, SB_ROUND
+import ring
+import rules
 from rules import glyph, stem, arm, horizontal, w_stem, w_horizontal, CUT_DEG, HORIZ_MID, HORIZ_TAPER, RING_W, RING_OFF
 
 # ---- proportions (R8) --------------------------------------------------------
@@ -68,8 +70,21 @@ def _bottom_arm(x_s, x_tip):
     return arm(x_s - w_stem(0) / 2, x_tip, 'bottom', left='cut', right='cut')
 
 def _mid_arm(x_s, x_tip, y):
-    """Middle arm from the stem centre (buried, square) to a tip at x_tip; follows the top arm (tip up)."""
-    return horizontal(x_s, x_tip, y, right='down')
+    """The middle arm.
+
+    Under R4b (the default) it is a CHORD of the mark's ring rather than a level stroke: it lies
+    on no metric line, so it is the ring's to move. It runs to the stem's own outer edge and is
+    cut there, exactly as the A's bar is cut on its legs, and its free right end takes an R5 cut
+    measured on the chord's normal. With ORPHAN_RING=0 it is R4's level stroke, buried square at
+    the stem centre and tipped up at the right.
+    """
+    if not ring.RING:
+        return horizontal(x_s, x_tip, y, right='down')
+    x0 = ring.solve_span(x_s, 'left', x_tip, y)
+    k, _n = ring.ring_chord(x0, x_tip, y, mid=rules.HORIZ_FREE,
+                            end0=ring.stem_edge_line(x_s, 'left'),
+                            end1=ring.r5_line(x0, x_tip, y, 'right', 'down', mid=rules.HORIZ_FREE))
+    return k
 
 def _arm_note(L):
     """How the arms on the metric lines are built, with this glyph's own numbers."""
@@ -177,7 +192,17 @@ def build_H():
     x_r = BODY_MEDIUM - w_stem(0) / 2
     left  = stem(x_l, 0, CAP, bottom='right', top='right')
     right = stem(x_r, 0, CAP, bottom='left',  top='left')
-    bar   = horizontal(x_l, x_r, MID_Y)
+    if ring.RING:
+        # Both ends are cut on a stem's outer edge, so each end's x depends on its own height;
+        # solving the left against the right and back again settles the pair.
+        bx0 = ring.solve_span(x_l, 'left', x_r + 200, MID_Y)
+        bx1 = ring.solve_span(x_r, 'right', bx0, MID_Y)
+        bx0 = ring.solve_span(x_l, 'left', bx1, MID_Y)
+        bar, _bn = ring.ring_chord(bx0, bx1, MID_Y, mid=rules.HORIZ_FREE,
+                                   end0=ring.stem_edge_line(x_l, 'left'),
+                                   end1=ring.stem_edge_line(x_r, 'right'))
+    else:
+        bar = horizontal(x_l, x_r, MID_Y)
     return glyph(ord('H'), [left, right, bar], sb=(SB_STRAIGHT, SB_STRAIGHT), notes=dict(
         construction=f"Medium body {BODY_MEDIUM} measured at the feet: two R3 stems (rules.stem), each cut "
                      f"at both ends with the body toward the other stem, and an R4 bar (rules.horizontal) "

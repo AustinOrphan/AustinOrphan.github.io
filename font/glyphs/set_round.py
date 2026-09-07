@@ -55,6 +55,8 @@ HERE = os.path.dirname(os.path.abspath(__file__)); FONT = os.path.dirname(HERE)
 sys.path.insert(0, os.path.join(FONT, 'lib'))
 from pen import (Contour, add, sub, mul, norm, unit, perp, from_ang, ang, line, line_2pt, arc_band,
                  line_circle, line_x_at_y, arc_segments, from_poly, ccw, fit_cubics)
+import ring
+import rules
 from metrics import CAP, OVER_ROUND, SB_STRAIGHT, SB_ROUND
 from rules import (glyph, stem, diagonal, horizontal, round_arc, round_ring, w_stem, w_horizontal,
                    w_backslash, RING_W, RING_OFF, ROUND_THICK, ROUND_THIN, CUT_DEG, HORIZ_MID)
@@ -231,13 +233,38 @@ def build_C():
 
 G_TIP_X = 560.0                           # left tip of the G's bar
 
+# G_BAR_Y is MID_LINE reflected in the half-cap, so under R4b the G takes the ring reflected
+# with it. Not licence: taking the ring upright here would tilt the bar INTO the aperture and
+# close the letter, which is the one thing the G's bar exists to keep open.
+G_SIGN = -1.0
+
+
 def _g_parts(tip_x=None):
     """The G: the C's round carried on round to the bar's height, closed by an R4 bar."""
     tip_x = G_TIP_X if tip_x is None else tip_x
-    a1 = 360.0 + math.degrees(math.asin((G_BAR_Y - C_C[1]) / C_R))     # where the arc reaches the bar
+    if not ring.RING:
+        a1 = 360.0 + math.degrees(math.asin((G_BAR_Y - C_C[1]) / C_R))   # where the arc reaches the bar
+        x_right = _circ_x(C_C, C_R, G_BAR_Y)
+        arc = round_arc(C_C, C_R, C_TOP, a1)
+        bar = _flush_arc(horizontal(tip_x, x_right, G_BAR_Y, left='up'), C_C, C_R)
+        return arc, bar, a1, x_right
+
+    # The bar meets the round, so its right end's x depends on that end's height, which the
+    # tilt decides -- and the tilt depends on the length. Iterate to the fixed point.
     x_right = _circ_x(C_C, C_R, G_BAR_Y)
+    for _ in range(40):
+        _p0, p1, _L = ring.chord_ends(tip_x, x_right, G_BAR_Y, G_SIGN)
+        nx = _circ_x(C_C, C_R, p1[1])
+        if abs(nx - x_right) < 1e-10: break
+        x_right = nx
+    _p0, p1, _L = ring.chord_ends(tip_x, x_right, G_BAR_Y, G_SIGN)
+    a1 = 360.0 + math.degrees(math.asin((p1[1] - C_C[1]) / C_R))
     arc = round_arc(C_C, C_R, C_TOP, a1)
-    bar = _flush_arc(horizontal(tip_x, x_right, G_BAR_Y, left='up'), C_C, C_R)
+    raw, _bn = ring.ring_chord(tip_x, x_right, G_BAR_Y, mid=rules.HORIZ_FREE, sign=G_SIGN,
+                               end0=ring.r5_line(tip_x, x_right, G_BAR_Y, 'left', 'up',
+                                                 mid=rules.HORIZ_FREE, sign=G_SIGN),
+                               end1=((x_right, 0.0), (x_right, 1.0)))
+    bar = _flush_arc(raw, C_C, C_R)
     return arc, bar, a1, x_right
 
 def build_G():
