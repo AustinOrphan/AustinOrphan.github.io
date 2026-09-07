@@ -87,7 +87,6 @@ TIP_Y, POINT_Y = CAP + OVER_POINT, -OVER_POINT  # where a point's tip sits (R6)
 
 # ---- proportions (R8) ---------------------------------------------------------
 BODY_MEDIUM = 558                               # V N K X Y Z: the A's foot spread
-W_MAX_ADV = round(0.95 * UPM)                   # R8: the W is steepened only until its advance is 950
 MID_Y = CAP / 2 + HORIZ_MID / 4                 # the face's optical middle (see module docstring)
 
 # ---- local constructors (see module docstring) --------------------------------
@@ -249,37 +248,99 @@ def build_V():
         sb='SB_ROUND both sides: cut tips above, a point below', deviations='none'))
 
 # ---- W --------------------------------------------------------------------------
+# The W is the M turned over, built rather than rotated.
+#
+# Rotating the M outright gives the right SHAPE -- its feet on the baseline become the W's
+# tops on the cap line, and its vee at 0.40 CAP becomes a peak at 0.60 -- but it also rotates
+# the STRESS, which is fixed to the page at 45.07 degrees. The M's foot weights would arrive
+# at the cap line, so the outer strokes would read 35.8/38.0 where R2 asks 29.8: heavy at the
+# top and light at the bottom, inverted against every other stroke in the face. So the same
+# two moves are made again from the bottom up.
+#
+# What the W takes from the M:
+#   * the legs are at the A's lean, exactly as the M's vee is
+#   * the middle peak STOPS SHORT, 0.40 CAP below the cap line as the M's vee stops 0.40 CAP
+#     above the baseline
+#   * the outer strokes SPLAY, solved to reach a named body rather than chosen
+#
+# The body is the M's own ADVANCE: the W is as wide inside as the M is outside. That puts the
+# W at 920 against the M's 840, which is the pairing this face wants, and the splay it asks
+# for (19.778) is 1.5 degrees under the A's lean -- so the letter still reads as carrying the
+# A's angle throughout. The two cannot share a body NAME: the M's advance adds 2*SB_STRAIGHT
+# and the W's only 2*SB_ROUND, so the same body would leave the W 40 units the narrower.
+W_PEAK_Y = 0.60 * CAP                          # the mirror of the M's vee at 0.40 CAP
+
+def w_body():
+    """840: the M's own advance.  A function, not a constant, because the M is defined
+    further down this module and the W would otherwise read it before it exists."""
+    return M_BODY + 2 * SB_STRAIGHT
+
+
+def _w_parts(splay, peak_y=None, lean=HALF_APEX):
+    """The W's four strokes and its body width, for a given splay.  Mirrors _m_parts."""
+    peak_y = W_PEAK_Y if peak_y is None else peak_y
+    tan, cos = math.tan(math.radians(splay)), math.cos(math.radians(splay))
+    wfL = w_stem if splay == 0 else w_slash
+    wfR = w_stem if splay == 0 else w_backslash
+    F_L  = (0.0, CAP)                                           # left top, on the cap line
+    P_BL = (wfL(CAP)/2 + (CAP - POINT_Y)*tan - wfL(POINT_Y)/(2*cos), POINT_Y)
+    run  = (peak_y - POINT_Y) * math.tan(math.radians(lean))    # a leg's run at the A's lean
+    T    = (P_BL[0] + run, peak_y)                              # the middle peak
+    P_BR = (T[0] + run, POINT_Y)
+    F_R  = (P_BR[0] + (CAP - POINT_Y)*tan - wfR(POINT_Y)/(2*cos) + wfR(CAP)/2, CAP)
+    aL, aR = ang(sub(F_L, P_BL)), ang(sub(F_R, P_BR))
+    lL, lR = ang(sub(T, P_BL)),   ang(sub(T, P_BR))
+    cLs, cLl = _point_cuts(aL, lL)
+    cRs, cRl = _point_cuts(aR, lR)
+    cTl, cTr = _point_cuts(ang(sub(P_BL, T)), ang(sub(P_BR, T)))
+    sideL = _placed_stroke(F_L, +1, P_BL, +1, end0='right', end1=cLs, wf=wfL)
+    sideR = _placed_stroke(F_R, -1, P_BR, -1, end0='left',  end1=cRs, wf=wfR)
+    legL  = _placed_stroke(T, +1, P_BL, -1, end0=cTl, end1=cLl)
+    legR  = _placed_stroke(T, -1, P_BR, +1, end0=cTr, end1=cRl)
+    return [sideL, legL, legR, sideR], F_R[0] - F_L[0], (P_BL, T, P_BR), (F_L, F_R), run
+
+
+def _w_splay(target=None, lo=0.0, hi=45.0):
+    """The least splay that brings the body to `target`.  Monotonic in splay, so bisect."""
+    target = w_body() if target is None else target
+    for _ in range(80):
+        mid = (lo + hi) / 2
+        if _w_parts(mid)[1] < target: lo = mid
+        else: hi = mid
+    return (lo + hi) / 2
+
+
 def build_W():
-    # With the A's lean the four legs would span 2*716*tan + 2*732*tan = 1129 units, so the
-    # lean is reduced until the advance is exactly W_MAX_ADV (R8).
-    body = W_MAX_ADV - 2 * SB_ROUND
-    h_out, h_in = CAP - POINT_Y, TIP_Y - POINT_Y
-    lean = math.degrees(math.atan(body / (2 * h_out + 2 * h_in)))
-    r_out, r_in = _spread(h_out, lean), _spread(h_in, lean)
-    T1 = (r_out, POINT_Y); apex = (r_out + r_in, TIP_Y); T2 = (r_out + 2 * r_in, POINT_Y)
-    TL, TR = (0.0, CAP), (2 * r_out + 2 * r_in, CAP)
-    # points: outer-edge directions from each tip, then the nested buried cuts
-    c1a, c2a = _point_cuts(ang(sub(TL, T1)), ang(sub(apex, T1)))
-    c2b, c3b = _point_cuts(ang(sub(T1, apex)), ang(sub(T2, apex)))
-    c3a, c4a = _point_cuts(ang(sub(apex, T2)), ang(sub(TR, T2)))
-    leg1 = _placed_stroke(T1, +1, TL, +1, end0=c1a, end1='right')
-    leg2 = _placed_stroke(T1, -1, apex, +1, end0=c2a, end1=c2b)      # outer edge swaps sides: lower-right at T1, upper-left at the apex
-    leg3 = _placed_stroke(T2, +1, apex, -1, end0=c3a, end1=c3b)
-    leg4 = _placed_stroke(T2, -1, TR, -1, end0=c4a, end1='left')
-    cuts = _terminals(('top left', leg1, TL), ('top right', leg4, TR))
-    return glyph(ord('W'), [leg1, leg2, leg3, leg4], sb=(SB_ROUND, SB_ROUND), notes=dict(
+    splay = _w_splay()
+    strokes, body, points, tops, run = _w_parts(splay)
+    sideL, legL, legR, sideR = strokes
+    TL, TR = tops
+    cuts = _terminals(('top left', sideL, TL), ('top right', sideR, TR))
+    return glyph(ord('W'), strokes, sb=(SB_ROUND, SB_ROUND), notes=dict(
         terminal_cuts=cuts,
-        construction=('Two vees: four R2 diagonals, points at y = -OVER_POINT under each vee and at y = CAP + '
-                      'OVER_POINT where the inner legs meet (R6), outer tops R5 cuts with the tip at the outer corner '
-                      'on the cap line; every buried end nests per _point_cuts.  All four legs share one lean so the '
-                      'letter is symmetric.'),
-        body_width=TR[0], lean_deg=lean, apex_deg=2 * lean, points=(T1, apex, T2),
-        vertices=('three points -- two at the baseline overshoot, one at the cap overshoot -- each the meeting of two '
-                  'outer edges, all three zoomed at 4x from the compiled outline: clean, no spur, no notch.'),
-        deviations=(f'R8: at the A\'s lean ({HALF_APEX:.2f} deg) the body would be '
-                    f'{2 * _spread(h_out, HALF_APEX) + 2 * _spread(h_in, HALF_APEX):.0f} units and the advance well past 0.95 em; '
-                    f'the legs are steepened to {lean:.2f} deg off the vertical (apex {2 * lean:.2f} deg), the least that '
-                    f'brings the advance to {W_MAX_ADV}, as R8 directs for the W.')))
+        construction=('The M turned over and rebuilt: two splayed R2 sides with R5 tops (tips at the outer '
+                      'corners on the cap line, cuts falling inward) and, between them, two R2 legs at the '
+                      f"A's lean whose outer edges meet in a point at y = {W_PEAK_Y:.0f} = 0.60*CAP, and whose "
+                      'lower edges meet the sides\' outer edges in points at y = -OVER_POINT (R6); the three '
+                      f"points' buried ends nest per _point_cuts.  The sides lean {splay:.2f} deg off the "
+                      "vertical, so they take R2's diagonal widths rather than R3's w_stem."),
+        body_width=body, half_apex_deg=HALF_APEX, splay_deg=splay, peak_y=W_PEAK_Y,
+        points=points, tops=tops, leg_run=run,
+        vertices=('three points: the two feet at the baseline overshoot, where each side\'s outer edge meets '
+                  'its leg\'s lower edge, and the peak at 0.60 of the cap.'),
+        proportion=(f"Body {w_body():.0f} = M_BODY + 2*SB_STRAIGHT, which is the M's own ADVANCE: the W is as "
+                    f"wide inside as the M is outside.  The lean stays the A's apex half-angle "
+                    f"({HALF_APEX:.2f} deg) and the SPLAY is solved, not chosen: {splay:.2f} deg is the least "
+                    f"splay that reaches it, each leg running {run:.1f} units from the peak to the baseline "
+                    f"overshoot.  Advance {body + 2*SB_ROUND:.0f} against the M's "
+                    f"{M_BODY + 2*SB_STRAIGHT:.0f}, so the W is the wider of the pair.  The two cannot share a "
+                    f"body NAME: the M's advance adds 2*SB_STRAIGHT and the W's only 2*SB_ROUND, so an equal "
+                    f"body would leave the W 40 units the narrower."),
+        deviations=(f'The peak sits at {W_PEAK_Y:.0f} = 0.60*CAP rather than on the cap overshoot (R6), '
+                    f'mirroring the M\'s vee at 0.40*CAP -- the one chosen proportion in either letter. '
+                    f'Previously the four legs shared one lean of 16.72 deg, steepened off the A\'s '
+                    f'{HALF_APEX:.2f} until the advance fitted 0.95 em; the splay carries that now and the '
+                    f'legs keep the A\'s angle.')))
 
 # ---- M --------------------------------------------------------------------------
 # The M is the one letter that has to be wide and heavy at once, and the shipping construction

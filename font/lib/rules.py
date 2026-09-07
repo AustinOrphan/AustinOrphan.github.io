@@ -11,11 +11,31 @@ _SRC = json.load(open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspa
 _ring = next(o for o in _SRC['objects'] if o['role'] == 'ring')
 _sO = (CAP + 2*OVER_ROUND) / (2*_ring['outer'][2])
 
+# ---- The two knobs -------------------------------------------------------------------
+#
+# The mark gives one weight and one amount of stress. These scale the two independently, so
+# the face can be cut at other weights without redrawing it. Both are 1.0 for the mark itself,
+# and at (1.0, 1.0) every glyph is byte for byte what the mark produces -- that is the test.
+#
+#   WEIGHT  scales the STROKE. RING_W is the O's mean band and, by R3, the stem at mid-cap, so
+#           the straights scale with it or the rounds and the straights come apart.
+#   PUSH    scales the O counter's DISPLACEMENT, which is where all of the face's stress comes
+#           from. It moves thin and thick apart around a fixed mean, so it changes CONTRAST at
+#           near-constant colour -- it is not a second weight.
+#
+# They are not fully independent at the ends: the thin side of a round is RING_W*WEIGHT minus
+# the displacement, so PUSH has a ceiling of 1.674*WEIGHT before that goes to zero, which is
+# also where the O would split into a C. Nothing here enforces it; ROUND_THIN simply goes
+# negative and the build fails loudly.
+WEIGHT = float(os.environ.get('ORPHAN_WEIGHT', 1.0))
+PUSH   = float(os.environ.get('ORPHAN_PUSH', 1.0))
+
 # ---- R1 rounds: the O's construction in absolute units, so every round in the face
 #      carries the O's stroke and the O's displacement whatever its size.
-RING_W   = (_ring['outer'][2] - _ring['inner'][2]) * _sO                          # 33.19: mean stroke of a round
-RING_OFF = ((_ring['inner'][0]-_ring['outer'][0]) * _sO, (_ring['inner'][1]-_ring['outer'][1]) * _sO)   # (14.0, 14.0): counter displacement
-ROUND_THICK, ROUND_THIN = RING_W + norm(RING_OFF), RING_W - norm(RING_OFF)         # 53.0 and 13.4
+RING_W   = (_ring['outer'][2] - _ring['inner'][2]) * _sO * WEIGHT                 # 33.19 at WEIGHT 1
+_OFF0    = ((_ring['inner'][0]-_ring['outer'][0]) * _sO, (_ring['inner'][1]-_ring['outer'][1]) * _sO)   # (14.0, 14.0)
+RING_OFF = (_OFF0[0] * PUSH, _OFF0[1] * PUSH)                                     # counter displacement
+ROUND_THICK, ROUND_THIN = RING_W + norm(RING_OFF), RING_W - norm(RING_OFF)         # 53.0 and 13.4 at (1, 1)
 
 def round_ring(c, r_out):
     """A complete round: outer radius r_out, counter per R1. -> [outer, inner] contours."""
@@ -26,8 +46,11 @@ def round_arc(c, r_out, a0, a1):
     return arc_band(c, r_out, r_out - RING_W, RING_OFF, a0, a1)
 
 # ---- R2 / R3 straight-stroke weights as a field over height (units)
-SLASH_BASE, SLASH_CAP = 39.5, 27.1        # strokes leaning like "/" and all vertical stems
-BACK_BASE,  BACK_CAP  = 37.2, 25.5        # strokes leaning like "\\"
+# Measured off the mark, then scaled with WEIGHT: R3 ties the stem at mid-cap to the O's mean
+# band, so if these did not move with RING_W a heavier cut would have heavy rounds on light
+# straights. The TAPER is a proportion of the width, so it survives the scaling unchanged.
+SLASH_BASE, SLASH_CAP = 39.5 * WEIGHT, 27.1 * WEIGHT   # strokes leaning like "/" and all vertical stems
+BACK_BASE,  BACK_CAP  = 37.2 * WEIGHT, 25.5 * WEIGHT   # strokes leaning like "\\"
 def w_slash(y):     return SLASH_BASE + (SLASH_CAP - SLASH_BASE) * (y / CAP)
 def w_backslash(y): return BACK_BASE  + (BACK_CAP  - BACK_BASE)  * (y / CAP)
 w_stem = w_slash
