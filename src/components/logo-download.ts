@@ -160,3 +160,183 @@ export function downloadPng(svg: SVGSVGElement, filename: string, size = 1024): 
     img.src = url;
   });
 }
+
+// ---------------------------------------------------------------------------------------
+// Video.
+//
+// Drawing an animating SVG into a canvas does not work: an <img> holding an SVG paints one
+// static state, and the animation inside it never advances. So each frame is BAKED instead --
+// the animations are seeked to that instant and every property they touch is read back and
+// written on as an inline style, giving a still SVG of that moment, which does rasterise.
+
+// The properties the write-on animates, plus the paint they sit on, plus `display` -- a baked
+// frame is a STANDALONE svg with no stylesheet, so anything a rule was hiding comes back. The
+// re-treated mark keeps hero's shadow group in its markup, and unpainted SVG is black, so
+// without this a hard black copy of the mark sat behind every frame, offset by 22 units, which
+// read as the circle being doubled.
+const FRAME_PROPS = ['display', 'stroke-dasharray', 'stroke-dashoffset', 'r', 'opacity',
+                     'transform', 'stroke-width', 'fill', 'stroke'];
+/** `none` is the meaningful value for these three, not the one to skip. */
+const KEEP_NONE = new Set(['display', 'fill', 'stroke']);
+
+function bake(src: Element, dst: Element): void {
+  const cs = getComputedStyle(src);
+  const style = (dst as SVGElement).style;
+  for (const prop of FRAME_PROPS) {
+    const v = cs.getPropertyValue(prop).trim();
+    if (!v || v === 'auto') continue;
+    if (v === 'none' && !KEEP_NONE.has(prop)) continue;
+    style.setProperty(prop, v);
+    if (prop === 'display' && v === 'none') return;   // nothing under it matters
+  }
+  const sk = Array.from(src.children);
+  const dk = Array.from(dst.children);
+  for (let i = 0; i < sk.length && i < dk.length; i++) bake(sk[i], dk[i]);
+}
+
+function animationsOf(svg: SVGSVGElement): Animation[] {
+  return document.getAnimations().filter((a) => {
+    // `target` lives on KeyframeEffect, not on the AnimationEffect base
+    const eff = a.effect;
+    const t = eff instanceof KeyframeEffect ? eff.target : null;
+    return t instanceof Element && svg.contains(t);
+  });
+}
+
+/** How long the whole choreography runs, in ms, read off the animations themselves. */
+export function animationDuration(svg: SVGSVGElement): number {
+  let end = 0;
+  for (const a of animationsOf(svg)) {
+    const t = a.effect?.getComputedTiming();
+    if (!t) continue;
+    end = Math.max(end, Number(t.delay || 0) + Number(t.activeDuration || 0));
+  }
+  return end;
+}
+
+/** A still SVG of this instant, with the animated values written in. */
+function frameAt(svg: SVGSVGElement, anims: Animation[], ms: number, size: number): string {
+  for (const a of anims) a.currentTime = ms;
+  const clone = svg.cloneNode(true) as SVGSVGElement;
+  bake(svg, clone);
+
+  // Resolve the hand-off instead of freezing it. The write-on ends by cross-fading the drawn
+  // pieces for the finished mark, and the two are not the same drawing: the pieces are masked
+  // strokes, the mark is the real outline with its R5 feet and its unioned overlaps. Live, that
+  // difference passes in 80ms and is invisible. Baked, a frame taken mid-fade holds the true
+  // mark at partial opacity over the approximation, and everywhere they differ -- the A's leg
+  // feet, the bar's ends, the thick lower-left of the ring -- shows as a grey ghost.
+  // So a frame is either before the hand-off or after it, never between.
+  const fin = clone.querySelector<SVGElement>('.la-final');
+  const pieces = clone.querySelector<SVGElement>('.la-pieces');
+  if (fin && pieces) {
+    const handed = parseFloat(getComputedStyle(svg.querySelector('.la-final') as Element).opacity) >= 0.5;
+    fin.style.opacity = handed ? '1' : '0';
+    pieces.style.opacity = handed ? '0' : '1';
+  }
+  clone.classList.remove('la-play');           // the values are baked; no animation wanted
+  clone.removeAttribute('id');
+  clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+  clone.setAttribute('width', String(size));
+  clone.setAttribute('height', String(size));
+  return new XMLSerializer().serializeToString(clone);
+}
+
+function load(text: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error('frame did not load'));
+    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(text);
+  });
+}
+
+/** The best container this browser will record, or null if it will record none. */
+export function videoMimeType(): string | null {
+  if (typeof MediaRecorder === 'undefined') return null;
+  for (const t of ['video/mp4;codecs=avc1', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm']) {
+    if (MediaRecorder.isTypeSupported(t)) return t;
+  }
+  return null;
+}
+
+export interface VideoOptions {
+  fps?: number;
+  size?: number;
+  /** Slow the playback down; 1 is real time, 4 is quarter speed. */
+  slow?: number;
+  background?: string;
+  /** Bits per second. A flat-colour mark is all hard edges, which is the worst case for an
+   *  inter-frame codec: at the default rate h264 rings around them, and the artefact is
+   *  clearest on the still tail, where it reads as a faint crescent inside the ring. */
+  bitrate?: number;
+  onProgress?: (done: number, total: number) => void;
+}
+
+/**
+ * Record the write-on to a video Blob.
+ *
+ * MediaRecorder timestamps by WALL CLOCK, so the frames have to be fed at the pace they should
+ * play back at; the recording therefore takes about as long as the clip it produces.
+ */
+export async function recordVideo(svg: SVGSVGElement, opts: VideoOptions = {}): Promise<Blob> {
+  const { fps = 30, size = 512, slow = 1, background = '', bitrate = 24_000_000, onProgress } = opts;
+  const mimeType = videoMimeType();
+  if (!mimeType) throw new Error('this browser cannot record video');
+
+  // The page drops `la-play` once the write-on settles, which takes the animations with it,
+  // so by the time anyone clicks there is usually nothing to record. Start it again.
+  let anims = animationsOf(svg);
+  if (!anims.length) {
+    svg.classList.remove('la-play');
+    void svg.getBoundingClientRect();          // force a reflow so the restart takes
+    svg.classList.add('la-play');
+    anims = animationsOf(svg);
+  }
+  if (!anims.length) throw new Error('the mark has no animation to record');
+  const wasPlaying = anims.map((a) => a.playState);
+  const total = animationDuration(svg) || 1400;
+  const count = Math.max(2, Math.round((total / 1000) * fps));
+
+  // bake every frame up front: rasterising is far slower than the frame interval
+  const frames: HTMLImageElement[] = [];
+  for (const a of anims) a.pause();
+  for (let i = 0; i < count; i++) {
+    frames.push(await load(frameAt(svg, anims, (i / (count - 1)) * total, size)));
+    onProgress?.(i + 1, count);
+  }
+
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('no 2d context');
+
+  const stream = canvas.captureStream(0);
+  const track = stream.getVideoTracks()[0] as CanvasCaptureMediaStreamTrack;
+  const chunks: Blob[] = [];
+  const rec = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: bitrate });
+  rec.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
+  const done = new Promise<void>((resolve) => { rec.onstop = () => resolve(); });
+  rec.start();
+
+  const step = (1000 / fps) * slow;
+  for (const img of frames) {
+    ctx.clearRect(0, 0, size, size);
+    if (background) { ctx.fillStyle = background; ctx.fillRect(0, 0, size, size); }
+    ctx.drawImage(img, 0, 0, size, size);
+    track.requestFrame();
+    await new Promise((r) => setTimeout(r, step));
+  }
+  rec.stop();
+  await done;
+
+  // leave the mark as it was found
+  anims.forEach((a, i) => { if (wasPlaying[i] === 'running') a.play(); });
+  return new Blob(chunks, { type: mimeType });
+}
+
+export async function downloadVideo(svg: SVGSVGElement, name: string, opts: VideoOptions = {}): Promise<void> {
+  const blob = await recordVideo(svg, opts);
+  const ext = blob.type.includes('mp4') ? 'mp4' : 'webm';
+  save(blob, `${name}.${ext}`);
+}
