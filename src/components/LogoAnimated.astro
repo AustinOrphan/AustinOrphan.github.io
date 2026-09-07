@@ -284,20 +284,35 @@ const easeTail = `linear(${dash(0)}, ${at(TAIL_STOPS)}, 1)`;
     --la-speed: 1;                                 /* time scale; 2 = twice as fast */
     --la-t-leg-l: calc(0.24s / var(--la-speed));    --la-d-leg-l: calc(0.13s / var(--la-speed));   /* left leg, foot up to apex */
     --la-t-leg-r: calc(0.36s / var(--la-speed));    --la-d-leg-r: calc(0.135s / var(--la-speed));  /* right leg, apex down to foot */
-    --la-t-trail: calc(0.48s / var(--la-speed));    --la-d-trail: calc(0.32s / var(--la-speed));   /* trail head, foot to hook tip */
+    /* The trail leaves exactly as the right leg lands -- not 0.015s before it, which read as
+       the swoosh starting on its own. Derived from the leg so the seam cannot drift again. */
+    --la-t-trail: calc(var(--la-t-leg-r) + var(--la-d-leg-r));
+    --la-d-trail: calc(0.32s / var(--la-speed));   /* trail head, foot to hook tip */
     --la-t-circle: calc(0.535s / var(--la-speed));  --la-d-circle: calc(0.565s / var(--la-speed)); /* thin circle grows */
     /* the circle's thicken beat is baked into la-ring-in's stops (34.5%-96.5% of the
        circle's own window), so it no longer needs its own delay and duration */
-    --la-t-bar: calc(0.80s / var(--la-speed));      --la-d-bar: calc(0.23s / var(--la-speed));     /* bar inks in, hook to hook */
-    --la-t-tail: calc(0.80s / var(--la-speed));     --la-d-tail: calc(0.21s / var(--la-speed));    /* trail retracts, foot to hook tip */
-    --la-t-final: calc(1.02s / var(--la-speed));    --la-d-final: calc(0.08s / var(--la-speed));   /* final layer fades in */
-    --la-t-pieces: calc(1.10s / var(--la-speed));                          /* the drawn pieces switch off */
-    --la-t-treat: calc(1.04s / var(--la-speed));    --la-d-treat: calc(0.26s / var(--la-speed));   /* hero only: the red outline grows out
+    /* The bar starts as the trail's head arrives, and the trail retracts over exactly the
+       bar's own duration, so the swoosh clears as the bar completes instead of 0.02s early. */
+    --la-t-bar: calc(var(--la-t-trail) + var(--la-d-trail));
+    --la-d-bar: calc(0.23s / var(--la-speed));     /* bar inks in, hook to hook */
+    --la-t-tail: var(--la-t-bar);
+    /* The trail clears when the RING does, not when the bar does. The bar finishes at 1.045
+       but the circle is still growing until 1.10, and a swoosh that has already gone leaves
+       that last stretch of growth unaccompanied. Retracting to the hand-off keeps something
+       moving until the mark is whole. */
+    --la-d-tail: calc(var(--la-t-final) - var(--la-t-tail));
+    /* The hand-off waits for the ring: the final layer used to start at 1.02 while the circle
+       was still growing until 1.10, so the full-size resting O faded in over a ring that had
+       not got there yet and the growth looked cut short. */
+    --la-t-final: calc(var(--la-t-circle) + var(--la-d-circle));
+    --la-d-final: calc(0.08s / var(--la-speed));   /* final layer fades in */
+    --la-t-pieces: calc(var(--la-t-final) + var(--la-d-final));            /* the drawn pieces switch off */
+    --la-t-treat: var(--la-t-final);                --la-d-treat: calc(0.26s / var(--la-speed));   /* hero only: the red outline grows out
                                                       from under the mark and the blue shadow
                                                       slides to its offset -- the treatment
                                                       SETTLES rather than appearing with the
                                                       cross-fade */
-    --la-t-done: calc(1.30s / var(--la-speed));                            /* everything over */
+    --la-t-done: calc(var(--la-t-treat) + var(--la-d-treat));              /* everything over */
     --la-trail-weight: 380;                        /* trail="stroke" only: 0.6 of the bar's run */
   }
 
@@ -354,11 +369,17 @@ const easeTail = `linear(${dash(0)}, ${at(TAIL_STOPS)}, 1)`;
     }
     /* Hero only: flat has neither a shadow nor a stroke, and animating stroke-width there
        would give it a red outline it is not supposed to have. */
+    /* `both`, not `forwards`, and that is load-bearing: the shadow group carries
+       transform="translate(22,22)" and the mark carries stroke-width="300" as MARKUP
+       attributes, so under `forwards` each paints its finished treatment during the
+       animation's delay -- a grey shadow at full offset and a red outline at full width,
+       for the frames between the final layer fading in and the treatment starting.
+       `backwards` fill makes the delay show the keyframes' from-state instead. */
     .site-logo-anim-hero.la-play .la-final-shadow {
-      animation: la-shadow var(--la-d-treat) var(--la-ease-grow) var(--la-t-treat) forwards;
+      animation: la-shadow var(--la-d-treat) var(--la-ease-grow) var(--la-t-treat) both;
     }
     .site-logo-anim-hero.la-play .la-final-mark {
-      animation: la-outline var(--la-d-treat) var(--la-ease-grow) var(--la-t-treat) forwards;
+      animation: la-outline var(--la-d-treat) var(--la-ease-grow) var(--la-t-treat) both;
     }
     .la-play .la-bar-m { animation: la-draw var(--la-d-bar) var(--la-ease-bar) var(--la-t-bar) forwards; }
     /* Linear timing on purpose: ease-grow's stops are baked into the keyframe values so the
