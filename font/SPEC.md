@@ -238,6 +238,82 @@ are one gesture, the A's flourish; the hooks cannot recur on an E without
 colliding with the arm below, and the tilt and arch belong to the same
 stroke, so none of the three transfers. Horizontals end in R5 cuts.
 
+**R4b. The ring the rest of the face borrows.** R4 leaves horizontals level.
+That holds on the metric lines and nowhere else. The A's crossbar **is** the
+mark's ring (§2.2), so the ring's gesture can be read straight off it: the two
+cut faces `clip_legs` leaves are its ends, and the line between their midpoints
+is the chord the ring draws through that letter. Under R4b every **interior**
+horizontal — one lying on no metric line — is a chord of that same ring.
+
+What the chords share is the **rise**, not the angle:
+
+> `tilt(L) = min(RING_TILT, atan(RISE / L))`, with **RISE 90.77** and
+> **RING_TILT 19.87°** measured off the A's bar.
+
+One angle is not one gesture. An H bar spans 1.6× an E arm, and the same tilt
+would lift them by different amounts, reading as two ring fragments rather than
+one ring. One rise is. A chord shorter than the A's own span takes the ring's
+angle verbatim; a longer one relaxes until its rise matches. The crossover
+between the two halves is **251.11**, the A's own span — true *by
+construction*, since it is `RISE/tan(RING_TILT)` and both are measured off the
+same bar. It looks like a discovered fact and is not one.
+
+The chord is **arched** on the A's bar's own radius, **ARC_R 2429.5** (308 pt,
+§2.2), and pivots about its own centre-line, so a glyph's colour and its
+counters stay where the level rule put them and only the gesture is new. It
+carries R4's widths and R4's taper, measured on the chord's own normal rather
+than on the vertical.
+
+A horizontal **on** the cap line or the baseline stays exactly level. The ring
+passes *behind* the letter, so it is not the ring's business to break the
+letter's silhouette against the line of type; only the interior strokes are its
+to move.
+
+Taken by E, F, H, P, R, B, G and the 4. The G takes the ring **reflected** in
+its bar's height, because `G_BAR_Y` is the mid line reflected in the half-cap;
+taking it upright there would tilt the bar *into* the aperture and close the
+letter, which is the one thing the G's bar exists to keep open. The 4's crossbar
+is the H's bar doing the H's job, and nothing about a figure exempts it: its R5
+tips are cut on the chord's normal and the diagonal's foot follows the bar,
+rather than the bar being held level to keep that foot where it was.
+
+Two exceptions beyond the metric lines, both because the stroke's *meaning*
+depends on being level rather than its silhouette:
+
+- **The mathematical marks.** `+` and `=` are level by definition — an equals
+  sign is two level bars, and a tilted one is not an equals sign. `_` must tile
+  with the next underscore into one unbroken line, which a tilt would break.
+  These keep R4's level horizontal.
+- **The 5** — *not yet decided, and currently level.* Its bar is not merely
+  near its bowl, it is tangent to it **along** its length: the whole figure is
+  solved so the bar's top edge passes through the bowl's top point. Tilting the
+  bar moves that tangency 84 units left (to where the ellipse's own slope
+  matches the chord's) and drops the stem's foot 84 units with it, and
+  `_bury_end`, which reshapes the bar's buried end on the assumption of a level
+  bar meeting the bowl at its top, produces a spur instead of a join. The solve
+  converges; the figure it converges to is a different 5. That is a redesign to
+  be judged on its own, not a wiring job, so the 5 is left level and listed here
+  rather than quietly skipped.
+
+The A itself does not move. Dropping its bar onto the mid line was considered —
+it would put the mark on the line E, F, H, K, X and Y are built on — but the A
+is the mark, and the rest of the face borrows from it rather than the other way
+round. `ORPHAN_RING_DROP=1` builds that reading (RISE 100.09, tilt 19.93°).
+
+**The band stays constant, deliberately.** The mark's bar is not an offset
+band: its two edges are separately struck, the upper on a radius of **2118.2**
+units and the lower on **2742.8** (whole-edge circle fits to the drawn outline,
+max residual 0.074 and 0.100). So the mark's own bar swells toward midspan.
+It swells by **0.85 units** — over the 251-unit span the A gives it. Carrying
+the two radii onto a longer chord instead of the swell would put **4.13 units**
+into the middle of an H's 551-unit bar, +12% on a 33-unit stroke: an artefact of
+length, not something the mark does. That is the same trap the tilt rule was
+written to avoid, one step further on, so it takes the same answer — transplant
+the amount, not the geometry. And the amount is 0.85 units, which at any size
+this face is set at is below the resolution of the thing it would correct. So
+the band is built constant, from one radius, and the 0.85 is left on the table
+knowingly rather than by omission.
+
 **R5. Terminals.** Every free end of a stem or diagonal is cut like the A's
 feet: **20.6° off the horizontal** (half the apex angle; measured 21.8° and
 19.4°), tip at the corner farther from the letter's centre, so the cut rises

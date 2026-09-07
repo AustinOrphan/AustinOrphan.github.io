@@ -238,6 +238,18 @@ G_TIP_X = 560.0                           # left tip of the G's bar
 # close the letter, which is the one thing the G's bar exists to keep open.
 G_SIGN = -1.0
 
+# Where the G's arc STARTS.  The C's aperture is built symmetric about the horizontal, ends at
+# +-CUT_DEG, and is then rotated down as a whole by C_TILT, landing its ends at C_TOP (+10.30)
+# and C_BOT (-30.90).  The G inherited C_TOP, which is half a construction: the rotation is
+# something the C does to an aperture with TWO free ends, and the G has one -- its lower end is
+# wherever the bar lands (-6.43), so there is nothing for the rotation to act on.  Taking C_TOP
+# anyway left the G a 16.73 deg aperture, 105 units of open height against the C's 249, and the
+# terminal sat down on the bar with the counter barely vented.  So the G takes the C's aperture
+# RULE -- an end at CUT_DEG off the horizontal -- rather than the C's rotation, which opens it
+# to 27.03 deg and 167 units.  Not a new number: CUT_DEG is R5's own cut angle, and this is
+# where the C's upper end stands before the C tilts it.
+G_TOP = CUT_DEG
+
 
 def _g_parts(tip_x=None):
     """The G: the C's round carried on round to the bar's height, closed by an R4 bar."""
@@ -245,7 +257,7 @@ def _g_parts(tip_x=None):
     if not ring.RING:
         a1 = 360.0 + math.degrees(math.asin((G_BAR_Y - C_C[1]) / C_R))   # where the arc reaches the bar
         x_right = _circ_x(C_C, C_R, G_BAR_Y)
-        arc = round_arc(C_C, C_R, C_TOP, a1)
+        arc = round_arc(C_C, C_R, G_TOP, a1)
         bar = _flush_arc(horizontal(tip_x, x_right, G_BAR_Y, left='up'), C_C, C_R)
         return arc, bar, a1, x_right
 
@@ -259,7 +271,7 @@ def _g_parts(tip_x=None):
         x_right = nx
     _p0, p1, _L = ring.chord_ends(tip_x, x_right, G_BAR_Y, G_SIGN)
     a1 = 360.0 + math.degrees(math.asin((p1[1] - C_C[1]) / C_R))
-    arc = round_arc(C_C, C_R, C_TOP, a1)
+    arc = round_arc(C_C, C_R, G_TOP, a1)
     raw, _bn = ring.ring_chord(tip_x, x_right, G_BAR_Y, mid=rules.HORIZ_FREE, sign=G_SIGN,
                                end0=ring.r5_line(tip_x, x_right, G_BAR_Y, 'left', 'up',
                                                  mid=rules.HORIZ_FREE, sign=G_SIGN),
@@ -275,7 +287,7 @@ def build_G():
     flush = max(abs(x_right - _circ_x(C_C, C_R, G_BAR_Y + w_end * (k/40.0 - 0.5))) for k in range(41))
     ink = max(p[0] for c in (arc, bar) for p in c.flatten()) - min(p[0] for c in (arc, bar) for p in c.flatten())
     return glyph(ord('G'), [arc, bar], sb=(SB_ROUND, SB_ROUND), notes=dict(
-        construction=f"The C's round (same centre, same r={C_R:g}, same top end at {C_TOP:+.2f} deg) carried on "
+        construction=f"The C's round (same centre, same r={C_R:g}, upper end at {G_TOP:+.2f} deg) carried on "
                      f"counter-clockwise past the right extreme to {a1 - 360:+.2f} deg, where the outer circle "
                      f"is at the bar's centre-line, plus one R4 bar (rules.horizontal) from a free R5 tip at "
                      f"x={G_TIP_X:g} to the outer circle at x={x_right:.1f}.  No stem under the bar: the round "
@@ -287,6 +299,18 @@ def build_G():
             f"counter at x={counter_x:.1f}, so {counter_x - G_TIP_X:.0f} units of it read inside the bowl.",
         tip=f"R5 cut, body 'up': the bar's centre-line is below the letter's centre, so the corner farther from "
             f"the centre is the lower one and the tip sits there, the cut rising to the right (R5, R7).",
+        aperture=f"{G_TOP - (a1 - 360):.2f} deg, from the arc's upper end at {G_TOP:+.2f} to the bar's "
+                 f"centre-line at {a1 - 360:+.2f}, which is {C_R*(math.sin(math.radians(G_TOP)) - math.sin(math.radians(a1 - 360))):.0f} "
+                 f"units of open height against the C's {C_R*(math.sin(math.radians(C_TOP)) - math.sin(math.radians(C_BOT))):.0f}.  "
+                 f"The upper end stands at CUT_DEG, R5's own cut angle, which is where the C's upper end sits "
+                 f"BEFORE the C rotates its aperture down by C_TILT.  The G does not take that rotation: it is "
+                 f"what the C does to an aperture with two free ends, and the G's lower end is not free -- it is "
+                 f"wherever the bar lands.  Inheriting the rotated end (C_TOP, {C_TOP:+.2f}) instead was the "
+                 f"first build and is the alternative set aside: it left {C_TOP - (a1 - 360):.2f} deg and "
+                 f"{C_R*(math.sin(math.radians(C_TOP)) - math.sin(math.radians(a1 - 360))):.0f} units, with the "
+                 f"terminal sitting down on the bar.  Terminal band {_band_w(G_TOP):.1f} against "
+                 f"{_band_w(C_TOP):.1f} at the old end -- thinner, because the band thins toward the stress at "
+                 f"{ang(RING_OFF):.1f} deg and the end has moved that way.",
         joins=f"The arc's radial end at {a1 - 360:+.2f} deg lies inside the bar (the bar is "
               f"{w_horizontal(L, 1):.1f} thick there against the band's {_band_w(a1):.1f}), so it is never seen. "
               f"The bar's right end is reshaped to the outer circle itself (_flush_arc), which moves it by at "

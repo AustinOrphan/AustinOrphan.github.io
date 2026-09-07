@@ -19,13 +19,23 @@ type; only the interior strokes are its to move.
 
 The chord pivots about the horizontal's own centre line, so a glyph's colour and its counters
 stay where the level rule put them, and only the gesture is new.
+
+The band is CONSTANT, and that is a decision rather than an omission. The mark's bar is not an
+offset band: its edges are separately struck, the upper on 2118.2 units and the lower on 2742.8
+(whole-edge circle fits to the drawn outline, max residual 0.074 and 0.100), so the mark's own
+bar swells toward midspan -- by 0.85 units, over the 251-unit span the A gives it. Carrying the
+two RADII onto a longer chord rather than the SWELL would put 4.13 units into the middle of an
+H's 551-unit bar, +12% on a 33-unit stroke, which is an artefact of length and not something the
+mark does. That is the tilt rule's trap one step on, so it takes the tilt rule's answer:
+transplant the amount, not the geometry. The amount is 0.85 units, below the resolution of the
+thing it would correct, so it is left on the table. See SPEC R4b.
 """
 import math
 
 from pen import (Contour, add, sub, mul, unit, perp, norm, ang, from_ang, fit_cubics,
                  clip_half, cut_for)
 from metrics import CAP
-from rules import w_horizontal, w_stem, HORIZ_FREE, HORIZ_JOIN, CUT_DEG
+from rules import w_horizontal, w_stem, HORIZ_FREE, HORIZ_JOIN, HORIZ_TAPER, CUT_DEG
 from glyphs.core import MID_LINE, RISE, RING_TILT, ARC_R, RING
 
 # How far past each end the band is drawn before it is clipped, and how finely the arch is
@@ -130,11 +140,27 @@ def chord_edge_point(x0, x1, y_c, edge, at_x, mid=HORIZ_JOIN, sign=1.0):
         a1 -= 360.0
     M = _mirror(y_c)
 
+    # The edge is the arc at radius R(t), where R carries R4's taper on the arc's own normal.
+    # Both R(t) and the angle are linear in t, so the tangent is exact in closed form -- and it
+    # has to be. A finite difference here puts a ~2e-9 floor under the tangent, the bowl solves
+    # against that tangent, and _bar_bowl's 1e-10 fixed point can then never close: at
+    # WEIGHT 1.45 / PUSH 0.30 the P's bowl spun out its 500 passes and raised.
+    dadt = math.radians(a1 - a0)
+    dRdt = edge * sign * (-HORIZ_TAPER * L) / 2
+
+    def _R(t):
+        return ARC_R + edge * sign * w_horizontal(L, t, mid) / 2
+
     def pt(t):
-        a = a0 + (a1 - a0) * t
-        r = from_ang(a)
-        q = add(add(c, mul(r, ARC_R)), mul(r, edge * sign * w_horizontal(L, t, mid) / 2))
+        r = from_ang(a0 + (a1 - a0) * t)
+        q = add(c, mul(r, _R(t)))
         return M(q) if sign < 0 else q
+
+    def tangent(t):
+        a = math.radians(a0 + (a1 - a0) * t)
+        r, rp = (math.cos(a), math.sin(a)), (-math.sin(a), math.cos(a))
+        d = add(mul(r, dRdt), mul(rp, _R(t) * dadt))
+        return unit((d[0], -d[1]) if sign < 0 else d)
 
     lo, hi = -1.0, 2.0
     for _ in range(80):
@@ -144,7 +170,7 @@ def chord_edge_point(x0, x1, y_c, edge, at_x, mid=HORIZ_JOIN, sign=1.0):
         else:
             hi = m
     t = (lo + hi) / 2
-    return pt(t), unit(sub(pt(t + 1e-4), pt(t - 1e-4)))
+    return pt(t), tangent(t)
 
 
 def r5_line(x0, x1, y_mid, which, body, mid=HORIZ_JOIN, sign=1.0):

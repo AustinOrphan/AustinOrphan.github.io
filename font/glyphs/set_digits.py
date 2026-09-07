@@ -47,7 +47,8 @@ from pen import (Contour, add, sub, mul, dot, unit, perp, norm, ang, arc_segment
 from metrics import CAP, OVER_ROUND, SB_STRAIGHT, SB_ROUND
 from rules import (glyph, stem, diagonal, horizontal, arm,
                    RING_W, RING_OFF, ROUND_THICK, ROUND_THIN, CUT_DEG, HORIZ_MID, HORIZ_TAPER,
-                   w_stem, w_slash, w_backslash, w_horizontal)
+                   HORIZ_FREE, w_stem, w_slash, w_backslash, w_horizontal)
+import ring
 
 BODY = 558                      # R8 medium: the A's foot spread, the digits' body
 DIGIT_ADV = BODY + 2 * SB_ROUND  # 638: the advance a full-body figure takes under R8 + R9
@@ -368,11 +369,33 @@ def build_one_tab():
 BAR4_Y = 200.0                       # centre-line of the 4's crossbar
 STEM4_RIGHT = 0.78 * BODY            # the stem's right edge at the baseline
 
+def _four_bar():
+    """The 4's crossbar, and the point the diagonal stands on.
+
+    The bar lies on no metric line and runs the full body between two free R5 tips, so under R4b
+    it is a chord of the ring exactly as the H's bar is -- there is nothing about a figure that
+    exempts it. Its tips are cut on the chord's own normal, and the diagonal's foot P follows the
+    bar rather than the bar being held level to keep P where it was.
+    """
+    L = float(BODY)
+    if not ring.RING:
+        bar = horizontal(0.0, L, BAR4_Y, left='up', right='up')
+        w0 = w_horizontal(L, 0)
+        return bar, (w0 / math.tan(math.radians(90 - CUT_DEG)), BAR4_Y + w0/2)
+    e0 = ring.r5_line(0.0, L, BAR4_Y, 'left',  'up', mid=HORIZ_FREE)
+    e1 = ring.r5_line(0.0, L, BAR4_Y, 'right', 'up', mid=HORIZ_FREE)
+    bar, _n = ring.ring_chord(0.0, L, BAR4_Y, mid=HORIZ_FREE, end0=e0, end1=e1)
+    # P is the far end of the left R5 cut: of the outline points that lie ON that cut, the upper.
+    pts = [bar.start] + [sg[-1] for sg in bar.segs]
+    a, b = e0
+    d = sub(b, a); n = (-d[1], d[0])
+    on = [p for p in pts if abs((p[0]-a[0])*n[0] + (p[1]-a[1])*n[1]) < 1e-6]
+    return bar, max(on, key=lambda p: p[1])
+
 def build_four():
     x_v = STEM4_RIGHT - w_stem(0)/2
-    bar = horizontal(0.0, BODY, BAR4_Y, left='up', right='up')
+    bar, P = _four_bar()
     w0 = w_horizontal(BODY, 0)
-    P = (w0 / math.tan(math.radians(90 - CUT_DEG)), BAR4_Y + w0/2)     # bar's inner (upper) left corner
     left_edge = line_2pt((x_v - w_stem(0)/2, 0.0), (x_v - w_stem(CAP)/2, CAP))
     top_cut = line_ang((x_v + w_stem(CAP)/2, CAP), 180 + CUT_DEG)
     TLc = isect(left_edge, top_cut)                                     # stem's upper-left corner
@@ -384,9 +407,9 @@ def build_four():
         construction=(f"A diagonal, a stem and a horizontal (the group's third option): an R2 \"/\" "
                       f"(rules.diagonal) at {slope:.1f} deg from the crossbar to the stem, an R3 stem "
                       f"(rules.stem) at x={x_v:.1f} with its right edge at {STEM4_RIGHT:.0f} "
-                      f"({STEM4_RIGHT/BODY:.2f} of the body) and free R5 cuts at both ends, and an R4 crossbar "
-                      f"(rules.horizontal, centre-line y={BAR4_Y:g}, away from both metric lines so it tapers "
-                      f"symmetrically) running the full body {BODY} with free R5 tips at both ends.  Closed top: "
+                      f"({STEM4_RIGHT/BODY:.2f} of the body) and free R5 cuts at both ends, and a crossbar "
+                      f"(centre-line y={BAR4_Y:g}) running the full body {BODY} with free R5 tips at both ends.  "
+                      f"Closed top: "
                       f"the diagonal's upper edge ends exactly on the stem's upper-left corner, where the stem's "
                       f"R5 top cut lands, so the two share one outline point."),
         junctions=(f"Bottom: the diagonal's lower-left corner sits exactly on the crossbar's inner (upper) left "
@@ -399,6 +422,17 @@ def build_four():
               f"upper-right (body 'left'), the stem standing right of centre.  R7's preference for the lower-left "
               f"corner does not apply -- it is R5 that names the tip, and only where R5 leaves a symmetric letter "
               f"undecided (set_straight's I and T) does R7 choose."),
+        bar=(f"R4b: the crossbar lies on no metric line and runs between two free ends, so it is a chord of the "
+             f"mark's ring like the H's bar, not a level stroke -- tilt {ring.tilt_for(float(BODY)):.2f} deg over "
+             f"its {BODY} length, the ring's own {ring.RISE:.2f}-unit rise, arched on ARC_R and pivoted about its "
+             f"own centre-line so the letter's colour does not move.  Its tips are R5 cuts measured on the chord's "
+             f"normal (ring.r5_line), as the A's feet are measured on its legs.  Nothing about a figure exempts "
+             f"it: the 4's bar and the H's bar are the same stroke doing the same job.  The diagonal's foot P "
+             f"follows the bar to ({P[0]:.1f}, {P[1]:.1f}) -- level it stood at "
+             f"({w_horizontal(float(BODY), 0)/math.tan(math.radians(90 - CUT_DEG)):.1f}, "
+             f"{BAR4_Y + w_horizontal(float(BODY), 0)/2:.1f}) -- which steepens the diagonal from 50.93 to "
+             f"{slope:.2f} deg and opens the counter.  Holding the bar level to keep P where it was would have "
+             f"been the tail wagging the dog.  ORPHAN_RING=0 builds the level version."),
         proportion=f"Body {BODY} (R8 medium), the bar's two tips; the bar reaches {BODY - STEM4_RIGHT:.0f} past the stem.",
         spacing=f"{SB_ROUND}/{SB_ROUND}: both extremes are the bar's R5 tips, points over open space.",
         deviations="none from R1-R9.",
