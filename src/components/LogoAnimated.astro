@@ -296,7 +296,11 @@ const easeTail = `linear(${dash(0)}, ${at(TAIL_STOPS)}, 1)`;
     --la-t-bar: calc(var(--la-t-trail) + var(--la-d-trail));
     --la-d-bar: calc(0.23s / var(--la-speed));     /* bar inks in, hook to hook */
     --la-t-tail: var(--la-t-bar);
-    --la-d-tail: var(--la-d-bar);                  /* trail retracts, foot to hook tip */
+    /* The trail clears when the RING does, not when the bar does. The bar finishes at 1.045
+       but the circle is still growing until 1.10, and a swoosh that has already gone leaves
+       that last stretch of growth unaccompanied. Retracting to the hand-off keeps something
+       moving until the mark is whole. */
+    --la-d-tail: calc(var(--la-t-final) - var(--la-t-tail));
     /* The hand-off waits for the ring: the final layer used to start at 1.02 while the circle
        was still growing until 1.10, so the full-size resting O faded in over a ring that had
        not got there yet and the growth looked cut short. */
