@@ -451,6 +451,63 @@ What bounds it now is geometry, not tooling:
 - **Past weight 2.00** the bowl's outer circle and its horizontal's outer edge
   stop meeting.
 
+## 5c. The figures
+
+The ten figures were settled together rather than one at a time, because the
+thing that decides them is how they sit in a row.
+
+**The rounds now agree.** Every lower round is **464** deep: the 5's bowl, the 6
+and 9's shared bowl, and the 3 and 8's lower rounds. Before, they ran 390–430
+with the 5 the shallowest, and the 5 read light beside its neighbours.
+
+**The 5.** Bowl 558 × 464, terminal at 165°, and the bowl carried on to 84°
+before the bar swallows it. Its bar stays **level**, and that is a derived
+result rather than an exception: the bar meets the bowl at its TOP, where the R1
+band is 19.4 units, and the bar carries 47.2. A 47-unit stroke cannot hand off
+to a 19-unit band without a ledge, so its underside has to run level to a wedge
+— which is exactly what §5's `set_bowl` note says about the cap-line arms of B,
+D, P and R. The rule generalises: **a horizontal meeting a round at its thin side
+must run level; one meeting it at the thick side can hand off, and can therefore
+take R4b's tilt.** A tilted bar was drawn and measured: its underside falls
+inside the bowl's counter from x≈120 onward, so the figure has no solution, not
+merely an awkward one.
+
+**The 6 and 9.** The shared bowl follows the 5 to 464; the 6's terminal swings up
+from 45° to 55°. The spine's height had been written as a literal `515`, which is
+only correct while the bowl is 205 deep — it is derived now, `TOP − (BOT + B69)`,
+so the 6 keeps reaching the top of the figure when the bowl moves.
+
+**The 3 and 8.** These are two-storey, so their two rounds share a 720-unit
+budget and a deeper lower round has to be taken out of the upper. Two things
+follow:
+
+- The upper round is **370 wide** against the lower's 558. At the old 88% the two
+  bowls were nearly the same round twice, which is what made the 8 read as two
+  circles stacked rather than as one letter.
+- The upper round's **height is solved, not chosen**. The ink between the two
+  counters at the waist is `2·RING_W − overlap`; the overlap is pure geometry
+  while `RING_W` scales with the weight, so a fixed height gives a waist that is
+  half a stroke at Thin and one and a half at Black. Setting `overlap = RING_W`
+  puts exactly **one stroke** between the counters at every point on both axes.
+  At the mark's own weight that lands on 289.2, which is where the constant had
+  been set by eye.
+
+**The 8's silhouette is one contour.** Unioned from two closed rounds it corners
+at each waist — 42° at these proportions — and that corner is what the eye reads
+as two separate objects. It is traced as a single outline now, upper round over
+the top and lower under the bottom, with each corner bridged by an arc of
+**`ROUND_THIN`** (13.4). That is the O's own thin side, the narrowest stroke the
+face draws anywhere, so no new number enters and the join follows both knobs;
+at the top of the push axis it goes to zero and the join relaxes back to the
+plain corner, which is the same place the round itself closes into a C. Larger
+radii were drawn and rejected: by r 50 the arc stops softening the corner and
+starts packing the notch, taking the silhouette across the waist from 200 units
+to 276.
+
+The counters are **not** derived from that silhouette. An 8's ink is two rings,
+so its two counters are the two ring-holes; eroding the outer contour gives one
+connected region, not two.
+
 ## 6. What is deliberately not in the face
 
 - the white swash and the two eyes (need the ring or the animation);

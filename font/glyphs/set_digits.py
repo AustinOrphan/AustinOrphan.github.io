@@ -43,7 +43,7 @@ import math, os, sys
 HERE = os.path.dirname(os.path.abspath(__file__)); FONT = os.path.dirname(HERE)
 sys.path.insert(0, os.path.join(FONT, 'lib')); sys.path.insert(0, FONT)
 from pen import (Contour, add, sub, mul, dot, unit, perp, norm, ang, arc_segments,
-                 line_2pt, line_ang, isect, from_poly, ccw)
+                 line_2pt, line_ang, isect, from_poly, ccw, fit_cubics)
 from metrics import CAP, OVER_ROUND, SB_STRAIGHT, SB_ROUND
 from rules import (glyph, stem, diagonal, horizontal, arm,
                    RING_W, RING_OFF, ROUND_THICK, ROUND_THIN, CUT_DEG, HORIZ_MID, HORIZ_TAPER,
@@ -553,8 +553,11 @@ def build_two():
         deviations="none from R1-R9 beyond the recorded join mismatch."))
 
 # ---- 3 ----------------------------------------------------------------------------
-A3_UP, B3_UP = 250.0, 175.0        # the 3's upper round
-A3_LO, B3_LO = 281.0, 200.0        # its lower round: wider and taller (R7, the heavier below)
+# Moved with the 8's, keeping the 3's own width offsets, and its upper height solved the same
+# way -- the 3's waist is the upper band's underside swallowing the lower round's top, so it
+# wants the same one-stroke overlap.
+A3_UP, A3_LO, B3_LO = 189.0, 281.0, 232.0
+B3_UP = (TOP - BOT + RING_W - 2*B3_LO) / 2
 T3_UP, T3_LO = 165.0, 190.0        # the two outer terminals, parametric degrees
 T3_WAIST = -105.0                  # where the upper round's band ends at the waist, on the left
 
@@ -634,9 +637,15 @@ def _bury_end(bar, bowl, T, x1, outer='top'):
     return from_poly(ccw(pts[:i] + rep + pts[i+1:]))
 
 # ---- 5 ----------------------------------------------------------------------------
-A5, B5 = 279.0, 215.0        # the 5's bowl
+# The bowl, drawn deeper and carried further than it first was.  At 279 x 215 the 5 sat
+# shallower than the 6, 8 and 9 beside it and read light in a run of figures; 232 brings its
+# depth into line with them, which also lifts the bar and shortens the stem.  Carrying the arc
+# on to 84 rather than 92 closes the gap under the bar so the figure holds together at a glance.
+# Chosen against the whole figure set rather than the letter alone -- measure/evidence/five-*.png.
+# The width stays 279 (the full body): the bowl has to fill it or the bar has nothing under it.
+A5, B5 = 279.0, 232.0        # the 5's bowl
 T5 = 165.0                   # its free terminal, parametric degrees
-ARC5_END = 92.0              # where its band ends under the bar
+ARC5_END = 84.0              # where its band ends under the bar
 
 def _five_parts():
     """The 5's stem, bar and bowl solved together: the bar's top edge passes through the bowl's top
@@ -704,19 +713,101 @@ def build_five():
         deviations="none from R1-R9."))
 
 # ---- 8 ----------------------------------------------------------------------------
-A8_UP, B8_UP = 246.0, 175.0        # the 8's upper round
-A8_LO, B8_LO = 279.0, 195.0        # its lower round: the wider and taller (R7)
+# The lower round matches the 5, 6 and 9's bowls at 464 deep.  The upper is 370 wide against
+# the lower's 558 -- 66% -- because at the old 88% the two bowls were nearly the same round
+# twice, which is what made the figure read as two circles stacked.
+#
+# Its HEIGHT is not a constant.  The ink between the two counters at the waist is
+# 2*RING_W - overlap, and the overlap is pure geometry while RING_W scales with the weight, so
+# a fixed height gives a waist that is half a stroke at Thin and one and a half at Black.  It
+# is solved instead: overlap = RING_W puts exactly one stroke between the counters at every
+# weight, and the upper round's height follows.  At the mark's own weight that lands on 289.2,
+# which is where the constant 290 had been set by eye.
+A8_UP, A8_LO, B8_LO = 185.0, 279.0, 232.0
+B8_UP = (TOP - BOT + RING_W - 2*B8_LO) / 2      # 144.6 at WEIGHT 1: a one-stroke waist
+
+WAIST8 = ROUND_THIN      # the radius the 8's waist join is rounded by -- see _eight_outer
+
+def _eight_cross(up, lo):
+    """Where the two outer ellipses cross, on the right.  Returns the point and each round's
+    parametric angle there."""
+    def fu(x): return up['c'][1] - up['b']*math.sqrt(max(0., 1-((x-up['c'][0])/up['a'])**2))
+    def fl(x): return lo['c'][1] + lo['b']*math.sqrt(max(0., 1-((x-lo['c'][0])/lo['a'])**2))
+    x0, x1 = BODY/2, BODY/2 + min(up['a'], lo['a']) - 1e-9
+    for _ in range(90):
+        m = (x0+x1)/2
+        if fu(m) < fl(m): x0 = m
+        else: x1 = m
+    x = (x0+x1)/2; y = fu(x)
+    tu = math.atan2((y-up['c'][1])/up['b'], (x-up['c'][0])/up['a'])
+    tl = math.atan2((y-lo['c'][1])/lo['b'], (x-lo['c'][0])/lo['a'])
+    return (x, y), tu, tl
+
+def _eight_outer(up, lo, rho, N=260):
+    """The 8's outer silhouette as ONE contour: the upper round over the top, the lower round
+    under the bottom, and the corner where they cross bridged by an arc of radius `rho`.
+
+    Built as two closed rounds unioned, the silhouette has a corner at each waist -- 42 degrees
+    at the drawn proportions -- and that corner is what makes the figure read as two circles
+    stacked rather than as one letter.  The bridge is rounded by ROUND_THIN, the O's own thin
+    side: the narrowest stroke the face draws anywhere, so the join introduces no new number
+    and follows both knobs for free.  At the top of the push axis ROUND_THIN goes to zero and
+    the join relaxes back to the plain corner, which is the same place the round itself closes
+    into a C.
+    """
+    X, tu, tl = _eight_cross(up, lo)
+    pts  = [_ell(up['c'], up['a'], up['b'], math.degrees(tu + (math.pi - 2*tu)*i/N)) for i in range(N+1)]
+    tlL  = math.pi - tl
+    pts += [_ell(lo['c'], lo['a'], lo['b'], math.degrees(tlL + (2*math.pi + tl - tlL)*i/N)) for i in range(N+1)]
+    if rho > 1e-9:
+        for i in (N, 0):                       # the two corners, right then left
+            pts = _bridge(pts, rho, i) or pts
+    tg = [unit(sub(pts[(i+1) % len(pts)], pts[(i-1) % len(pts)])) for i in range(len(pts))]
+    segs, _err = fit_cubics(pts, tg, tol=0.03)
+    k = Contour(pts[0])
+    for sg in segs: k.curve_to(*sg)
+    return k.ccw(), X
+
+def _bridge(pts, rho, i):
+    """Replace the corner at index i with an arc of radius rho spanning it."""
+    n = len(pts); k = 3
+    while k < n//6 and norm(sub(pts[(i-k) % n], pts[(i+k) % n])) < 1.4*rho: k += 1
+    A, B = pts[(i-k) % n], pts[(i+k) % n]
+    d = sub(B, A); L = norm(d)
+    if L > 2*rho or L < 1e-9: return None
+    M = mul(add(A, B), 0.5); h = math.sqrt(rho*rho - (L/2)**2); nr = unit((-d[1], d[0]))
+    c1, c2 = add(M, mul(nr, h)), sub(M, mul(nr, h))
+    C = c1 if norm(sub(c1, pts[i])) > norm(sub(c2, pts[i])) else c2
+    a0 = math.atan2(A[1]-C[1], A[0]-C[0]); a1 = math.atan2(B[1]-C[1], B[0]-C[0])
+    while a1-a0 >  math.pi: a1 -= 2*math.pi
+    while a1-a0 < -math.pi: a1 += 2*math.pi
+    out = list(pts); m = 2*k+1
+    for j in range(m):
+        t = a0 + (a1-a0)*j/(m-1)
+        out[(i-k+j) % n] = (C[0] + rho*math.cos(t), C[1] + rho*math.sin(t))
+    return out
 
 def build_eight():
     up = dict(c=(BODY/2, TOP - B8_UP), a=A8_UP, b=B8_UP)
     lo = dict(c=(BODY/2, BOT + B8_LO), a=A8_LO, b=B8_LO)
     over = 2*B8_UP + 2*B8_LO - (TOP - BOT)
-    return glyph(ord('8'), _ring(up['c'], up['a'], up['b']) + _ring(lo['c'], lo['a'], lo['b']),
+    outer, X = _eight_outer(up, lo, WAIST8)
+    return glyph(ord('8'), [outer, _off_contour(up, 0, 360).cw(), _off_contour(lo, 0, 360).cw()],
                  sb=(SB_ROUND, SB_ROUND), notes=dict(
-        construction=(f"Two complete narrowed rounds on one axis (x={BODY/2:g}): the upper {A8_UP:g} x {B8_UP:g} "
-                      f"with its top edge on {TOP}, the lower {A8_LO:g} x {B8_LO:g} with its bottom edge on "
-                      f"{BOT} and its extremes on the body {BODY}.  Nothing else: no end cuts anywhere, both "
-                      f"rounds closed, the two counters left as they fall."),
+        construction=(f"Two narrowed rounds on one axis (x={BODY/2:g}): the upper {A8_UP:g} x {B8_UP:g} with "
+                      f"its top edge on {TOP}, the lower {A8_LO:g} x {B8_LO:g} with its bottom edge on {BOT} "
+                      f"and its extremes on the body {BODY}.  The OUTER SILHOUETTE is traced as one contour "
+                      f"rather than unioned from two closed rounds -- upper round over the top, lower round "
+                      f"under the bottom -- with the corner at each waist bridged by an arc of "
+                      f"{WAIST8:.2f} (ROUND_THIN).  The counters are the two rounds' own R1 counters: an 8's "
+                      f"ink is two rings, so its two counters are the two ring-holes, and they are not the "
+                      f"inset of the silhouette."),
+        waist_join=(f"Unioned, the silhouette corners at each waist -- {42.0:.0f} degrees at these proportions -- "
+                    f"and that corner is what makes the figure read as two circles stacked rather than as one "
+                    f"letter.  The bridge is rounded by ROUND_THIN, the O's own thin side: the narrowest stroke "
+                    f"the face draws anywhere, so no new number enters and the join follows both knobs.  Larger "
+                    f"radii were drawn and rejected -- by r 50 the arc stops softening the corner and starts "
+                    f"packing the notch, taking the silhouette across the waist from {200} units to {276}."),
         waist=(f"The two ellipses are {over:g} units taller together than the {TOP - BOT} they span, so they "
                f"cross and the union is one shape.  The ink between the two counters at the waist is "
                f"{ROUND_THICK + ROUND_THIN - over:.1f} units -- the upper round's thick bottom ({ROUND_THICK:.1f}) less the lower "
@@ -731,9 +822,16 @@ def build_eight():
         deviations="none from R1-R9."))
 
 # ---- 6 and 9 ----------------------------------------------------------------------
-A69, B69 = BODY/2, 205.0          # the bowl of both figures
-A_SP, B_SP = 250.0, 515.0         # the spine: the tall round the bowl's tangent point sits on
-T6_TERM, T9_TERM = 45.0, -115.0   # the free terminals, parametric degrees
+# Deepened from 205 to match the 5's bowl, which was itself deepened to sit properly among the
+# other figures.  The 6 and the 9 share it, so both move.
+A69, B69 = BODY/2, 232.0          # the bowl of both figures
+# The spine is the tall round the bowl's tangent point sits on.  Its height is NOT free: the
+# spine's top edge is the figure's, on TOP, and its centre is the bowl's centre, so the two
+# together fix it.  It was written as a literal 515, which is only correct while the bowl is
+# 205 deep -- deepen the bowl and the 6 quietly stops reaching the top of the figure.
+A_SP = 250.0
+B_SP = TOP - (BOT + B69)          # 515 at B69 = 205
+T6_TERM, T9_TERM = 55.0, -115.0   # the free terminals, parametric degrees
 
 def _spine_note(spine, bowl, t_merge, term):
     m = min(_margin(p, bowl) for p in _cut_pts(spine, t_merge)[1:])
