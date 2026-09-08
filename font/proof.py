@@ -50,21 +50,25 @@ def overlay(path, S=9, PAD=4.0):
     # the source and the glyphs (counters wound against their outers), so nonzero unions them.
     src = " ".join(c.to_svg() for o in SRC['objects'] if o['role'] != 'white'
                               for c in source_contours(o['items']))
-    dA = " ".join(Contour.from_json(c).map(inv_A).to_svg() for c in gA['contours'])
+    # Contours 0 and 1 are the letter -- the polygon and the bar.  Anything after them is a ring
+    # tail, the ring's back half continuing behind a leg; the source A polygon has no counterpart
+    # for those, so drawing them here just puts two stray shapes on the legs.
+    dA = " ".join(Contour.from_json(c).map(inv_A).to_svg() for c in gA['contours'][:2])
     dO = " ".join(Contour.from_json(c).map(inv_O).to_svg() for c in gO['contours'])
     pts = [q for o in SRC['objects'] if o['role'] != 'white'
              for c in source_contours(o['items']) for q in c.flatten()]
-    pts += [q for c in gA['contours'] for q in Contour.from_json(c).map(inv_A).flatten()]
+    pts += [q for c in gA['contours'][:2] for q in Contour.from_json(c).map(inv_A).flatten()]
     pts += [q for c in gO['contours'] for q in Contour.from_json(c).map(inv_O).flatten()]
     x0 = min(q[0] for q in pts) - PAD; x1 = max(q[0] for q in pts) + PAD
     y0 = min(q[1] for q in pts) - PAD; y1 = max(q[1] for q in pts) + PAD - 2.4
     W, H = x1 - x0, y1 - y0
     cap = ('source (grey) &#183; font O (blue) &#183; font A (red), mapped back to the source frame. '
            'Where a coloured edge hugs the grey, they register.')
-    note1 = ('Apex 0.000 pt off, counter apex 0.069. The four FOOT vertices sit 0.83-0.89 off, and cannot '
-             'do better: the source A&#8217;s two feet differ by 8.54 pt in y and build_A levels them.')
-    note2 = ('The two small red shapes on the legs are the ring&#8217;s tails, which continue behind the legs '
-             'in the font and have no counterpart in the source A.')
+    note1 = ('Apex 0.000 pt off, counter apex 0.069. The four FOOT vertices sit 0.83-0.89 off and cannot do '
+             'better:')
+    note1b = ('levelling the feet and standing the axis upright are 1.31 deg apart in the mark. '
+              'Ring tails not drawn.')
+
     svg = (f'<svg xmlns="http://www.w3.org/2000/svg" width="{W*S:.0f}" height="{H*S+62:.0f}">'
            f'<rect width="100%" height="100%" fill="{BG}"/>'
            f'<g transform="translate({-x0*S:.2f},{y1*S:.2f}) scale({S},{-S})">'
@@ -74,7 +78,7 @@ def overlay(path, S=9, PAD=4.0):
            f'</g>'
            f'<text x="10" y="{H*S+20:.0f}" fill="{INK}" font-family="monospace" font-size="12">{cap}</text>'
            f'<text x="10" y="{H*S+38:.0f}" fill="#8FA3B0" font-family="monospace" font-size="11">{note1}</text>'
-           f'<text x="10" y="{H*S+54:.0f}" fill="#8FA3B0" font-family="monospace" font-size="11">{note2}</text>'
+           f'<text x="10" y="{H*S+54:.0f}" fill="#8FA3B0" font-family="monospace" font-size="11">{note1b}</text>'
            f'</svg>')
     open(path, 'w').write(svg)
 
