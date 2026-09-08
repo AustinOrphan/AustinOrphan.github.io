@@ -5,6 +5,9 @@ interpolation, so what the sheet shows is what the variable font is built from.
 
     python3 measure/axes.py        # writes measure/evidence/axes.svg
 
+Restores build/glyphs.json to the default build on the way out.  It did not, and proof.py
+reads that file, so the overlay sheet was drawn with the Black A over the Regular source.
+
 Rasterise with measure/rasterize.mjs.
 """
 import json, os, subprocess, sys
@@ -36,6 +39,7 @@ def path(g):
 def main():
     S, PAD, TOP = 0.115, 26, 150
     cells = [[build(w, p) for w in WEIGHTS] for p in PUSHES]
+    build(1.00, 1.00)     # leave build/glyphs.json at the default, not at the last cell
     colw = max(sum(G['glyphs'][NAME.get(ch, ch)]['adv'] for ch in WORD) for row in cells for G in row) * S
     W = 150 + len(WEIGHTS) * (colw + PAD) + 40
     H = TOP + len(PUSHES) * 120 + 90
