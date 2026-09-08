@@ -378,8 +378,15 @@ def _leg(tip, y_top):
     CENTRE-LINE ends and the R2 field is read there, so the centre-line end p0 is placed half a
     width off the tip along the stroke's normal and w0 solved to be consistent with it."""
     u = from_ang(LEG_ANGLE); n = perp(u)
-    k = (BACK_CAP - BACK_BASE) / CAP
-    w0 = w_backslash(tip[1]) / (1 - k * n[1] / 2)
+    # w0 is the width at the CENTRE-LINE end, which sits half a width off the tip along the
+    # normal -- so it depends on its own value.  This was a closed form that inverted R2's
+    # linear taper; R2 is no longer linear near the baseline (it flares), so it is solved as
+    # the fixed point it always was.  Converges in a handful of passes at any weight.
+    w0 = w_backslash(tip[1])
+    for _ in range(60):
+        w_new = w_backslash(tip[1] + n[1] * w0 / 2)
+        if abs(w_new - w0) < 1e-12: break
+        w0 = w_new
     p0 = add(tip, mul(n, w0 / 2))
     p1 = add(p0, mul(u, (y_top - p0[1]) / u[1]))
     leg = diagonal(p0, p1, bottom='left', top=None)

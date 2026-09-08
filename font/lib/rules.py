@@ -67,6 +67,7 @@ def round_arc(c, r_out, a0, a1):
 # that check can carry, and a wrong derivation is not worth keeping to make it land prettier.
 SLASH_BASE, SLASH_CAP = 39.899 * WEIGHT, 25.987 * WEIGHT   # strokes leaning "/" and all stems
 BACK_BASE,  BACK_CAP  = 37.544 * WEIGHT, 24.464 * WEIGHT   # strokes leaning like "\\"
+
 def w_slash(y):     return SLASH_BASE + (SLASH_CAP - SLASH_BASE) * (y / CAP)
 def w_backslash(y): return BACK_BASE  + (BACK_CAP  - BACK_BASE)  * (y / CAP)
 w_stem = w_slash
