@@ -23,13 +23,29 @@ MAX_ERR = 0.6   # units of curve error allowed when going cubic -> quadratic
 BUILD = os.path.join(HERE, 'build')
 MASTERS = os.path.join(BUILD, 'masters')
 
-# The grid. Weight is sampled at five points because colour is not linear in it; push at three,
+# The grid. Weight is sampled at six points because colour is not linear in it; push at three,
 # because it is nearly linear and three is enough to carry the ends and the middle.
-# The buildable region, mapped rather than assumed. Outside this the B's cap-line trim chord
-# cuts into its counter (light weights) or its lower bowl overruns the waist (heavy weights and
-# high push), and D P R go with it. This is the largest rectangle that holds and still contains
-# the mark itself at (1.00, 1.00). Widen it as set_bowl improves.
-WEIGHTS = [0.85, 1.00, 1.20, 1.45]
+#
+# The buildable region, mapped rather than assumed -- measure/bowl_region.py draws the map.
+# It used to be 0.85..1.45 x 0.30..1.00, and both of the things holding it there turned out to
+# be the solver rather than the letters:
+#
+#   * the B's cap-line trim left a STRAIGHT chord across a round band, and a straight line
+#     across a round band is the one path that heads for the counter. It now follows the band
+#     (set_bowl._bury_edge), so its clearance is the band's own thin side rather than a chord's
+#     worst case: 13.30 units at the mark against 8.54, and it holds until ROUND_THIN itself
+#     runs out, which is the real ceiling.
+#   * _wedge_x searched UNDAMPED. From the counter's right extreme its first step jumped clean
+#     past the solution, and at that x the arm's inner edge missed the counter altogether -- so
+#     the B failed at low push not because there was no wedge but because the search stepped
+#     over it. Damped like _bar_bowl and _arm_bowl already were.
+#
+# With those two the whole 63-glyph set builds over 0.60..2.00 x 0.30..1.00, and 0.70..2.00 at
+# push 1.00. The rectangle below is 0.70..2.00, which holds at every push in range. What stops
+# it now is genuine: at push 0.12 the counter has moved so far from the cap line that the arm's
+# inner edge never reaches it and there is no wedge to solve for, and past weight 2.00 the
+# bowl's outer circle and its horizontal's outer edge stop meeting at all.
+WEIGHTS = [0.70, 0.85, 1.00, 1.20, 1.45, 2.00]
 PUSHES  = [0.30, 0.65, 1.00]
 
 # What the sliders will say. wght follows the CSS convention (100..900) so a browser's own
@@ -38,10 +54,12 @@ def wght_of(w):     return round(400 * w)          # 400 at the mark, so wght re
 def push_of(p):     return round(p * 100)
 
 NAMED = [
-    ('Light',        0.85, 1.00), ('Regular',      1.00, 1.00),
-    ('Medium',       1.20, 1.00), ('Bold',         1.45, 1.00),
+    ('Thin',         0.70, 1.00), ('Light',        0.85, 1.00),
+    ('Regular',      1.00, 1.00), ('Medium',       1.20, 1.00),
+    ('Bold',         1.45, 1.00), ('Black',        2.00, 1.00),
     ('Regular Flat', 1.00, 0.30), ('Regular Soft', 1.00, 0.65),
     ('Light Flat',   0.85, 0.30), ('Bold Flat',    1.45, 0.30),
+    ('Black Flat',   2.00, 0.30),
 ]
 
 def run_master(weight, push, out_otf):

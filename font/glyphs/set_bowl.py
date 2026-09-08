@@ -86,8 +86,8 @@ own geometry.
 import math, os, sys
 HERE = os.path.dirname(os.path.abspath(__file__)); FONT = os.path.dirname(HERE)
 sys.path.insert(0, os.path.join(FONT, 'lib'))
-from pen import (add, sub, mul, dot, perp, from_ang, ang, line, line_2pt, offset_line, line_circle, circle_circle,
-                 from_poly, ccw)
+from pen import (add, sub, mul, dot, norm, perp, from_ang, ang, line, line_2pt, offset_line, line_circle,
+                 circle_circle, from_poly, ccw)
 import ring
 import rules
 from metrics import CAP, SB_STRAIGHT, SB_ROUND
@@ -228,8 +228,33 @@ def _bury(bar, outer, c, r, T, x1):
     E = (x1, yc - side * BURY_IN)
     i = pts.index(OR); n = len(pts)
     before = pts[(i - 1) % n]
-    rep = [E, T] if abs(before[0] - xmax) < 1e-6 else [T, E]
+    rep = _bury_edge(c, r, E, T) if outer == 'top' else [E, T]
+    if abs(before[0] - xmax) >= 1e-6:
+        rep = rep[::-1]
     return from_poly(ccw(pts[:i] + rep + pts[i+1:]))
+
+
+def _bury_edge(c, r, E, T, n=24):
+    """The buried edge a CAP-LINE arm's trim leaves, from the wedge back to the tangent point.
+
+    It used to be the straight chord E->T, and a straight line across a round band is the one
+    path that heads for the counter: the band's own curve falls away from it. At the mark's
+    numbers it still cleared the counter by 8.6-9.2 units and was asserted and tolerated, but
+    the clearance shrinks as PUSH displaces the counter toward it, and the B failed on that
+    assertion well before anything about the letter was actually wrong.
+
+    So the edge follows the BAND instead of cutting across it: an arc from E round to T, its
+    radius easing from E's to the outer circle's at T. Nothing visible changes -- this edge is
+    inside the band either way, which is what BURY_IN is for -- but its clearance is now the
+    band's own thinnest point rather than a chord's worst case, so it holds until ROUND_THIN
+    itself runs out, which is the real ceiling (PUSH 1.674*WEIGHT, where the round splits).
+    """
+    aE, aT = ang(sub(E, c)), ang(sub(T, c))
+    if aT - aE > 180: aT -= 360
+    if aE - aT > 180: aT += 360
+    rE, rT = norm(sub(E, c)), norm(sub(T, c))
+    return [add(c, mul(from_ang(aE + (aT - aE) * k / n), rE + (rT - rE) * k / n))
+            for k in range(n + 1)]
 
 
 # ---- the two round-to-horizontal joins ------------------------------------------------
@@ -314,12 +339,16 @@ def _wedge_x(x0, y_out, ci, ri, sgn):
     """x where a cap-line arm's inner edge meets the counter circle (ci, ri), solved with the arm's
     own length (R4's taper depends on it).  sgn -1: top arm."""
     x1 = ci[0] + ri
-    for _ in range(50):
+    for _ in range(200):
         L = x1 - x0
         inner = line_2pt((x0, y_out + sgn * w_horizontal(L, 0, HORIZ_JOIN)), (x1, y_out + sgn * w_horizontal(L, 1, HORIZ_JOIN)))
         p = line_circle(inner, ci, ri, pick='max')
         if abs(p[0] - x1) < 1e-9: return x1
-        x1 = p[0]
+        # Damped, as _bar_bowl and _arm_bowl already are. Undamped, the first step overshoots:
+        # from the counter's right extreme it jumped the whole way past the solution, and at
+        # that x1 the arm's inner edge missed the counter altogether and the B failed to build
+        # at low PUSH -- not because there was no wedge, but because the search stepped over it.
+        x1 = (x1 + p[0]) / 2
     return x1
 
 def _top_arm(b):
@@ -380,13 +409,15 @@ def _cap_arm_note(b, x1):
     """The cap-line arm's numbers: drawn to the wedge, outer edge trimmed to the round's top."""
     tang = b['c'][0]
     y_at_wedge = b['c'][1] + math.sqrt(max(0.0, b['r']**2 - (x1 - tang)**2))
-    T, E = (tang, float(CAP)), (x1, y_at_wedge - BURY_IN)     # the chord _bury leaves in place of the corner
-    d = sub(E, T); t = max(0.0, min(1.0, dot(sub(b['ci'], T), d) / dot(d, d)))
-    clear = math.dist(add(T, mul(d, t)), b['ci']) - b['ri']   # >0: the chord stays outside the counter
-    assert clear > 0, f'the trim chord cuts into the counter by {-clear:.2f}'
+    T, E = (tang, float(CAP)), (x1, y_at_wedge - BURY_IN)     # the ends of the edge the trim leaves
+    edge = _bury_edge(b['c'], b['r'], E, T)                   # what is actually drawn: an arc in the band
+    clear = min(math.dist(q, b['ci']) for q in edge) - b['ri']
+    assert clear > 0, f'the trim edge cuts into the counter by {-clear:.2f}'
     return dict(drawn_to_wedge_x=x1, outer_edge_ends_x=tang, overhang_trimmed=x1 - tang,
                 cliff_avoided=CAP - y_at_wedge, circle_y_at_wedge=y_at_wedge,
                 r4_length=x1 - TOP[0], visible_outer_length=tang - TOP[0],
+                straight_chord_clear=math.dist(add(T, mul(sub(E, T), max(0.0, min(1.0,
+                    dot(sub(b['ci'], T), sub(E, T)) / dot(sub(E, T), sub(E, T)))))), b['ci']) - b['ri'],
                 w_at_stem=w_horizontal(x1 - TOP[0], 0), w_at_wedge=w_horizontal(x1 - TOP[0], 1),
                 chord_clear_of_counter=clear)
 

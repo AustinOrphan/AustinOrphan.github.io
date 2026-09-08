@@ -7,14 +7,17 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 
 const PRESETS = [
+  { name: 'Thin',         wght: 280, push: 100 },
   { name: 'Light',        wght: 340, push: 100 },
   { name: 'Regular',      wght: 400, push: 100 },
   { name: 'Medium',       wght: 480, push: 100 },
   { name: 'Bold',         wght: 580, push: 100 },
+  { name: 'Black',        wght: 800, push: 100 },
   { name: 'Light Flat',   wght: 340, push: 30  },
   { name: 'Regular Soft', wght: 400, push: 65  },
   { name: 'Regular Flat', wght: 400, push: 30  },
   { name: 'Bold Flat',    wght: 580, push: 30  },
+  { name: 'Black Flat',   wght: 800, push: 30  },
 ];
 const SIZES = [88, 46, 27, 17];
 ---
@@ -34,7 +37,7 @@ const SIZES = [88, 46, 27, 17];
     <section class="od-controls" aria-label="Axes">
       <label>
         <span>weight <output data-out="wght">400</output></span>
-        <input type="range" data-axis="wght" min="340" max="580" step="1" value="400">
+        <input type="range" data-axis="wght" min="280" max="800" step="1" value="400">
       </label>
       <label>
         <span>contrast <output data-out="push">100</output></span>

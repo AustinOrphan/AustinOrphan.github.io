@@ -417,6 +417,40 @@ notes.
 **R9. Spacing.** D6's side bearings by the shape of the extreme (stem: 60,
 round or point: 40). Kerning is out of scope until the set is complete.
 
+## 5b. How far the axes run
+
+The WEIGHT and PUSH knobs are bounded by the **bowl letters** — B, D, P and R,
+each a round solved against a horizontal on one or both faces. They, not the
+diagonals, decide the range. `measure/bowl_region.py` draws the map.
+
+The whole 63-glyph set builds over **WEIGHT 0.60–2.00 × PUSH 0.30–1.00**, and
+the variable font is cut at **0.70–2.00** (wght 280–800), which holds at every
+push in that range. It was 0.85–1.45 (wght 340–580) until both of the things
+holding it there turned out to be the solver rather than the letters:
+
+- **The B's cap-line trim left a straight chord across a round band.** A
+  straight line across a round band is the one path that heads for the counter,
+  because the band's own curve falls away from it. The edge follows the band
+  now, so its clearance is the band's thin side rather than a chord's worst
+  case — **13.30 units at the mark against 8.54** — and it holds until
+  `ROUND_THIN` itself runs out.
+- **`_wedge_x` searched undamped.** From the counter's right extreme its first
+  step jumped clean past the solution, and at that x the arm's inner edge missed
+  the counter altogether. The B failed at low push not because there was no
+  wedge but because the search stepped over it. It is damped now, like
+  `_bar_bowl` and `_arm_bowl` already were.
+
+What bounds it now is geometry, not tooling:
+
+- **Below about push 0.12** the counter has moved so far from the cap line that
+  a cap-line arm's inner edge never reaches it, and there is no wedge to solve
+  for. Checked directly: over every x where the edge meets the counter at all,
+  the solution always lies to the left of the trial, so no fixed point exists.
+- **At the push ceiling**, `ROUND_THIN` goes to zero — the round is closing into
+  a C. That is the knobs' own ceiling anyway (`PUSH = 1.674 × WEIGHT`).
+- **Past weight 2.00** the bowl's outer circle and its horizontal's outer edge
+  stop meeting.
+
 ## 6. What is deliberately not in the face
 
 - the white swash and the two eyes (need the ring or the animation);
