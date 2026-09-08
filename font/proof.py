@@ -30,8 +30,13 @@ def sheet(names, path, scale=0.32, pad=40):
     svg = f'<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}"><rect width="{W}" height="{H}" fill="{BG}"/>{guides}{"".join(parts)}</svg>'
     open(path, 'w').write(svg)
 
-def overlay(path, S=9):
-    """The font's A and O mapped back into the source's coordinates (points), drawn over the source objects."""
+def overlay(path, S=9, PAD=4.0):
+    """The font's A and O mapped back into the source's coordinates (points), drawn over the source objects.
+
+    The frame is the BBOX of everything drawn, padded -- not the source artboard.  The artboard is
+    100x100 and the mapped-back A runs past it on three sides (its apex overshoots the cap line by
+    OVER_POINT and its feet sit below the baseline), so an artboard-sized frame cut the apex off.
+    """
     W, H = SRC['w'], SRC['h']
     gA, gO = G['glyphs']['A'], G['glyphs']['O']; nA, nO = gA['notes'], gO['notes']
     # inverse of build_A: undo x_shift and scale, then rotate back about the apex
@@ -43,8 +48,15 @@ def overlay(path, S=9):
     src = "".join(f'<path d="{" ".join(c.to_svg() for c in source_contours(o["items"]))}" fill="{INK}" fill-opacity="0.35" fill-rule="nonzero"/>' for o in SRC['objects'] if o['role'] != 'white')
     dA = " ".join(Contour.from_json(c).map(inv_A).to_svg() for c in gA['contours'])
     dO = " ".join(Contour.from_json(c).map(inv_O).to_svg() for c in gO['contours'])
-    svg = (f'<svg xmlns="http://www.w3.org/2000/svg" width="{W*S}" height="{H*S}"><rect width="100%" height="100%" fill="{BG}"/>'
-           f'<g transform="translate(0,{H*S}) scale({S},{-S})">{src}'
+    pts = [q for o in SRC['objects'] if o['role'] != 'white'
+             for c in source_contours(o['items']) for q in c.flatten()]
+    pts += [q for c in gA['contours'] for q in Contour.from_json(c).map(inv_A).flatten()]
+    pts += [q for c in gO['contours'] for q in Contour.from_json(c).map(inv_O).flatten()]
+    x0 = min(q[0] for q in pts) - PAD; x1 = max(q[0] for q in pts) + PAD
+    y0 = min(q[1] for q in pts) - PAD; y1 = max(q[1] for q in pts) + PAD
+    W, H = x1 - x0, y1 - y0
+    svg = (f'<svg xmlns="http://www.w3.org/2000/svg" width="{W*S:.0f}" height="{H*S:.0f}"><rect width="100%" height="100%" fill="{BG}"/>'
+           f'<g transform="translate({-x0*S:.2f},{y1*S:.2f}) scale({S},{-S})">{src}'
            f'<path d="{dO}" fill="none" stroke="{ACC}" stroke-width="{2.2/S}" fill-rule="nonzero"/>'
            f'<path d="{dA}" fill="none" stroke="{RED}" stroke-width="{2.2/S}" fill-rule="nonzero"/></g>'
            f'<text x="8" y="20" fill="{INK}" font-family="monospace" font-size="13">source objects (light) · font O (blue) · font A (red), both mapped back to the source frame</text></svg>')
