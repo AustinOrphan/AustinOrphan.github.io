@@ -64,6 +64,7 @@ _OFF_MUL  = float(os.environ.get('ORPHAN_OFF_MUL', 1.0))     # TEST KNOB: counte
 _RING_MARK = (_ring['outer'][2] - _ring['inner'][2]) * _sO                        # 33.19, the mark's band
 _FOOT1   = float(os.environ.get('ORPHAN_FOOT', 20.0))                             # R2b at WEIGHT 1
 RING_GAIN = 1.0 + (_FOOT1 / 2) / _RING_MARK                                       # 1.3013 at FOOT 20
+if os.environ.get('ORPHAN_R1B', '1') != '1': RING_GAIN = 1.0    # TEST KNOB: rounds left at the mark's
 RING_W   = (_RING_MARK * RING_GAIN + _RING_ADD) * WEIGHT                          # 43.19 at WEIGHT 1
 _OFF0    = ((_ring['inner'][0]-_ring['outer'][0]) * _sO, (_ring['inner'][1]-_ring['outer'][1]) * _sO)   # (14.0, 14.0)
 RING_OFF = (_OFF0[0] * PUSH * _OFF_MUL * RING_GAIN, _OFF0[1] * PUSH * _OFF_MUL * RING_GAIN)
