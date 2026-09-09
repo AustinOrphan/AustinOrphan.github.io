@@ -289,41 +289,18 @@ def cut_for(p_end, p_other, face, body, off_deg):
 
 
 # ---- fitting cubics to a sampled curve ------------------------------------------------
-def fit_cubics(P, T, tol=0.05, depth=0, nseg=None):
-    """Schneider's fit: a chain of cubic Beziers through the sampled curve P, tangent to the
-    unit tangents T at the two ends of every piece.
-
-    Offsetting a curve by a varying width gives something that is not itself an ellipse or a
-    circle, so the S's edges have to be approximated.  A dense polygon is the wrong way --
-    set_round's own notes record that a chain of short chords turns into a visible ripple once
-    the compiler rounds -- so the samples are fitted instead, and the caller is told the worst
-    deviation so the tolerance can be argued rather than assumed.
-
-    Returns (segments, max_error) where segments are (p1, p2, p3) control triples following on
-    from P[0], ready for Contour.curve_to.
-
-    `nseg` forces a FIXED number of pieces instead of splitting until `tol` is met, and every
-    outline that has to interpolate across the variable font's masters needs it.  The adaptive
-    split is driven by the sampled curve, the curve moves with WEIGHT and PUSH, and so the piece
-    count moves too: the A's bar came out as 32, 33 or 35 cubics depending on the master.  varLib
-    cannot interpolate outlines whose point counts differ, so it drops those glyphs from `gvar`
-    entirely -- 15 of the 63 shapes were frozen at the default and did not respond to either axis.
-    With nseg the topology is a property of the drawing rather than of the master, and the fit's
-    error is reported as before so the choice can be checked rather than assumed.
-    """
+def _fit_one(P, T):
+    """One cubic through the sampled curve P, tangent to T at its two ends.  Returns
+    (p1, p2, worst_error, worst_index): the two control points, how far the fit strays from the
+    samples, and which sample it strays furthest at -- which is where Schneider splits."""
     n = len(P)
-    if n < 2: return [], 0.0
     if n == 2:
         d = norm(sub(P[1], P[0])) / 3.0
-        return [(add(P[0], mul(T[0], d)), sub(P[1], mul(T[-1], d)), P[1])], 0.0
-    if nseg is not None and nseg > 1 and n > 2:
-        k = n // 2                                       # split by INDEX, not by worst error, so
-        L, eL = fit_cubics(P[:k+1], T[:k+1], tol, depth+1, nseg // 2)          # the same samples
-        R, eR = fit_cubics(P[k:], T[k:], tol, depth+1, nseg - nseg // 2)       # split the same way
-        return L + R, max(eL, eR)                                             # in every master
+        return add(P[0], mul(T[0], d)), sub(P[1], mul(T[-1], d)), 0.0, 0
     u = [0.0]                                            # chord-length parameterisation
     for i in range(1, n): u.append(u[-1] + norm(sub(P[i], P[i-1])))
-    if u[-1] <= 0: return [], 0.0
+    if u[-1] <= 0:
+        return P[0], P[-1], 0.0, 0
     u = [t / u[-1] for t in u]
     t0, t1 = T[0], mul(T[-1], -1)
 
@@ -376,7 +353,64 @@ def fit_cubics(P, T, tol=0.05, depth=0, nseg=None):
         e2, k2 = worst(q1, q2, v)
         if e2 >= err: break
         u, p1, p2, err, split = v, q1, q2, e2, k2
-    if nseg is not None or err <= tol or depth > 12 or split in (0, n-1):
+    return p1, p2, err, split
+
+
+def fit_cubics(P, T, tol=0.05, depth=0, nseg=None):
+    """Schneider's fit: a chain of cubic Beziers through the sampled curve P, tangent to the
+    unit tangents T at the two ends of every piece.
+
+    Offsetting a curve by a varying width gives something that is not itself an ellipse or a
+    circle, so the S's edges have to be approximated.  A dense polygon is the wrong way --
+    set_round's own notes record that a chain of short chords turns into a visible ripple once
+    the compiler rounds -- so the samples are fitted instead, and the caller is told the worst
+    deviation so the tolerance can be argued rather than assumed.
+
+    Returns (segments, max_error) where segments are (p1, p2, p3) control triples following on
+    from P[0], ready for Contour.curve_to.
+
+    `nseg` asks for a FIXED number of pieces instead of splitting until `tol` is met, and every
+    outline that has to interpolate across the variable font's masters needs it.  Splitting until
+    a tolerance is met is driven by the sampled curve, the curve moves with WEIGHT and PUSH, and
+    so the piece count moves too: the A's bar came out as 32, 33 or 35 cubics depending on the
+    master.  varLib cannot interpolate outlines whose point counts differ, so it drops those
+    glyphs from `gvar` -- 15 of the 63 shapes were frozen at the default and did not respond to
+    either axis.
+
+    The pieces are still chosen by WORST ERROR, exactly as the adaptive fit chooses them -- split
+    the piece that strays furthest, at the sample it strays furthest at -- only the stopping
+    condition changes, from "close enough" to "enough pieces".  Splitting at fixed fractions
+    instead does not work on these curves: several have a corner in them, the adaptive rule lands
+    a boundary on the corner and an even division straddles it, and the 8's fit came out 40 times
+    worse at the same piece count.
+    """
+    n = len(P)
+    if n < 2: return [], 0.0
+    if n == 2 or nseg == 1:
+        p1, p2, err, _ = _fit_one(P, T)
+        return [(p1, p2, P[-1])], err
+
+    if nseg is not None:
+        cache, ranges = {}, [(0, n - 1)]
+        def info(r):
+            if r not in cache: cache[r] = _fit_one(P[r[0]:r[1]+1], T[r[0]:r[1]+1])
+            return cache[r]
+        while len(ranges) < nseg:
+            cand = [i for i, r in enumerate(ranges) if r[1] - r[0] >= 2]
+            if not cand: break
+            i = max(cand, key=lambda i: (info(ranges[i])[2], ranges[i][1] - ranges[i][0], -i))
+            a, b = ranges[i]
+            s = a + info((a, b))[3]
+            if not (a < s < b): s = (a + b) // 2
+            ranges[i:i+1] = [(a, s), (s, b)]
+        segs, err = [], 0.0
+        for r in ranges:
+            p1, p2, e, _ = info(r)
+            segs.append((p1, p2, P[r[1]])); err = max(err, e)
+        return segs, err
+
+    p1, p2, err, split = _fit_one(P, T)
+    if err <= tol or depth > 12 or split in (0, n-1):
         return [(p1, p2, P[-1])], err
     L, eL = fit_cubics(P[:split+1], T[:split+1], tol, depth+1)
     R, eR = fit_cubics(P[split:], T[split:], tol, depth+1)
