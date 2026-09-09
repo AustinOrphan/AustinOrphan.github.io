@@ -35,9 +35,11 @@ PUSH   = float(os.environ.get('ORPHAN_PUSH', 1.0))
 
 # ---- R1 rounds: the O's construction in absolute units, so every round in the face
 #      carries the O's stroke and the O's displacement whatever its size.
-RING_W   = (_ring['outer'][2] - _ring['inner'][2]) * _sO * WEIGHT                 # 33.19 at WEIGHT 1
+_RING_ADD = float(os.environ.get('ORPHAN_RING_ADD', 0.0))    # TEST KNOB: extra band on every round
+_OFF_MUL  = float(os.environ.get('ORPHAN_OFF_MUL', 1.0))     # TEST KNOB: counter displacement multiplier
+RING_W   = ((_ring['outer'][2] - _ring['inner'][2]) * _sO + _RING_ADD) * WEIGHT   # 33.19 at WEIGHT 1
 _OFF0    = ((_ring['inner'][0]-_ring['outer'][0]) * _sO, (_ring['inner'][1]-_ring['outer'][1]) * _sO)   # (14.0, 14.0)
-RING_OFF = (_OFF0[0] * PUSH, _OFF0[1] * PUSH)                                     # counter displacement
+RING_OFF = (_OFF0[0] * PUSH * _OFF_MUL, _OFF0[1] * PUSH * _OFF_MUL)               # counter displacement
 ROUND_THICK, ROUND_THIN = RING_W + norm(RING_OFF), RING_W - norm(RING_OFF)         # 53.0 and 13.4 at (1, 1)
 
 def round_ring(c, r_out):
@@ -100,8 +102,9 @@ def round_arc(c, r_out, a0, a1):
 # by whichever tangency keeps it inside its bowl.
 FOOT_WIDEN = float(os.environ.get('ORPHAN_FOOT', 20.0)) * WEIGHT
 
-SLASH_BASE, SLASH_CAP = 39.899 * WEIGHT + FOOT_WIDEN, 25.987 * WEIGHT   # strokes leaning "/" and all stems
-BACK_BASE,  BACK_CAP  = 37.544 * WEIGHT + FOOT_WIDEN, 24.464 * WEIGHT   # strokes leaning like "\\"
+_CAP_NARROW = float(os.environ.get('ORPHAN_CAP_NARROW', 0.0)) * WEIGHT   # TEST KNOB
+SLASH_BASE, SLASH_CAP = 39.899 * WEIGHT + FOOT_WIDEN, 25.987 * WEIGHT - _CAP_NARROW   # "/" and stems
+BACK_BASE,  BACK_CAP  = 37.544 * WEIGHT + FOOT_WIDEN, 24.464 * WEIGHT - _CAP_NARROW   # "\\"
 
 def w_slash(y):     return SLASH_BASE + (SLASH_CAP - SLASH_BASE) * (y / CAP)
 def w_backslash(y): return BACK_BASE  + (BACK_CAP  - BACK_BASE)  * (y / CAP)
