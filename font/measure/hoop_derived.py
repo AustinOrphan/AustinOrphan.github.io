@@ -47,6 +47,19 @@ FACE = {h['face_seg'] for h in HK.values()}          # 7 and 16
 INNER_RUN = list(range(8, 16))
 
 
+def _seglen(it, n=24):
+    """Arc length of one traced segment, for placing the ramp at the hooks' own hand-overs."""
+    if it[0] == 'l': return math.dist(tuple(it[1]), tuple(it[2]))
+    p0, c1, c2, p1 = (tuple(it[1]), tuple(it[2]), tuple(it[3]), tuple(it[4]))
+    L, prev = 0.0, p0
+    for t in range(1, n + 1):
+        u = t / n; m = 1 - u
+        q = (m**3*p0[0] + 3*m*m*u*c1[0] + 3*m*u*u*c2[0] + u**3*p1[0],
+             m**3*p0[1] + 3*m*m*u*c1[1] + 3*m*u*u*c2[1] + u**3*p1[1])
+        L += math.dist(prev, q); prev = q
+    return L
+
+
 def _flatten(items, per=0.25):
     """The inner run as a dense polyline, and the outer boundary as another."""
     out = []
@@ -81,15 +94,31 @@ def derived_hoop(nseg=28):
     outer = _flatten([items[j] for j in (17, 0, 1, 2, 3, 4, 5, 6)])
     inner = _flatten([items[j] for j in INNER_RUN])
 
-    def push(p):
+    # How far along the inner run each hook hands over to the main rim.  The thickening is ramped
+    # to ZERO at the two tips and full across the middle, because a hook's EYE -- the sliver of
+    # background its curl encloses -- is only two units of the mark's 100 wide, and thickening the
+    # band there by 30% shuts it.  The eye is the whole reason the hook reads as a curl rather than
+    # as a blob, so the hooks keep the band they were drawn with and the free run takes all of it.
+    L_END = sum(_seglen(items[j]) for j in range(8, 11))        # end of hook L's inner curl
+    R_START = sum(_seglen(items[j]) for j in range(8, 14))      # start of hook R's inner curl
+    TOTAL = sum(_seglen(items[j]) for j in INNER_RUN)
+
+    def ramp(s):
+        if s <= 0 or s >= TOTAL: return 0.0
+        t = min(s / L_END, (TOTAL - s) / (TOTAL - R_START), 1.0)
+        return t * t * (3 - 2 * t)                              # smoothstep, so there is no corner
+
+    def push(p, w):
         q = min(outer, key=lambda o: (o[0]-p[0])**2 + (o[1]-p[1])**2)
         d = math.hypot(p[0]-q[0], p[1]-q[1])
         if d < 1e-9: return p, 0.0
-        return (p[0] + (p[0]-q[0])/d * (K-1) * d, p[1] + (p[1]-q[1])/d * (K-1) * d), d
+        g = w * (K - 1)
+        return (p[0] + (p[0]-q[0])/d * g * d, p[1] + (p[1]-q[1])/d * g * d), d
 
-    moved, bands = [], []
-    for p in inner:
-        m, d = push(p); moved.append(m); bands.append(d)
+    moved, bands, s = [], [], 0.0
+    for i, p in enumerate(inner):
+        if i: s += math.dist(inner[i-1], p)
+        m, d = push(p, ramp(s)); moved.append(m); bands.append(d)
 
     tg = [unit(sub(moved[min(i+1, len(moved)-1)], moved[max(i-1, 0)])) for i in range(len(moved))]
     segs, err = fit_cubics(moved, tg, nseg=nseg)
