@@ -65,8 +65,9 @@ def round_arc(c, r_out, a0, a1):
 # noting the profile's mid-height matches the O's mean band. It still holds -- 32.94 against
 # 33.19, 0.75% -- where the old numbers gave 33.30, 0.34%. Both sit well inside any tolerance
 # that check can carry, and a wrong derivation is not worth keeping to make it land prettier.
-SLASH_BASE, SLASH_CAP = 39.899 * WEIGHT, 25.987 * WEIGHT   # strokes leaning "/" and all stems
-BACK_BASE,  BACK_CAP  = 37.544 * WEIGHT, 24.464 * WEIGHT   # strokes leaning like "\\"
+FOOT = float(os.environ.get('ORPHAN_FOOT', 0.0))           # TEST KNOB: extra width at the baseline
+SLASH_BASE, SLASH_CAP = (39.899 + FOOT) * WEIGHT, 25.987 * WEIGHT   # strokes leaning "/" and all stems
+BACK_BASE,  BACK_CAP  = (37.544 + FOOT) * WEIGHT, 24.464 * WEIGHT   # strokes leaning like "\\"
 
 def w_slash(y):     return SLASH_BASE + (SLASH_CAP - SLASH_BASE) * (y / CAP)
 def w_backslash(y): return BACK_BASE  + (BACK_CAP  - BACK_BASE)  * (y / CAP)

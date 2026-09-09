@@ -820,6 +820,12 @@ def build_U():
     xl, a0 = _heavy_junction(U_C, U_R, -1)                           # counter crossing, left
     xr, a1, y0r = _light_junction(U_C, U_R, +1)                      # silhouette crossing, right
     a1 += 360.0
+    # The left junction sits within a fraction of a degree of 180, and ang() wraps at +/-180: a
+    # heavier stem is placed further left, which tips a0 from +179.9 to -179.9 and turns a 183-degree
+    # sweep into a 543-degree one.  round_arc draws what it is asked for, so the band wound one and a
+    # half times and the U came apart -- at every WEIGHT above about 1.05, which is most of the
+    # variable font's range.  Normalise the sweep into (0, 360] instead of trusting ang()'s branch.
+    a0 += 360.0 * math.floor((a1 - a0) / 360.0)
     y0 = U_C[1] - BURY
     left  = stem(xl, y0,  CAP, bottom=None, top='right')
     right = stem(xr, y0r, CAP, bottom=None, top='left')
