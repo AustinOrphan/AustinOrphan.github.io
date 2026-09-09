@@ -66,12 +66,18 @@ def round_arc(c, r_out, a0, a1):
 # 33.19, 0.75% -- where the old numbers gave 33.30, 0.34%. Both sit well inside any tolerance
 # that check can carry, and a wrong derivation is not worth keeping to make it land prettier.
 FOOT = float(os.environ.get('ORPHAN_FOOT', 0.0))           # TEST KNOB: extra width at the baseline
-SLASH_BASE, SLASH_CAP = (39.899 + FOOT) * WEIGHT, 25.987 * WEIGHT   # strokes leaning "/" and all stems
-BACK_BASE,  BACK_CAP  = (37.544 + FOOT) * WEIGHT, 24.464 * WEIGHT   # strokes leaning like "\\"
+_FS = os.environ.get('FOOT_SCALES', '1') == '1'
+_FMODE = os.environ.get('ORPHAN_FOOT_MODE', 'all')         # 'all' or 'diagonals'
+_FA = FOOT * (WEIGHT if _FS else 1.0)
+_FD = _FA if _FMODE in ('all', 'diagonals') else 0.0       # on diagonal feet
+_FV = _FA if _FMODE == 'all' else 0.0                      # on vertical stems too
+SLASH_BASE, SLASH_CAP = 39.899 * WEIGHT + _FD, 25.987 * WEIGHT
+BACK_BASE,  BACK_CAP  = 37.544 * WEIGHT + _FD, 24.464 * WEIGHT
+STEM_BASE, STEM_CAP   = 39.899 * WEIGHT + _FV, 25.987 * WEIGHT
 
 def w_slash(y):     return SLASH_BASE + (SLASH_CAP - SLASH_BASE) * (y / CAP)
 def w_backslash(y): return BACK_BASE  + (BACK_CAP  - BACK_BASE)  * (y / CAP)
-w_stem = w_slash
+def w_stem(y):      return STEM_BASE  + (STEM_CAP  - STEM_BASE)  * (y / CAP)
 
 # ---- R4 horizontals
 # R4 has two weights, because a horizontal has two jobs.
