@@ -7,10 +7,8 @@ core._derived_bar is what the letter uses: a plain piece of the ring's annulus, 
 Dropped into the mark that is wrong twice over -- it stops square where the artwork curls, and it
 runs to a construction range (18 to 152 degrees) that was only ever there to be cut away.
 
-So the hoop is re-derived the way the A's bar is, but on the ARTWORK's own geometry and over the
-artwork's own extent: every OUTER curve is left exactly as drawn -- the main rim and both hooks'
-outer rims and nothing about the silhouette's ends -- and only the INNER curves move, inward, by the
-same factor core._ring_ellipses uses for the bar inside the letter.
+So the hoop is re-derived on the ARTWORK's own geometry and over the artwork's own extent, by the
+same factor R4 gives a bar that runs into a round.
 
     band' = band * k,    k = HORIZ_JOIN / HORIZ_JOIN_at_the_mark
 
@@ -80,76 +78,60 @@ def _flatten(items, per=0.25):
     return out
 
 
-def derived_hoop(nseg=28):
+def derived_hoop(nseg=34):
     """The hoop thickened to the face's band, in the mark's own coordinates.
 
-    Every OUTER curve is the artwork, untouched -- the main rim, both hooks' outer rims, and so the
-    whole silhouette and both curls.  The inner edge is moved AWAY from the outer one by (k-1) times
-    its own local distance to it, which thickens the band by exactly the factor R1b thickens a round,
-    proportionally all the way round rather than by a constant amount: the hoop is a ring in
-    perspective and its band is not the same width at both ends.  The moved samples are refitted to
-    cubics with a fixed piece count, and the two flat faces are redrawn to the ends that moved.
+    The INNER edge is the artwork, untouched, and the OUTER edge moves outward.  That is the wrong
+    way round at first glance -- the letter's bar thickens inward -- and it is the only way that
+    works here, because of the eyes.
+
+    Each hook curls back and encloses an eye about two units of the mark's 100 across.  The eye is
+    bounded on one side by the hook's inner curl and on the other by the main band's inner edge, so
+    ANY inward thickening walks straight into it: the gain is 1.85 units against an eye of 2.  The
+    first attempt shut both eyes.  Ramping the gain to nothing across each hook kept them open but
+    left the hoop 30% heavier in the middle and its drawn weight at the ends -- a bulge, which is
+    not a weight change, it is a lump.
+
+    Moving the outer edge instead thickens the band by the same 30% EVERYWHERE, uniformly, with no
+    ramp and nothing to blend: the eyes are not on that side of the stroke.  What it costs is the
+    outer silhouette, which grows by the gain -- the hoop's rim and both curls stand a little
+    further out.  That is what a thicker ribbon does, and it is the side of the mark with room.
+
+    Each outer sample is pushed away from its own region's inner edge -- the main rim against the
+    main inner edge, each hook's outer curl against its own inner curl -- by (k-1) times the distance
+    to it, so the band grows by the same proportion everywhere rather than by a constant amount.  The
+    hoop is a ring in perspective and its band runs 4.7 to 6.1 units of the mark's 100.
     """
     items = BAR['items']
-    # The MAIN rim only, not the hooks' outer curls.  Pushing each inner sample away from its
-    # nearest point on the whole outer boundary sounds right and is not: on the left the hook's
-    # outer curl wraps back UNDER the band and wins the nearest-point search, so those samples were
-    # pushed toward the rim instead of away from it and the band came out thinner where it should
-    # have been thickest.  The main rim is the edge the band is measured from everywhere it matters,
-    # and at the hooks the gain is ramped to nothing anyway.
-    outer = _flatten([items[j] for j in (1, 2, 3)])
-    inner = _flatten([items[j] for j in INNER_RUN])
+    OUT_RUN = [17, 0, 1, 2, 3, 4, 5, 6]
+    REF = {17: (14, 15), 0: (14, 15),                      # hook R's outer against hook R's inner
+           1: (11, 13), 2: (11, 13), 3: (11, 13),          # the main rim against the main inner edge
+           4: (8, 10), 5: (8, 10), 6: (8, 10)}             # hook L's outer against hook L's inner
+    ref_pts = {}
+    for lo, hi in set(REF.values()):
+        ref_pts[(lo, hi)] = _flatten([items[j] for j in range(lo, hi + 1)])
 
-    # Where each hook's inner curl hands over to the main rim, measured along the inner run.
-    #
-    # The gain is held at ZERO for the whole of both curls and ramped up on the MAIN RUN, over the
-    # third of it nearest each hand-over.  Two reasons, and the first one is not the obvious one.
-    #
-    # A hook encloses an eye about two units of the mark's 100 wide against a band of five, so 30%
-    # of the band shuts it, and the eye is the whole reason a hook reads as a curl rather than a
-    # blob.  That is why the hooks keep the band they were drawn with.
-    #
-    # But the ramp has to be flat across the whole curl, not merely zero at the tip.  The push is
-    # "away from the main rim by (k-1) times the distance to it", and at a hook that distance is not
-    # the band -- it is 14.6 units where the band is 5 -- so even a tenth of the gain there moves the
-    # edge half a unit in a direction that has nothing to do with the local stroke.  Ramping through
-    # the curl cost a sliver of the artwork at both tips: ink LOST, which is what showed as a corner
-    # jutting out of the curl.
-    L_END = sum(_seglen(items[j]) for j in range(8, 11))        # end of hook L's inner curl
-    R_START = sum(_seglen(items[j]) for j in range(8, 14))      # start of hook R's inner curl
-    TOTAL = sum(_seglen(items[j]) for j in INNER_RUN)
-    BLEND = (R_START - L_END) / 3.0
-
-    def ramp(s):
-        t = min((s - L_END) / BLEND, (R_START - s) / BLEND, 1.0)
-        if t <= 0: return 0.0
-        return t * t * (3 - 2 * t)                              # smoothstep: no corner at either end
-
-    def push(p, w):
-        q = min(outer, key=lambda o: (o[0]-p[0])**2 + (o[1]-p[1])**2)
-        d = math.hypot(p[0]-q[0], p[1]-q[1])
-        if d < 1e-9 or w <= 0.0: return p, d
-        g = w * (K - 1)
-        return (p[0] + (p[0]-q[0])/d * g * d, p[1] + (p[1]-q[1])/d * g * d), d
-
-    moved, bands, s = [], [], 0.0
-    for i, p in enumerate(inner):
-        if i: s += math.dist(inner[i-1], p)
-        m, d = push(p, ramp(s)); moved.append(m)
-        if L_END <= s <= R_START: bands.append(d)
+    moved, bands = [], []
+    for j in OUT_RUN:
+        pts = _flatten([items[j]])
+        R = ref_pts[REF[j]]
+        for p in pts:
+            q = min(R, key=lambda o: (o[0]-p[0])**2 + (o[1]-p[1])**2)
+            d = math.hypot(p[0]-q[0], p[1]-q[1])
+            bands.append(d)
+            moved.append(p if d < 1e-9 else
+                         (p[0] + (p[0]-q[0])/d * (K-1) * d, p[1] + (p[1]-q[1])/d * (K-1) * d))
 
     tg = [unit(sub(moved[min(i+1, len(moved)-1)], moved[max(i-1, 0)])) for i in range(len(moved))]
     segs, err = fit_cubics(moved, tg, nseg=nseg)
 
-    k = Contour(tuple(items[17][1]))
-    for j in (17, 0, 1, 2, 3, 4, 5, 6):
+    k = Contour(moved[0])
+    for sg in segs: k.curve_to(*sg)
+    k.line_to(tuple(items[8][1]))                          # hook L's face, to the inner edge as drawn
+    for j in INNER_RUN:
         it = items[j]
         k.curve_to(tuple(it[2]), tuple(it[3]), tuple(it[4])) if it[0] == 'c' else k.line_to(tuple(it[2]))
-    f = items[7]                                         # hook L's face, exactly as drawn: the gain
-    k.curve_to(tuple(f[2]), tuple(f[3]), tuple(f[4]))    # is zero at the ends so nothing has moved
-    for sg in segs: k.curve_to(*sg)
-    f = items[16]                                        # hook R's face, likewise
-    k.curve_to(tuple(f[2]), tuple(f[3]), tuple(f[4]))
+    k.line_to(moved[0])                                    # hook R's face, likewise
     return k.ccw(), dict(k=K, fit_err=err, band_min=min(bands), band_max=max(bands), nseg=nseg)
 
 
