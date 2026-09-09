@@ -289,7 +289,7 @@ def cut_for(p_end, p_other, face, body, off_deg):
 
 
 # ---- fitting cubics to a sampled curve ------------------------------------------------
-def fit_cubics(P, T, tol=0.05, depth=0):
+def fit_cubics(P, T, tol=0.05, depth=0, nseg=None):
     """Schneider's fit: a chain of cubic Beziers through the sampled curve P, tangent to the
     unit tangents T at the two ends of every piece.
 
@@ -301,12 +301,26 @@ def fit_cubics(P, T, tol=0.05, depth=0):
 
     Returns (segments, max_error) where segments are (p1, p2, p3) control triples following on
     from P[0], ready for Contour.curve_to.
+
+    `nseg` forces a FIXED number of pieces instead of splitting until `tol` is met, and every
+    outline that has to interpolate across the variable font's masters needs it.  The adaptive
+    split is driven by the sampled curve, the curve moves with WEIGHT and PUSH, and so the piece
+    count moves too: the A's bar came out as 32, 33 or 35 cubics depending on the master.  varLib
+    cannot interpolate outlines whose point counts differ, so it drops those glyphs from `gvar`
+    entirely -- 15 of the 63 shapes were frozen at the default and did not respond to either axis.
+    With nseg the topology is a property of the drawing rather than of the master, and the fit's
+    error is reported as before so the choice can be checked rather than assumed.
     """
     n = len(P)
     if n < 2: return [], 0.0
     if n == 2:
         d = norm(sub(P[1], P[0])) / 3.0
         return [(add(P[0], mul(T[0], d)), sub(P[1], mul(T[-1], d)), P[1])], 0.0
+    if nseg is not None and nseg > 1 and n > 2:
+        k = n // 2                                       # split by INDEX, not by worst error, so
+        L, eL = fit_cubics(P[:k+1], T[:k+1], tol, depth+1, nseg // 2)          # the same samples
+        R, eR = fit_cubics(P[k:], T[k:], tol, depth+1, nseg - nseg // 2)       # split the same way
+        return L + R, max(eL, eR)                                             # in every master
     u = [0.0]                                            # chord-length parameterisation
     for i in range(1, n): u.append(u[-1] + norm(sub(P[i], P[i-1])))
     if u[-1] <= 0: return [], 0.0
@@ -362,7 +376,7 @@ def fit_cubics(P, T, tol=0.05, depth=0):
         e2, k2 = worst(q1, q2, v)
         if e2 >= err: break
         u, p1, p2, err, split = v, q1, q2, e2, k2
-    if err <= tol or depth > 12 or split in (0, n-1):
+    if nseg is not None or err <= tol or depth > 12 or split in (0, n-1):
         return [(p1, p2, P[-1])], err
     L, eL = fit_cubics(P[:split+1], T[:split+1], tol, depth+1)
     R, eR = fit_cubics(P[split:], T[split:], tol, depth+1)

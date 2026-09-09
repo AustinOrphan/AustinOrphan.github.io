@@ -33,6 +33,10 @@ def sheet(names, path, scale=0.32, pad=40):
 def overlay(path, S=9, PAD=4.0):
     """The font's A and O mapped back into the source's coordinates (points), drawn over the source objects.
 
+    Build this one at ORPHAN_FOOT=0.  R2b's widened base is a design decision taken on top of the
+    derivation, and what this sheet checks is the DERIVATION: whether the rules reproduce the mark.
+    The shipped cut deliberately does not.
+
     The frame is the BBOX of everything drawn, padded -- not the source artboard.  The artboard is
     100x100 and the mapped-back A runs past it on three sides (its apex overshoots the cap line by
     OVER_POINT and its feet sit below the baseline), so an artboard-sized frame cut the apex off.
@@ -67,7 +71,7 @@ def overlay(path, S=9, PAD=4.0):
     note1 = ('Apex 0.000 pt off, counter apex 0.069. The four FOOT vertices sit 0.83-0.89 off and cannot do '
              'better:')
     note1b = ('levelling the feet and standing the axis upright are 1.31 deg apart in the mark. '
-              'Ring tails not drawn.')
+              'Ring tails not drawn. Built at ORPHAN_FOOT=0: this checks the derivation, not the cut.')
 
     svg = (f'<svg xmlns="http://www.w3.org/2000/svg" width="{W*S:.0f}" height="{H*S+62:.0f}">'
            f'<rect width="100%" height="100%" fill="{BG}"/>'

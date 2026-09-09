@@ -69,32 +69,75 @@ def run_master(weight, push, out_otf):
     # compile_font needs the fontforge interpreter, not this venv
     subprocess.run(['/opt/homebrew/bin/python3', os.path.join(HERE, 'compile_font.py')],
                    check=True, env=env, cwd=HERE, capture_output=True)
-    to_ttf(os.path.join(BUILD, 'OrphanDisplay-Regular.otf'), out_otf)
+    shutil.copyfile(os.path.join(BUILD, 'OrphanDisplay-Regular.otf'), out_otf)
 
 
-def to_ttf(src, dst):
-    """Re-record a master's outlines as quadratic and save it as a TTF.
+def to_ttf_all(srcs, dsts):
+    """Re-record every master's outlines as quadratic, ALL OF THEM AT ONCE, and save the TTFs.
 
     varLib merges `glyf` cleanly; merging CFF means merging HINTS, and fontforge picks
     different hints for different masters, which it refuses ("hintmask at index 5 differs from
     the default font hint type"). Hints are per-instance rendering advice, not shape, so the
     outlines are what should survive. Converting here rather than dropping the hints in place
     keeps one code path instead of two.
+
+    The conversion has to see every master together.  Cu2QuPen picks however many quadratic
+    points a given curve needs, and that count depends on the curve, so converting each master on
+    its own gave the same glyph different point counts in different masters -- and varLib then
+    silently drops those glyphs from `gvar`: "glyph A has incompatible masters; skipping".  It
+    was skipping 42 of the 63.  The axes moved the 21 that happened to convert alike and left the
+    rest frozen at the default, which is most of the alphabet.  Cu2QuMultiPen solves the whole
+    set at once instead, so every master gets the same points in the same order and every glyph
+    varies.
     """
     from fontTools.ttLib import TTFont, newTable
     from fontTools.pens.ttGlyphPen import TTGlyphPen
-    from fontTools.pens.cu2quPen import Cu2QuPen
+    from fontTools.pens.cu2quPen import Cu2QuMultiPen
+    from fontTools.pens.recordingPen import RecordingPen
 
-    f = TTFont(src)
-    order = f.getGlyphOrder()
-    gs = f.getGlyphSet()
-    glyf, hmtx = newTable('glyf'), f['hmtx']
-    glyf.glyphOrder = order
-    glyf.glyphs = {}
+    fonts = [TTFont(s) for s in srcs]
+    order = fonts[0].getGlyphOrder()
+    for f in fonts:
+        if f.getGlyphOrder() != order:
+            raise SystemExit('masters disagree about the glyph order')
+    sets = [f.getGlyphSet() for f in fonts]
+    glyfs = []
+    for f in fonts:
+        g = newTable('glyf'); g.glyphOrder = order; g.glyphs = {}
+        glyfs.append(g)
+    from fontTools.pens.cu2quPen import Cu2QuPen
+    incompatible = []
     for name in order:
-        pen = TTGlyphPen(None)
-        gs[name].draw(Cu2QuPen(pen, MAX_ERR))
-        glyf[name] = pen.glyph()
+        recs = []
+        for gs in sets:
+            rp = RecordingPen(); gs[name].draw(rp); recs.append(rp.value)
+        if len({tuple(op for op, _ in r) for r in recs}) != 1:
+            # A genuine incompatibility: this glyph's CONSTRUCTION changes shape with the knobs,
+            # so no conversion can make its masters interpolate.  Convert each on its own and let
+            # varLib freeze it, but say so rather than leaving it to a warning in the noise.
+            incompatible.append(name)
+            for gs, g in zip(sets, glyfs):
+                pen = TTGlyphPen(None)
+                gs[name].draw(Cu2QuPen(pen, MAX_ERR))
+                g[name] = pen.glyph()
+            continue
+        pens = [TTGlyphPen(None) for _ in fonts]
+        multi = Cu2QuMultiPen(pens, MAX_ERR)
+        for ops in zip(*recs):
+            op = ops[0][0]
+            getattr(multi, op)([o[1] for o in ops]) if op not in ('closePath', 'endPath') \
+                else getattr(multi, op)()
+        for g, pen in zip(glyfs, pens):
+            g[name] = pen.glyph()
+    if incompatible:
+        print(f'  {len(incompatible)} glyphs differ in construction between masters and cannot '
+              f'interpolate: {" ".join(incompatible)}')
+    for f, g, dst in zip(fonts, glyfs, dsts):
+        _save_ttf(f, g, order, dst)
+
+
+def _save_ttf(f, glyf, order, dst):
+    from fontTools.ttLib import TTFont, newTable
     f['glyf'] = glyf
     f['loca'] = newTable('loca')
     maxp = newTable('maxp')
@@ -127,14 +170,21 @@ def main():
     pushes  = [PUSHES[0], PUSHES[-1]] if args.quick else PUSHES
 
     os.makedirs(MASTERS, exist_ok=True)
-    made = []
+    made, otfs = [], []
     for w in weights:
         for p in pushes:
-            name = f'master-w{int(w*100):03d}-p{int(p*100):03d}.ttf'
-            path = os.path.join(MASTERS, name)
-            print(f'  building weight {w} push {p} -> {name}')
-            run_master(w, p, path)
-            made.append((w, p, path))
+            stem = f'master-w{int(w*100):03d}-p{int(p*100):03d}'
+            otf = os.path.join(MASTERS, stem + '.otf')
+            ttf = os.path.join(MASTERS, stem + '.ttf')
+            print(f'  building weight {w} push {p} -> {stem}.ttf')
+            run_master(w, p, otf)
+            otfs.append(otf)
+            made.append((w, p, ttf))
+    # One conversion for the whole set, so the masters stay interpolation-compatible.
+    print(f'  converting {len(otfs)} masters to quadratic together')
+    to_ttf_all(otfs, [f for _, _, f in made])
+    for f in otfs:
+        os.remove(f)
 
     ds = os.path.join(MASTERS, 'OrphanDisplay.designspace')
     write_designspace(ds, made, weights, pushes)

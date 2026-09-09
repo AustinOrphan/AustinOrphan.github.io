@@ -763,7 +763,7 @@ def _eight_outer(up, lo, rho, N=260):
         for i in (N, 0):                       # the two corners, right then left
             pts = _bridge(pts, rho, i) or pts
     tg = [unit(sub(pts[(i+1) % len(pts)], pts[(i-1) % len(pts)])) for i in range(len(pts))]
-    segs, _err = fit_cubics(pts, tg, tol=0.03)
+    segs, _err = fit_cubics(pts, tg, nseg=37)   # fixed pieces: see pen.fit_cubics
     k = Contour(pts[0])
     for sg in segs: k.curve_to(*sg)
     return k.ccw(), X

@@ -522,6 +522,8 @@ S_TOP   = 20.0             # the terminals, as parameters on their own ellipses
 S_BOT   = -160.0
 S_WAIST = 150.0            # the connector's handle length: how diagonally the waist runs
 S_TOL   = 0.15             # units; the fit's tolerance, a seventh of the compiler's rounding
+S_SEGS  = 19               # fixed pieces per S edge, so the S interpolates (pen.fit_cubics);
+                           # adaptively at S_TOL it ran 16 to 19 across the masters
 S_N     = 160              # samples per section
 
 def _band_at(theta):
@@ -575,8 +577,8 @@ def _edges(pts):
 def build_S():
     pts = _s_spine()
     (L, TL), (R, TR) = _edges(pts)
-    segL, eL = fit_cubics(L, TL, S_TOL)
-    segR, eR = fit_cubics(R[::-1], [mul(t, -1) for t in TR[::-1]], S_TOL)
+    segL, eL = fit_cubics(L, TL, nseg=S_SEGS)                       # fixed pieces: see
+    segR, eR = fit_cubics(R[::-1], [mul(t, -1) for t in TR[::-1]], nseg=S_SEGS)   # pen.fit_cubics
     k = Contour(L[0])
     for p1, p2, p3 in segL: k.curve_to(p1, p2, p3)
     k.line_to(R[-1])                                   # the end terminal, square to the spine
@@ -732,15 +734,33 @@ def _light_junction(c, r, side):
     return x, ang(sub(q, c)), _touch_y(_touch_deg(x, side, c, r - GRAZE, c), c, r - GRAZE)
 
 def _heavy_junction(c, r, side):
-    """The junction where the round's band is WIDER than the stem (the heavy, lower-left side).
-    Returns the stem's centre x and the ray the round's arc must end on.  The mirror of
-    _light_junction: the stem's inner edge is set tangent to the circle GRAZE units inside the
-    COUNTER's, so it crosses the counter at a real angle (2.6 deg) instead of grazing it -- an
-    exact tangency there leaves the union a zero-area spike at the touch point -- and the arc is
-    ended on the ray through that crossing, so the counter hands off with no step.  The stem bites
-    GRAZE units into the counter over about 11 units of its run, which is below any raster."""
+    """The junction on the round's HEAVY side (the lower left).  Returns the stem's centre x and
+    the ray the round's arc must end on.
+
+    The mirror of _light_junction: the stem's inner edge is set tangent to the circle GRAZE units
+    inside the COUNTER's, so it crosses the counter at a real angle (2.6 deg) instead of grazing it
+    -- an exact tangency there leaves the union a zero-area spike at the touch point -- and the arc
+    is ended on the ray through that crossing, so the counter hands off with no step.  The stem
+    bites GRAZE units into the counter over about 11 units of its run, which is below any raster.
+
+    That anchoring holds only while the stem FITS INSIDE THE BAND.  Tangency to the counter fixes
+    the stem's inner edge and lets the outer edge fall where it may, and once the stem is wider than
+    the band at this height the outer edge falls right out of the round: it no longer meets the
+    outer circle at all, the silhouette's hand-off has no solution, and the letter cannot be built.
+    The band here is RING_W * WEIGHT + 19.8 * PUSH against a stem of 34.55 * WEIGHT + the R2 foot
+    widening, so the room runs out fastest at low PUSH -- at Black / PUSH 0.30 it is gone by three
+    units of widening.
+
+    So the stem takes the tangency that keeps it inside the bowl: to the counter while it fits, to
+    the OUTER circle once it does not, whichever places it further in.  Past the crossover the
+    silhouette is the smooth one and the counter takes the corner instead, which is exactly what the
+    light side does on the other stem.  The two coincide at the crossover, so the placement is
+    continuous in both knobs, and below it this is the rule it always was -- every master that built
+    before builds identically."""
     ci, ri = add(c, RING_OFF), r - RING_W
-    x = _stem_tangent_x(ci, ri - GRAZE, -side, side)
+    x_counter = _stem_tangent_x(ci, ri - GRAZE, -side, side)     # inner edge tangent to the counter
+    x_outer   = _stem_tangent_x(c,  r  - GRAZE,  side, side)     # outer edge tangent to the silhouette
+    x = max(x_counter, x_outer) if side < 0 else min(x_counter, x_outer)
     q = line_circle(_stem_edge(x, -side), ci, ri, pick='min')   # the lower of the two crossings
     return x, ang(sub(q, c))
 

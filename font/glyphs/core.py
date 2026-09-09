@@ -267,8 +267,11 @@ def _derived_bar():
     up = [E(ao, bo, t0 + (t1-t0)*i/N) for i in range(N+1)]
     lo = [E(ai, bi, t0 + (t1-t0)*i/N) for i in range(N+1)]
     tg = lambda P: [unit(sub(P[min(i+1, len(P)-1)], P[max(i-1, 0)])) for i in range(len(P))]
-    su, _ = fit_cubics(up, tg(up), tol=0.004)
-    sl, _ = fit_cubics(lo[::-1], tg(lo[::-1]), tol=0.004)
+    # Fixed piece counts, not a tolerance: the outer edge is knob-independent and always came out
+    # at 13, but the inner one is derived from the ring's band and ran 6 to 11 across the masters,
+    # which is why the A would not interpolate.  13 and 11 are those maxima.  See pen.fit_cubics.
+    su, _eu = fit_cubics(up, tg(up), nseg=13)
+    sl, _el = fit_cubics(lo[::-1], tg(lo[::-1]), nseg=11)
     k = Contour(up[0])
     for sg in su: k.curve_to(*sg)
     k.line_to(lo[-1])

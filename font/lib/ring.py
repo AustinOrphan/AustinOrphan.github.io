@@ -42,6 +42,7 @@ from glyphs.core import MID_LINE, RISE, RING_TILT, ARC_R, RING
 # How far past each end the band is drawn before it is clipped, and how finely the arch is
 # sampled before it is fitted back to cubics.
 EXT, NSAMP, FIT_TOL = 90.0, 90, 0.03
+CHORD_SEGS = 5      # fixed pieces per chord edge; the most the adaptive fit ever asked for
 
 
 def tilt_for(length):
@@ -101,8 +102,11 @@ def ring_chord(x0, x1, y_mid=MID_LINE, mid=HORIZ_JOIN, end0=None, end1=None, sig
     def tangents(P):
         return [unit(sub(P[min(i + 1, len(P) - 1)], P[max(i - 1, 0)])) for i in range(len(P))]
 
-    st, et = fit_cubics(top, tangents(top), tol=FIT_TOL)
-    sb, eb = fit_cubics(bot[::-1], tangents(bot[::-1]), tol=FIT_TOL)
+    # A FIXED number of pieces, so a chord has the same points in every master (pen.fit_cubics).
+    # Adaptively these ran 2 to 5 across the grid, and a glyph whose point count moves with the
+    # knobs is dropped from the variable font's gvar.
+    st, et = fit_cubics(top, tangents(top), nseg=CHORD_SEGS)
+    sb, eb = fit_cubics(bot[::-1], tangents(bot[::-1]), nseg=CHORD_SEGS)
     k = Contour(top[0])
     for seg in st:
         k.curve_to(*seg)

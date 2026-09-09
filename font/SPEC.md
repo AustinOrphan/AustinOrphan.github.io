@@ -243,10 +243,13 @@ Partial rounds (C, G, S, U, the bowls of B, D, P, R, the digits) are arcs of
 that construction with radial cuts.
 
 **R2. Diagonals.** The A's legs, as a weight field over height: a stroke
-leaning like "/" is **39.90** units wide at the baseline and **25.99** at the
-cap line, one leaning like "\\" is **37.54** and **24.46**, linear in between.
+leaning like "/" is **59.90** units wide at the baseline and **25.99** at the
+cap line, one leaning like "\\" is **57.54** and **24.46**, linear in between.
 Shorter diagonals take the widths at whatever heights they span. Applies to V,
 W, M, N, K, X, Y, Z, 4, 7.
+
+The **baselines carry a +20 that is not measured** — see R2b. The mark's own
+legs are 39.90 and 37.54 there; the cap widths are the mark's.
 
 Those four numbers were **39.5 / 27.1** and **37.2 / 25.5** until the A's
 counter was derived and the discrepancy surfaced. §2.2 measured the legs at the
@@ -258,14 +261,52 @@ taper flatter than the A's own. It also corrects §2.2's "the legs lose about
 1.6% of their length in width" — the 12.39-unit drop was divided by the whole
 768.4-unit leg but measured over only 669.1 of it. **The rate is 1.85%.**
 
+**R2b. The widened base.** One number in this face is a design decision rather
+than a reading: the base of R2's field is **20 units wider than the mark's**,
+and the cap is the mark's exactly. A stroke is 59.90 at the baseline and still
+25.99 at the cap line, so the taper is steeper and the whole lower half of the
+face is planted rather than merely tipped. It scales with WEIGHT like the rest
+of R2.
+
+Three alternatives were measured and drawn before this one was taken — the
+mark's own taper, a wider foot with a **curved** taper, and a **true flare**
+confined to the bottom 200 units. `measure/evidence/foot-matrix.png` and
+`foot-full-letter.png` are the comparison, at three strengths each. The flare
+is the only one that leaves the letter's colour above the foot untouched
+(32.9 at mid-cap at every strength); this one does not, and that is the point.
+It is also the only one the existing machinery draws exactly, because the
+field stays **linear** and `stroke()` interpolates between two endpoint
+widths; a flare or a curve would need `stroke()`, `diagonal()` and
+`_derive_counter` taught to follow a field along the stroke.
+
+What it costs is R3's corroboration, below, and a colour difference between
+the face's straights and its rounds that the mark does not have. The rounds
+have no foot to widen: a round's weight is modulated by stress, not by height.
+
 **R3. Verticals.** No exemplar exists, so a stem takes the left leg's profile:
-**39.90 at the baseline tapering to 25.99 at the cap line.** The check on that
-choice is the O: a stem beside an O should carry the O's average weight, and
-this profile's width at mid-height (**32.94**) sits within **0.73%** of the O's
-mean stroke (33.19). Under R2's old numbers it was 33.30, within 0.34%. The
-check is a corroboration with a tolerance of a unit or so, and both readings
-pass it comfortably; the old numbers landing nearer is not a reason to keep a
-derivation that was wrong about which heights it had measured.
+**59.90 at the baseline tapering to 25.99 at the cap line** — R2b reaches
+every upright in the face through this rule, which is the whole of its scope.
+
+The check on borrowing the leg was the O: a stem beside an O should carry the
+O's average weight, and before R2b the profile's width at mid-height
+(**32.94**) sat within **0.73%** of the O's mean stroke (33.19). Under R2's
+pre-correction numbers it was 33.30, within 0.34%. **R2b breaks that check**:
+mid-cap is now **42.94**, 29% over the O's band. The check was always a
+corroboration rather than a derivation, and what it corroborated — where the
+stem's profile came from — has not changed. But it no longer lands, and that
+is the strongest argument against R2b.
+
+R2b does not fit through the axes for free either. The U's left stem is set
+tangent to the counter on its bowl's heavy side, which fixes the inner edge
+and lets the outer edge fall where it may; once the stem is wider than the
+band there, the outer edge falls out of the bowl entirely and the join has no
+solution. Measured across the master grid, the largest widening the old rule
+tolerated ran from 22.13 units at Thin/PUSH 1.00 down to **2.97 at Black/PUSH
+0.30**, so +20 broke 13 of the 18 masters. The stem now takes **whichever
+tangency keeps it inside the bowl** — the counter while it fits, the outer
+circle once it does not, the two coinciding at the crossover. Past that point
+the silhouette is the smooth one and the counter takes the corner, which is
+what the light side already does on the other stem.
 
 **R4. Horizontals.** From the bar: **47.5 units at mid-length, thinning 1.8%
 of its length from left to right**, and level. A horizontal whose outer edge

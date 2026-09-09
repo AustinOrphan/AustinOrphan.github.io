@@ -15,7 +15,10 @@ _sO = (CAP + 2*OVER_ROUND) / (2*_ring['outer'][2])
 #
 # The mark gives one weight and one amount of stress. These scale the two independently, so
 # the face can be cut at other weights without redrawing it. Both are 1.0 for the mark itself,
-# and at (1.0, 1.0) every glyph is byte for byte what the mark produces -- that is the test.
+# and at (1.0, 1.0, ORPHAN_FOOT=0) every glyph is byte for byte what the mark produces -- that is
+# the test. It now needs the third setting: FOOT_WIDEN below is a design decision taken on top of
+# the derivation, so the SHIPPED cut deliberately does not reproduce the mark, and the sheet that
+# checks the derivation (proof.py --overlay) is built with the widening off.
 #
 #   WEIGHT  scales the STROKE. RING_W is the O's mean band and, by R3, the stem at mid-cap, so
 #           the straights scale with it or the rounds and the straights come apart.
@@ -65,19 +68,44 @@ def round_arc(c, r_out, a0, a1):
 # noting the profile's mid-height matches the O's mean band. It still holds -- 32.94 against
 # 33.19, 0.75% -- where the old numbers gave 33.30, 0.34%. Both sit well inside any tolerance
 # that check can carry, and a wrong derivation is not worth keeping to make it land prettier.
-FOOT = float(os.environ.get('ORPHAN_FOOT', 0.0))           # TEST KNOB: extra width at the baseline
-_FS = os.environ.get('FOOT_SCALES', '1') == '1'
-_FMODE = os.environ.get('ORPHAN_FOOT_MODE', 'all')         # 'all' or 'diagonals'
-_FA = FOOT * (WEIGHT if _FS else 1.0)
-_FD = _FA if _FMODE in ('all', 'diagonals') else 0.0       # on diagonal feet
-_FV = _FA if _FMODE == 'all' else 0.0                      # on vertical stems too
-SLASH_BASE, SLASH_CAP = 39.899 * WEIGHT + _FD, 25.987 * WEIGHT
-BACK_BASE,  BACK_CAP  = 37.544 * WEIGHT + _FD, 24.464 * WEIGHT
-STEM_BASE, STEM_CAP   = 39.899 * WEIGHT + _FV, 25.987 * WEIGHT
+# FOOT_WIDEN is the one number in R2 that is NOT measured off the mark.  The mark's own A tapers
+# 39.90 -> 25.99 straight, and the face was cut that way; this widens the BASE of that taper by
+# 20 units and leaves the cap where it is, so a stroke is 59.90 at the baseline and still 25.99 at
+# the cap line.  Three things about it are worth stating, because it is a departure:
+#
+#   * It is a DESIGN decision, not a reading.  The alternatives were measured and drawn first --
+#     a wider foot with a curved taper, and a true flare confined to the bottom 200 units -- and
+#     measure/evidence/foot-matrix.png and foot-full-letter.png are the comparison.  A flare holds
+#     the letter's colour above the foot exactly; this does not, and that is the point: it makes
+#     the whole lower half of the face heavier, planted rather than merely tipped.
+#   * The field STAYS LINEAR, which is why it costs nothing.  stroke() samples a width at each end
+#     and interpolates, so a straight taper from a wider base is the one treatment the existing
+#     machinery draws exactly; a flare or a curve would need stroke(), diagonal() and
+#     _derive_counter taught to follow a field along the stroke.
+#   * It SCALES WITH WEIGHT, like the rest of R2, so the Black carries proportionally the same foot
+#     as the Thin rather than a progressively smaller one.
+#
+# It costs R3 its corroboration, and that is the strongest thing against it.  R3 borrows the leg's
+# profile for a stem and checks the choice against the O: the profile's width at mid-cap used to be
+# 32.94 against the O's mean band of 33.19, within 0.75%.  It is now 42.94, 29% heavier, and the
+# whole lower half of the face's straights are heavier than its rounds -- the rounds have no foot to
+# widen, because a round's weight is modulated by stress and not by height.  The check was always a
+# corroboration rather than a derivation, and what it corroborated is where the stem's profile CAME
+# from, which has not changed.  But the face now has a colour difference between straight and round
+# that it did not have, by choice.
+#
+# R3 borrows the left leg's profile for the stem, so this reaches every upright in the face too.
+# That is the whole of the change: no vertex moves, only the base of one linear field.  It does not
+# fit through the axes for free -- see set_round._heavy_junction, where the U's stem is now placed
+# by whichever tangency keeps it inside its bowl.
+FOOT_WIDEN = float(os.environ.get('ORPHAN_FOOT', 20.0)) * WEIGHT
+
+SLASH_BASE, SLASH_CAP = 39.899 * WEIGHT + FOOT_WIDEN, 25.987 * WEIGHT   # strokes leaning "/" and all stems
+BACK_BASE,  BACK_CAP  = 37.544 * WEIGHT + FOOT_WIDEN, 24.464 * WEIGHT   # strokes leaning like "\\"
 
 def w_slash(y):     return SLASH_BASE + (SLASH_CAP - SLASH_BASE) * (y / CAP)
 def w_backslash(y): return BACK_BASE  + (BACK_CAP  - BACK_BASE)  * (y / CAP)
-def w_stem(y):      return STEM_BASE  + (STEM_CAP  - STEM_BASE)  * (y / CAP)
+w_stem = w_slash
 
 # ---- R4 horizontals
 # R4 has two weights, because a horizontal has two jobs.
