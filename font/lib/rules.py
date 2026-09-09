@@ -35,9 +35,32 @@ PUSH   = float(os.environ.get('ORPHAN_PUSH', 1.0))
 
 # ---- R1 rounds: the O's construction in absolute units, so every round in the face
 #      carries the O's stroke and the O's displacement whatever its size.
+# R1b. The rounds follow R2b.
+#
+# R2b widens the straights at the baseline and a round has no foot to widen -- its weight is the
+# band and the counter's displacement, both fixed to the page rather than to height.  Left alone,
+# the face's straights averaged 42.9 units against its rounds' 33.2, a 29% split the mark does not
+# have, and an O beside an H looked starved.
+#
+# So the BAND takes the same gain R2b gives the straights' MEAN: RING_W is multiplied by
+# 1 + (FOOT_WIDEN/2) / RING_W_mark.  R3's check -- a stem and an O carry the same weight -- goes on
+# holding at its own original 0.75%, because both sides moved by the same fraction, and at
+# FOOT_WIDEN 0 this reduces to the mark exactly.
+#
+# The DISPLACEMENT is left at the mark's.  It is the O's stress, PUSH is the axis that owns stress,
+# and R2b is a change of weight rather than of stress.  Scaling it with the band as well is the
+# other reading, and it is a better-looking O -- the mark's own contrast survives instead of
+# flattening from 3.97 to 2.70 -- but it does not fit: the B's upper bowl is the tightest round in
+# the face, its bar's outer edge has to meet the bowl's outer circle, and a heavier band walks the
+# two apart.  Measured, the WEIGHT ceiling at PUSH 1.00 falls from 2.302 to 1.638 with the band
+# alone and to 1.110 with the displacement as well -- and the axis needs 2.00.  ORPHAN_OFF_MUL
+# builds the other reading for comparison.
 _RING_ADD = float(os.environ.get('ORPHAN_RING_ADD', 0.0))    # TEST KNOB: extra band on every round
 _OFF_MUL  = float(os.environ.get('ORPHAN_OFF_MUL', 1.0))     # TEST KNOB: counter displacement multiplier
-RING_W   = ((_ring['outer'][2] - _ring['inner'][2]) * _sO + _RING_ADD) * WEIGHT   # 33.19 at WEIGHT 1
+_RING_MARK = (_ring['outer'][2] - _ring['inner'][2]) * _sO                        # 33.19, the mark's band
+_FOOT1   = float(os.environ.get('ORPHAN_FOOT', 20.0))                             # R2b at WEIGHT 1
+RING_GAIN = 1.0 + (_FOOT1 / 2) / _RING_MARK                                       # 1.3013 at FOOT 20
+RING_W   = (_RING_MARK * RING_GAIN + _RING_ADD) * WEIGHT                          # 43.19 at WEIGHT 1
 _OFF0    = ((_ring['inner'][0]-_ring['outer'][0]) * _sO, (_ring['inner'][1]-_ring['outer'][1]) * _sO)   # (14.0, 14.0)
 RING_OFF = (_OFF0[0] * PUSH * _OFF_MUL, _OFF0[1] * PUSH * _OFF_MUL)               # counter displacement
 ROUND_THICK, ROUND_THIN = RING_W + norm(RING_OFF), RING_W - norm(RING_OFF)         # 53.0 and 13.4 at (1, 1)
