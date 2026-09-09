@@ -127,6 +127,14 @@ BAND_BOT = RING_W + RING_OFF[1]              # 47.23: an R1 band at the bottom o
 BAND_TOP = RING_W - RING_OFF[1]              # 19.15: and at the top
 RUN = RING_W                                 # how far a bottom join's buried end runs past the meeting point
 BURY_IN = 0.5                                # a buried end's chord sits this far inside the outer circle
+TOUCH_TOL = HORIZ_MID / 4                    # how far a tangent join may miss and still be read as
+                                             # tangent.  A quarter of the waist's own thickness: the
+                                             # point handed back is the bowl's nearest point to the
+                                             # waist's underside, so while the shortfall stays well
+                                             # inside the waist's band it is buried in ink either
+                                             # way and nothing about the silhouette depends on it.
+                                             # The shortfall is 0.004 units at the mark and 1.56 at
+                                             # Black, against a waist 47 and 94 units thick.
 
 
 # ---- helpers -------------------------------------------------------------------------
@@ -283,7 +291,21 @@ def _bowl(right, below, cap=True, above=None, _tol=1e-9):
         conds = [(+1, line_lo), ('cap',) if cap else (-1, above[1])]
         r, cy = _solve_bowl(right, conds)
         c = (right - r, cy); ci = add(c, RING_OFF); ri = r - RING_W
-        Po = line_circle(below[0], c, r, pick='max')      # where the outline hands off to the arc
+        # TOUCH_TOL, not zero: this hand-off is TANGENT by construction, not by accident.  The
+        # waist's underside lies on the mid line, its centre is MID_LINE + HORIZ_MID/2, and
+        # HORIZ_MID is RING_W + RING_OFF[1] -- so the bowl's counter tangent to the waist's top
+        # edge puts the bowl's own lowest point at MID_LINE + (RING_W + RING_OFF[1]) - RING_OFF[1]
+        # - RING_W, which is MID_LINE exactly.  The circle touches the underside and does not
+        # cross it, and whether the quadratic finds two roots there was decided by rounding: the
+        # B built at the mark's numbers by 0.004 units and failed at a heavier band by 0.01.  That
+        # is what put the WEIGHT ceiling at 1.638 with R1b's band and at 1.110 with its
+        # displacement as well.  Take the tangency for what it is.
+        #
+        # The identity is exact only for a LEVEL waist.  Under R4b the waist is a chord of the ring,
+        # tilted and arched, and the bowl falls a little short of its underside -- 1.56 units at
+        # Black against a waist 94 units thick, so the hand-off point is buried in the waist either
+        # way.  TOUCH_TOL is a quarter of the waist, which covers that and stays well inside it.
+        Po = line_circle(below[0], c, r, pick='max', touch=TOUCH_TOL)
         a0 = ang(sub(Po, c))
         Pi = line_circle(line(c, from_ang(a0)), ci, ri, pick='max')
         step = _sdist(below[1], Pi)

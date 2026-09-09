@@ -47,14 +47,18 @@ PUSH   = float(os.environ.get('ORPHAN_PUSH', 1.0))
 # holding at its own original 0.75%, because both sides moved by the same fraction, and at
 # FOOT_WIDEN 0 this reduces to the mark exactly.
 #
-# The DISPLACEMENT is left at the mark's.  It is the O's stress, PUSH is the axis that owns stress,
-# and R2b is a change of weight rather than of stress.  Scaling it with the band as well is the
-# other reading, and it is a better-looking O -- the mark's own contrast survives instead of
-# flattening from 3.97 to 2.70 -- but it does not fit: the B's upper bowl is the tightest round in
-# the face, its bar's outer edge has to meet the bowl's outer circle, and a heavier band walks the
-# two apart.  Measured, the WEIGHT ceiling at PUSH 1.00 falls from 2.302 to 1.638 with the band
-# alone and to 1.110 with the displacement as well -- and the axis needs 2.00.  ORPHAN_OFF_MUL
-# builds the other reading for comparison.
+# The DISPLACEMENT takes the same gain, so the round's CONTRAST is untouched: thick over thin stays
+# the mark's 53.02/13.36 = 3.97 rather than flattening to 2.70, PUSH means what it meant, and its
+# ceiling sits where it sat.  Scaling the band alone is the other reading and ORPHAN_OFF_MUL builds
+# it; it is a more monoline O than the mark's.
+#
+# This looked unaffordable at first.  Measured across the grid the WEIGHT ceiling at PUSH 1.00 fell
+# from 2.302 to 1.638 with the band alone and to 1.110 with the displacement as well, against an
+# axis that needs 2.00.  All three numbers were an artefact: the B's upper bowl meets its waist at
+# a TANGENCY, and set_bowl._bowl was asking that tangency for two roots.  It got them by rounding
+# at the mark's numbers and stopped getting them under a heavier band.  Read as the tangency it is,
+# the ceilings are 3.014, 2.370 and 2.311 -- the axis fits with room, and it had more room than
+# anyone thought at the mark's numbers too.
 _RING_ADD = float(os.environ.get('ORPHAN_RING_ADD', 0.0))    # TEST KNOB: extra band on every round
 _OFF_MUL  = float(os.environ.get('ORPHAN_OFF_MUL', 1.0))     # TEST KNOB: counter displacement multiplier
 _RING_MARK = (_ring['outer'][2] - _ring['inner'][2]) * _sO                        # 33.19, the mark's band
@@ -62,7 +66,7 @@ _FOOT1   = float(os.environ.get('ORPHAN_FOOT', 20.0))                           
 RING_GAIN = 1.0 + (_FOOT1 / 2) / _RING_MARK                                       # 1.3013 at FOOT 20
 RING_W   = (_RING_MARK * RING_GAIN + _RING_ADD) * WEIGHT                          # 43.19 at WEIGHT 1
 _OFF0    = ((_ring['inner'][0]-_ring['outer'][0]) * _sO, (_ring['inner'][1]-_ring['outer'][1]) * _sO)   # (14.0, 14.0)
-RING_OFF = (_OFF0[0] * PUSH * _OFF_MUL, _OFF0[1] * PUSH * _OFF_MUL)               # counter displacement
+RING_OFF = (_OFF0[0] * PUSH * _OFF_MUL * RING_GAIN, _OFF0[1] * PUSH * _OFF_MUL * RING_GAIN)
 ROUND_THICK, ROUND_THIN = RING_W + norm(RING_OFF), RING_W - norm(RING_OFF)         # 53.0 and 13.4 at (1, 1)
 
 def round_ring(c, r_out):

@@ -51,11 +51,23 @@ def line_x_at_y(l, y):
     if abs(v[1]) < 1e-12: raise ValueError("horizontal line")
     return p[0] + v[0] * (y - p[1]) / v[1]
 
-def line_circle(l, c, r, pick='max'):
-    """Intersections of a line with a circle. pick: 'min'/'max' by line parameter, or a point to be nearest."""
+def line_circle(l, c, r, pick='max', touch=0.0):
+    """Intersections of a line with a circle. pick: 'min'/'max' by line parameter, or a point to be nearest.
+
+    `touch` allows a TANGENT line: one that misses by up to `touch` units is answered with the foot
+    of the perpendicular from c, the point the two roots collapse to.  Some joins in this face are
+    tangent by construction rather than by accident and have no secant to find -- see
+    set_bowl._bowl, where the B's upper bowl meets its waist -- and asking for two roots there is
+    asking the geometry for something it does not have.  Leave it at 0 anywhere the crossing is
+    meant to be real, so a genuine miss still raises."""
     p, v = l; f = sub(p, c)
     b = 2*dot(f, v); cc = dot(f, f) - r*r; disc = b*b - 4*cc
-    if disc < 0: raise ValueError("line misses circle")
+    if disc < 0:
+        n = unit(perp(v))
+        d = abs(dot(sub(c, p), n))
+        if touch > 0.0 and d - r <= touch:
+            return add(c, mul(n, -math.copysign(r, dot(sub(c, p), n))))
+        raise ValueError("line misses circle")
     ts = [(-b - math.sqrt(disc))/2, (-b + math.sqrt(disc))/2]
     if pick == 'min':   t = ts[0]
     elif pick == 'max': t = ts[1]

@@ -261,6 +261,33 @@ taper flatter than the A's own. It also corrects §2.2's "the legs lose about
 1.6% of their length in width" — the 12.39-unit drop was divided by the whole
 768.4-unit leg but measured over only 669.1 of it. **The rate is 1.85%.**
 
+**R1b. The rounds follow R2b.** R2b widens the straights at the baseline, and
+a round has no foot to widen: its weight is the band and the counter's
+displacement, both fixed to the page rather than to height. Left alone the
+face's straights averaged **42.9** units against its rounds' **33.2**, a 29%
+split the mark does not have, and an O beside an H looked starved.
+
+So the round takes the same gain, as a ratio: the band **and** the
+displacement are both multiplied by `1 + (FOOT_WIDEN/2) / RING_W`, the
+fraction by which R2b lifts the straights' mean. RING_W goes 33.19 → **43.19**
+and the displacement 19.83 → **25.81**. Two things follow. R3's check keeps
+holding at its own original 0.75%, because both sides moved by the same
+fraction. And the round's contrast is untouched — thick over thin stays the
+mark's 3.97 — so PUSH means what it meant. At `ORPHAN_FOOT=0` it reduces to
+the mark exactly.
+
+This looked unaffordable when it was first measured. The WEIGHT ceiling at
+PUSH 1.00 appeared to fall from 2.302 to 1.638 with the band alone and to
+1.110 with the displacement as well, against an axis that needs 2.00. All
+three numbers were an artefact of one line of code: the B's upper bowl meets
+its waist at a **tangency** — its counter tangent to the waist's top edge puts
+the bowl's lowest point at `MID_LINE + HORIZ_MID - RING_OFF[1] - RING_W`,
+which is `MID_LINE` exactly, and the waist's underside is on `MID_LINE` — and
+`set_bowl._bowl` was asking that tangency for two roots. It got them by
+rounding at the mark's numbers and stopped getting them under a heavier band.
+Read as the tangency it is, the ceilings are **3.014, 2.370 and 2.311**. The
+axis had more room than anyone thought at the mark's numbers too.
+
 **R2b. The widened base.** One number in this face is a design decision rather
 than a reading: the base of R2's field is **20 units wider than the mark's**,
 and the cap is the mark's exactly. A stroke is 59.90 at the baseline and still
