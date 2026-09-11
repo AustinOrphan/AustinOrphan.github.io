@@ -39,10 +39,10 @@
    }
   },
   "residual": {
-   "samples": 1920,
-   "mean": 4.54906935044436,
-   "p95": 12.23109590183682,
-   "max": 20.620875565562997,
+   "samples": 630,
+   "mean": 65.87107701033406,
+   "p95": 188.42850789184516,
+   "max": 306.52180130127505,
    "unit": "site path units (1 unit = 0.1 viewBox unit)",
    "note": "distance from each site-path sample to the nearest transformed source outline"
   }
@@ -201,7 +201,7 @@
   "ring_mean": 390.27045372668636
  },
  "trail_from_swash": {
-  "note": "AUTHORITATIVE. The pen trail the component renders. Use centre_joined_d (the sweep path, and the trail=\"stroke\" line), outline_joined_d (the filled swash) and mask (the reveal path and its fractions); outline_d / centre_d are the same shape before the join fix, kept for reference. geometry.json's trail_from_video is a superseded earlier pass; nothing derives it.",
+  "note": "AUTHORITATIVE. The pen trail the component renders: written by derive_trail.py from the Illustrator swash. Use centre_joined_d (the sweep path / the trail=\"stroke\" line), outline_joined_d (the filled swash) and mask (the reveal path and its fractions); outline_d / centre_d are the same shape before the join fix, kept for reference.",
   "source": "AO.ai page 1, the white swash object (15 cubic segments, one closed contour)",
   "transform": {
    "scale": 106.23230763512323,
