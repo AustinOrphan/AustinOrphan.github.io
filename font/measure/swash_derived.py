@@ -70,8 +70,15 @@ DEPARTURES = ((3, 4, 3, (2, 3)), (6, 1, 2, (4, 5)))
 NS = 1500                                                     # samples along the spine
 END_BLEND = float(os.environ.get('ORPHAN_SWASH_END', 0.06))   # residual anchoring span
 HEAD_REACH = float(os.environ.get('ORPHAN_SWASH_REACH', 0.0))   # 0 = one cut-length of travel
+PATH_REACH = float(os.environ.get('ORPHAN_SWASH_PATH', 0.0))    # 0 = one cut-length, as above
+# How long the stroke may run STRAIGHT out of the leg before it starts to turn, and where
+# it is back on the artwork's path, as fractions of the trail.  Off by default: running it
+# straight for a cut-length and easing back over the two after reads as a longer, fuller
+# stroke in outline, but it is bought by bending the hook, and the hook will not take it --
+# the inner edge stops being fittable (2.32 mark units against 0.25) and derive_trail's own
+# mask guard rejects the result.
+HOLD = tuple(float(v) for v in os.environ.get('ORPHAN_SWASH_HOLD', '0,0').split(','))
 GAIN = float(os.environ.get('ORPHAN_SWASH_GAIN', 0.0)) or rules.RING_GAIN
-DEPART = os.environ.get('ORPHAN_SWASH_DEPART', '1') != '0'    # 0 shows the rebuild's angles
 
 
 def _C(p):
@@ -155,10 +162,24 @@ def _half(a_edge, b_edge, glide=0.02):
     # the half-cut, so the ends would then need almost two mark units of forcing to reach
     # the cut they are supposed to land on by construction.
     t = np.clip((t - t[0]) / (t[-1] - t[0]), 0.0, 1.0)
-    return (_at(b_edge, t) - a_edge) / 2
+    h = (_at(b_edge, t) - a_edge) / 2
+
+    # The half-width vector is a slowly varying quantity ALONG the ribbon, but it is read
+    # off a discrete pairing, so it carries ripple at the sample scale.  At gain 1 that
+    # never shows -- h is not used -- but the widening adds (gain - 1) * h to each edge,
+    # and a second derivative of sample-scale ripple is enormous: the rebuilt edges came
+    # out with 53 changes of curvature sign and curvature peaking at 25 against the
+    # artwork's 0.77.  Smoothing h is safe in a way that smoothing the spine is not: it is
+    # a width, not a path, so a window wide enough to clear the ripple costs nothing.  The
+    # two ends are put back exactly, because the head's anchoring rests on h being the
+    # half-cut there.
+    e0, e1 = h[0], h[-1]
+    h = _smooth(h.real, 0.015) + 1j * _smooth(h.imag, 0.015)
+    h[0], h[-1] = e0, e1
+    return h
 
 
-def _fit_edge(pts, walk, n=WALK_N):
+def _fit_edge(pts, walk, head_tangent=None, n=WALK_N):
     """One cubic per SOURCE item, over that item's own stretch of the edge.
 
     Refitting the edge as a whole and letting the fitter place its own knots by worst error
@@ -173,11 +194,21 @@ def _fit_edge(pts, walk, n=WALK_N):
     over the stretch it already covered.  It keeps the source's 15-item topology honestly
     too, rather than reusing the count while moving every boundary.
     """
+    # Tangents come from the WHOLE edge and are then sliced, never taken per piece.  Per
+    # piece, every knot gets a one-sided derivative and the two items sharing it disagree,
+    # so the fit is handed a tangent the samples do not actually have: item 6 came back
+    # with handles of 0.37 and 0.54 on a chord of 4.32, which is a cubic that is a straight
+    # line with a hard turn at each end, and curvature peaked at 76 against the artwork's
+    # 0.77.  Sliced from the whole, adjacent pieces share a knot tangent exactly and the
+    # chain is G1 by construction.
+    tan = np.gradient(pts)
+    tan = tan / np.abs(tan)
+    if head_tangent is not None:
+        tan[0] = head_tangent               # a CONSTRAINT on the fit, not a twist after it
     segs, err = [], 0.0
     for k in range(len(walk)):
-        P = pts[k * (n - 1):k * (n - 1) + n]
-        t = np.gradient(P)
-        t = t / np.abs(t)
+        a = k * (n - 1)
+        P, t = pts[a:a + n], tan[a:a + n]
         one, e = fit_cubics([(z.real, z.imag) for z in P],
                             [(z.real, z.imag) for z in t], nseg=1)
         segs += one
@@ -205,22 +236,13 @@ def _warp_cap(items, idxs, old_a, old_b, new_a, new_b):
         items[k] = [items[k][0]] + [[f(_C(p)).real, f(_C(p)).imag] for p in items[k][1:]]
 
 
-def _departure_turns(items, verts):
-    V = [_C(v) for v in verts]
-    return [(_C(items[i][h]) - _C(items[i][a])) / (V[e1] - V[e0])
-            for i, a, h, (e0, e1) in DEPARTURES]
 
-
-def _match_departures(items, verts, turns):
+def _departure_error(items, verts):
+    """How far off parallel with the leg each edge leaves the foot cut, in degrees."""
     V = [_C(v) for v in verts]
-    got = []
-    for (i, ai, hi, (e0, e1)), r in zip(DEPARTURES, turns):
-        a, h = _C(items[i][ai]), _C(items[i][hi])
-        want = (V[e1] - V[e0]) * r / abs(r)
-        new = a + abs(h - a) * want / abs(want)
-        got.append(math.degrees(cmath.phase((new - a) / (h - a))))
-        items[i][hi] = [new.real, new.imag]
-    return got
+    want = (V[3] - V[2], V[4] - V[5])
+    return [math.degrees(cmath.phase((_C(items[i][h]) - _C(items[i][a])) / w))
+            for (i, a, h, _), w in zip(DEPARTURES, want)]
 
 
 def _width_ratio(before, after):
@@ -261,7 +283,11 @@ def derived_swash_items(a_verts=None, hoop_items=None):
     src = {o['role']: o for o in page['objects']}
     items = [list(it) for it in src['white']['items']]
     before = [list(it) for it in items]
-    turns = _departure_turns(items, src['A']['vertices'])      # before anything moves
+    # Both edges leave the foot cut running along the leg edge they meet, so the leg runs
+    # on into the hook and the cut between them is never seen as an edge.  The artwork's own
+    # angles are 1.04 deg off parallel on the outer edge -- near enough that it reads as a
+    # continuation -- but 57 deg off on the inner one, which is a corner, and against the A's
+    # 60% wider foot that corner is what makes the leg look sliced off rather than turned.
 
     # the four points the swash is pinned to.  The BEFORE anchors come from the swash's own
     # copies of them: the source rounds each object independently, so the A's vertices and
@@ -304,10 +330,35 @@ def derived_swash_items(a_verts=None, hoop_items=None):
     d_head = (nV3 + nV4) / 2 - (oV3 + oV4) / 2
     d_tail = (nf0 + nf1) / 2 - (of0 + of1) / 2
 
+    aV = [_C(v) for v in a_verts]
+
+    def straighten(mid, hold, release):
+        """Run the midline straight out along the leg for `hold`, back on its own path by
+        `release`.
+
+        Blended by POSITION, not by direction.  Rotating each tangent and re-integrating
+        holds the direction correctly but every later point inherits the correction, so the
+        tail walks off the hoop -- 13 to 45 mark units of it, depending how long the hold
+        is.  Blending toward a straight ray and back again keeps the change local: past
+        `release` the path is the artwork's, to the unit.
+        """
+        if release <= hold:
+            return mid
+        u = _arcfrac(mid)
+        d = np.r_[0.0, np.cumsum(np.abs(np.diff(mid)))]
+        w = np.clip((release - u) / (release - hold), 0.0, 1.0)
+        w = 0.5 * (1 - np.cos(np.pi * w))
+        return mid + w * (mid[0] + axis * d - mid)
+
+    e1, e2 = aV[3] - aV[2], aV[4] - aV[5]
+    axis = e1 / abs(e1) + e2 / abs(e2)
+    axis = axis / abs(axis)
+
     def place(edge, h, head, tail):
         u = _arcfrac(edge)
         g = GAIN + (k_head - GAIN) * 0.5 * (1 + np.cos(np.pi * np.minimum(1.0, u / reach)))
-        p = edge - (g - 1.0) * h + d_head * (1 - u) + d_tail * u
+        mid = straighten(edge + h, HOLD[0], HOLD[1])
+        p = mid - g * h + d_head * (1 - u) + d_tail * u
         a = 0.5 * (1 + np.cos(np.pi * np.minimum(1.0, u / END_BLEND)))
         b = 0.5 * (1 + np.cos(np.pi * np.minimum(1.0, (1 - u) / END_BLEND)))
         return p + (head - p[0]) * a + (tail - p[-1]) * b, abs(head - p[0]), abs(tail - p[-1])
@@ -316,12 +367,57 @@ def derived_swash_items(a_verts=None, hoop_items=None):
     inner, r2, r3 = place(inner, h_in, nV4, nf0)
     residual = max(r0, r1, r2, r3)
 
-    (so, eo), (si, ei) = _fit_edge(outer, EDGE_OUTER), _fit_edge(inner, EDGE_INNER)
+    # Leaving the foot, the two edges disagree about what they are doing: the outer runs
+    # ALONG the stroke, 77.6 deg, and the inner runs ACROSS it, 16.9 deg, so the swash opens
+    # out of the cut as a mouth rather than carrying on as a stroke.  On the artwork that is
+    # a small wedge; against the A's 60% wider foot it is a long spike of leg with the hook
+    # hung off the side of it.
+    #
+    # So over the head the inner edge is the OUTER edge offset by the cut, which is the one
+    # thing that makes the pair parallel, and it blends back to its own shape by PATH_REACH.
+    # The midline is already right -- the artwork leaves the foot within 0.2 deg of the
+    # leg's axis -- so the stroke now runs out of the leg parallel-sided and then turns,
+    # rather than turning the moment it leaves.
+    # Over the same one cut-length as the flare and the straight run.  ONE length governs
+    # the whole head: the foot is one cut-length wide, so for one cut-length of travel the
+    # stroke is still leaving the foot -- it runs straight, it stays parallel-sided, and it
+    # carries the foot's extra width -- and then it turns, easing onto the artwork's own
+    # path over the two cut-lengths after that.  Holding the edges parallel much further
+    # closes the hook's mouth on itself; by a third of the trail the outline self-intersects.
+    ui = _arcfrac(inner)
+    w = 0.5 * (1 + np.cos(np.pi * np.minimum(1.0, ui / (PATH_REACH or reach))))
+    inner = inner + w * (_at(outer, ui) + (nV4 - nV3) - inner)
+
+    # The OUTER edge leaves the foot cut running along the leg edge it meets, so the leg
+    # runs on into the hook rather than the hook being stuck onto it.  The artwork is 1.04
+    # deg off parallel there, near enough that it already reads as a continuation, and the
+    # 1 deg is given up so the rule is exact and follows the leg: R2c's flare turns that
+    # edge 2.3 deg and the swash turns with it.
+    #
+    # The INNER edge is left to follow the rebuilt geometry.  It has no anchor in the leg
+    # to inherit: V[4] is the MOUTH of the hook, where the ribbon opens away from the leg
+    # rather than running on down it.  Forcing it parallel to the leg's other edge makes
+    # its first piece leave steeply downhill and double back to a knot that is up and to
+    # the right -- a hairpin inside one short segment, curvature peaking at 78 against the
+    # artwork's 0.77.  Imposing the ARTWORK's own angle there is not much better: the
+    # wider foot has swung that piece's chord 20 deg, so the old angle no longer suits it
+    # and the fit answers by collapsing both handles to about an eighth of the chord,
+    # which is a straight line with a corner at each end.
+    #
+    # It goes in as a tangent CONSTRAINT on the fit.  Fitting first and rotating the handle
+    # afterwards puts the angle right and the curve wrong: the piece has to reach the same
+    # far knot from a direction it was not fitted for, and it arrives stalled -- sample steps
+    # of 0.010 against a median of 0.111, curvature peaking at 104 where the artwork peaks at
+    # 0.77.  That is a cusp a hundredth of a unit across sitting in the first knot of the
+    # hook, which is exactly the kind of bulge this is meant to remove.
+    t_out = aV[3] - aV[2]
+    (so, eo), (si, ei) = (_fit_edge(outer, EDGE_OUTER, t_out / abs(t_out)),
+                          _fit_edge(inner, EDGE_INNER))
     _write_chain(items, EDGE_OUTER, outer[0], so)
     _write_chain(items, EDGE_INNER, inner[0], si)
     _warp_cap(items, HEAD_CAP, oV3, oV4, nV3, nV4)
     _warp_cap(items, TAIL_CAP, of0, of1, nf0, nf1)
-    rotated = _match_departures(items, a_verts, turns) if DEPART else [0.0, 0.0]
+    rotated = _departure_error(items, a_verts)
 
     gaps = [(i, abs(_C(items[i][-1]) - _C(items[(i + 1) % len(items)][1])))
             for i in range(len(items))
@@ -346,6 +442,6 @@ if __name__ == '__main__':
           ' the anchors need %.4f units of forcing' % (r['k_head'], round(r['reach'] * 100),
                                                        r['residual']))
     print('  refit worst %.4f (outer) / %.4f (inner) mark units' % r['fit_err'])
-    print('  departures rotated back by %s deg'
+    print('  edges leave the foot off parallel with the leg by %s deg'
           % ', '.join('%.2f' % v for v in r['departures_rotated_deg']))
     print('  %d items, %d continuity gaps' % (len(it), len(r['gaps'])))
