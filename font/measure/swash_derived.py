@@ -89,8 +89,14 @@ OPEN_TO = float(os.environ.get('ORPHAN_SWASH_OPEN_TO', 0.30))
 # deepens by inflating the whole curl -- to reach 1.8 units it throws the swash out to
 # x=117 against the artwork's 94.5, well outside the mark -- so the depth is put in
 # locally instead, as a bump on the midline centred on the hook's lowest point.
-DEEPEN = float(os.environ.get('ORPHAN_SWASH_DEEPEN', 2.9))
+DEEPEN = float(os.environ.get('ORPHAN_SWASH_DEEPEN', 3.2))
 DEEPEN_SPAN = float(os.environ.get('ORPHAN_SWASH_DEEPEN_SPAN', 0.22))
+# How much of the deepening goes into WIDTH rather than into moving the midline.  Dropping
+# the midline drops both edges, and the inner one is on the concave side, so it tightens:
+# the upper edge of the hook comes to a radius of about 1.2 mark units against the
+# artwork's 6.1.  Putting two thirds of it into width instead holds the inner edge still
+# and drops only the outer, which is what the depth is actually for.
+DEEPEN_SPLIT = float(os.environ.get('ORPHAN_SWASH_SPLIT', 0.5))
 GAIN = float(os.environ.get('ORPHAN_SWASH_GAIN', 0.0)) or rules.RING_GAIN
 
 
@@ -413,10 +419,8 @@ def derived_swash_items(a_verts=None, hoop_items=None):
         P = P - (P[-1] - m[-1]) * (v * v * (3 - 2 * v))
         return np.interp(d / d[-1], t, P.real) + 1j * np.interp(d / d[-1], t, P.imag)
 
-    def deepen(mid, amount, span):
-        """Drop the bottom of the hook by `amount`, tapering to nothing `span` either side."""
-        if amount == 0.0:
-            return mid
+    def deepen_bump(mid, span):
+        """A raised-cosine hump over the bottom of the hook, zero at both ends of the trail."""
         u = _arcfrac(mid)
         u0 = u[int(np.argmin(mid.imag))]                  # the hook's lowest point
         # The bump has to reach zero at BOTH ends of the trail, and the hook's lowest point
@@ -426,20 +430,29 @@ def derived_swash_items(a_verts=None, hoop_items=None):
         # tapers over however much room there actually is.
         left = np.clip(1.0 - (u0 - u) / max(u0, 1e-6), 0.0, 1.0)
         right = np.clip(1.0 - (u - u0) / span, 0.0, 1.0)
-        w = np.where(u < u0, left, right)
-        return mid - 1j * amount * 0.5 * (1 - np.cos(np.pi * w))
+        return 0.5 * (1 - np.cos(np.pi * np.where(u < u0, left, right)))
 
-    mid_ref = deepen(open_hook(outer + h_out, OPEN, OPEN_TO), DEEPEN, DEEPEN_SPAN)
+    opened = open_hook(outer + h_out, OPEN, OPEN_TO)
+    bump = deepen_bump(opened, DEEPEN_SPAN) if DEEPEN else np.zeros(len(opened))
+    mid_ref = opened - 1j * DEEPEN * (1.0 - DEEPEN_SPLIT) * bump
     disp_ref = straighten(mid_ref, HOLD[0], HOLD[1]) - (outer + h_out)
     u_ref = _arcfrac(mid_ref)
 
     def place(edge, h, head, tail):
         u = _arcfrac(edge)
         g = GAIN + (k_head - GAIN) * 0.5 * (1 + np.cos(np.pi * np.minimum(1.0, u / reach)))
+        # The displacement is looked up by POSITION along the shared midline, not by arc
+        # fraction.  The two edges are parameterised quite differently near the head -- the
+        # inner one is much the shorter -- so the same fraction is a different place on the
+        # curve, and the bump lands offset on one edge against the other.  That put a hard
+        # V in the inner edge just past the foot cut, radius 0.05 mark units where the
+        # artwork has 6.09.
         mid = edge + h
-        um = _arcfrac(mid)
-        mid = mid + (np.interp(um, u_ref, disp_ref.real)
-                     + 1j * np.interp(um, u_ref, disp_ref.imag))
+        at = _pair(mid, mid_ref)
+        if DEEPEN and DEEPEN_SPLIT:
+            grow = DEEPEN * DEEPEN_SPLIT * bump[at] / 2.0
+            h = h * (1.0 + grow / np.maximum(np.abs(h), 1e-9))
+        mid = mid + disp_ref[at]
         p = mid - g * h + d_head * (1 - u) + d_tail * u
         a = 0.5 * (1 + np.cos(np.pi * np.minimum(1.0, u / END_BLEND)))
         b = 0.5 * (1 + np.cos(np.pi * np.minimum(1.0, (1 - u) / END_BLEND)))
