@@ -77,6 +77,13 @@ PATH_REACH = float(os.environ.get('ORPHAN_SWASH_PATH', 0.0))    # 0 = one cut-le
 # 8.5%, at 5% it is 10.1%, at 6% 15.3%, and at one cut-length 86% -- by which point the S is
 # plainly visible and the inner edge has stopped being fittable.  See `straighten`.
 HOLD = tuple(float(v) for v in os.environ.get('ORPHAN_SWASH_HOLD', '0.025,0.08').split(','))
+# How much of the hook's curvature to keep, and how far the hook runs.  Below 1 the turn
+# takes a bigger radius, so the bottom of the hook sits lower and rounder and its counter
+# opens.  The stroke thickened inside an envelope that did not grow, which closes a counter
+# the way it does in any bold weight; the artwork keeps a gap of 0.49 times the stroke
+# width between the two arms of the curl.
+OPEN = float(os.environ.get('ORPHAN_SWASH_OPEN', 0.86))
+OPEN_TO = float(os.environ.get('ORPHAN_SWASH_OPEN_TO', 0.30))
 GAIN = float(os.environ.get('ORPHAN_SWASH_GAIN', 0.0)) or rules.RING_GAIN
 
 
@@ -374,8 +381,33 @@ def derived_swash_items(a_verts=None, hoop_items=None):
     # is the trap: they are the same curve but parameterised differently, so they come back
     # as two different curves and the pair stops bounding a ribbon at all -- the measured
     # width collapses to a quarter of the artwork's.
-    mid_ref = outer + h_out
-    disp_ref = straighten(mid_ref, HOLD[0], HOLD[1]) - mid_ref
+    def open_hook(mid, c, upto):
+        """Scale the hook's curvature by `c`, giving the turn a bigger radius."""
+        if c == 1.0:
+            return mid
+        n = 2000
+        d = np.r_[0.0, np.cumsum(np.abs(np.diff(mid)))]
+        t = np.linspace(0.0, 1.0, n)
+        m = np.interp(t, d / d[-1], mid.real) + 1j * np.interp(t, d / d[-1], mid.imag)
+        tg = np.gradient(_smooth(m.real, 0.01) + 1j * _smooth(m.imag, 0.01))
+        k = _smooth(np.gradient(np.unwrap(np.angle(tg)), t), 0.01)
+        w = np.clip((t - upto) / (0.5 * upto), 0.0, 1.0)       # c through the hook, 1 after
+        g = c + (1.0 - c) * 0.5 * (1 - np.cos(np.pi * w))
+        an = np.unwrap(np.angle(tg))[0] + np.r_[
+            0.0, np.cumsum((k[1:] * g[1:] + k[:-1] * g[:-1]) / 2 * np.diff(t))]
+        st = np.exp(1j * an)
+        P = m[0] + d[-1] * np.r_[0.0, np.cumsum((st[1:] + st[:-1]) / 2 * np.diff(t))]
+
+        # Re-integrating a changed curvature moves everything after it, so the tail ends up
+        # 21 mark units off the hook's face.  That closing error is taken out smoothly over
+        # everything past the hook rather than left for the end blend, which would otherwise
+        # have to cram 21 units into the last 6% of the trail.
+        v = np.clip((t - upto) / (1.0 - upto), 0.0, 1.0)
+        P = P - (P[-1] - m[-1]) * (v * v * (3 - 2 * v))
+        return np.interp(d / d[-1], t, P.real) + 1j * np.interp(d / d[-1], t, P.imag)
+
+    mid_ref = open_hook(outer + h_out, OPEN, OPEN_TO)
+    disp_ref = straighten(mid_ref, HOLD[0], HOLD[1]) - (outer + h_out)
     u_ref = _arcfrac(mid_ref)
 
     def place(edge, h, head, tail):
