@@ -65,6 +65,9 @@ _RING_MARK = (_ring['outer'][2] - _ring['inner'][2]) * _sO                      
 _FOOT1   = float(os.environ.get('ORPHAN_FOOT', 20.0))                             # R2b at WEIGHT 1
 RING_GAIN = 1.0 + (_FOOT1 / 2) / _RING_MARK                                       # 1.3013 at FOOT 20
 if os.environ.get('ORPHAN_R1B', '1') != '1': RING_GAIN = 1.0    # TEST KNOB: rounds left at the mark's
+# TEST KNOB: how much of R2b's gain the rounds follow.  1.0 is R1b as written and keeps the straights
+# and the rounds level; 0.0 leaves the rounds at the mark and lets the straights run away from them.
+RING_GAIN = 1.0 + float(os.environ.get('ORPHAN_R1B_FRAC', 1.0)) * (RING_GAIN - 1.0)
 RING_W   = (_RING_MARK * RING_GAIN + _RING_ADD) * WEIGHT                          # 43.19 at WEIGHT 1
 _OFF0    = ((_ring['inner'][0]-_ring['outer'][0]) * _sO, (_ring['inner'][1]-_ring['outer'][1]) * _sO)   # (14.0, 14.0)
 RING_OFF = (_OFF0[0] * PUSH * _OFF_MUL * RING_GAIN, _OFF0[1] * PUSH * _OFF_MUL * RING_GAIN)
@@ -131,8 +134,12 @@ def round_arc(c, r_out, a0, a1):
 FOOT_WIDEN = float(os.environ.get('ORPHAN_FOOT', 20.0)) * WEIGHT
 
 _CAP_NARROW = float(os.environ.get('ORPHAN_CAP_NARROW', 0.0)) * WEIGHT   # TEST KNOB
-SLASH_BASE, SLASH_CAP = 39.899 * WEIGHT + FOOT_WIDEN, 25.987 * WEIGHT - _CAP_NARROW   # "/" and stems
-BACK_BASE,  BACK_CAP  = 37.544 * WEIGHT + FOOT_WIDEN, 24.464 * WEIGHT - _CAP_NARROW   # "\\"
+# TEST KNOB: TAPER moves the base up and the cap down by the SAME amount, so the field's mean does
+# not move -- and R1b keys off the mean, so the rounds do not move either.  It buys a wider foot
+# against an unchanged O, which is a different question from FOOT_WIDEN's.
+_TAPER = float(os.environ.get('ORPHAN_TAPER', 0.0)) * WEIGHT
+SLASH_BASE, SLASH_CAP = 39.899 * WEIGHT + FOOT_WIDEN + _TAPER, 25.987 * WEIGHT - _CAP_NARROW - _TAPER
+BACK_BASE,  BACK_CAP  = 37.544 * WEIGHT + FOOT_WIDEN + _TAPER, 24.464 * WEIGHT - _CAP_NARROW - _TAPER
 
 def w_slash(y):     return SLASH_BASE + (SLASH_CAP - SLASH_BASE) * (y / CAP)
 def w_backslash(y): return BACK_BASE  + (BACK_CAP  - BACK_BASE)  * (y / CAP)
