@@ -135,6 +135,57 @@ def derived_hoop(nseg=34):
     return k.ccw(), dict(k=K, fit_err=err, band_min=min(bands), band_max=max(bands), nseg=nseg)
 
 
+def derived_hoop_items(per_seg=40):
+    """The same thickening, but emitted with the ARTWORK'S OWN 18-SEGMENT TOPOLOGY.
+
+    derive_geometry.py indexes the hoop by position -- bar[1:5] is the top run, bar[5:7] the left
+    hook's outer rim, bar[7] its face, and so on -- so a hoop that arrives as one refitted run of 44
+    cubics silently produces nonsense: bar widths of 4025 and 8677 site units where the artwork
+    measures 650 and 516.
+
+    So each of the eight OUTER segments is offset and refitted to ONE cubic of its own, keeping the
+    index order; the eight inner segments are the artwork verbatim; and the two faces are redrawn as
+    lines to the outer ends that moved.  Returns items in the source's own ['c', p0, c1, c2, p3] /
+    ['l', p0, p1] form, in source index order 0..17.
+    """
+    items = BAR['items']
+    OUT_RUN = [17, 0, 1, 2, 3, 4, 5, 6]
+    REF = {17: (14, 15), 0: (14, 15), 1: (11, 13), 2: (11, 13), 3: (11, 13),
+           4: (8, 10), 5: (8, 10), 6: (8, 10)}
+    ref_pts = {}
+    for lo, hi in set(REF.values()):
+        ref_pts[(lo, hi)] = _flatten([items[j] for j in range(lo, hi + 1)])
+
+    moved_seg, worst = {}, 0.0
+    for j in OUT_RUN:
+        pts = _flatten([items[j]], per=0.01)
+        R = ref_pts[REF[j]]
+        mv = []
+        for p in pts:
+            q = min(R, key=lambda o: (o[0]-p[0])**2 + (o[1]-p[1])**2)
+            d = math.hypot(p[0]-q[0], p[1]-q[1])
+            mv.append(p if d < 1e-9 else
+                      (p[0] + (p[0]-q[0])/d * (K-1) * d, p[1] + (p[1]-q[1])/d * (K-1) * d))
+        tg = [unit(sub(mv[min(i+1, len(mv)-1)], mv[max(i-1, 0)])) for i in range(len(mv))]
+        segs, err = fit_cubics(mv, tg, nseg=1)
+        worst = max(worst, err)
+        c1, c2, p3 = segs[0]
+        moved_seg[j] = ['c', list(mv[0]), list(c1), list(c2), list(p3)]
+
+    out = []
+    for j in range(len(items)):
+        it = items[j]
+        if j in moved_seg:
+            out.append(moved_seg[j])
+        elif j == 7:                                   # hook L's face: outer end -> inner start
+            out.append(['l', list(moved_seg[6][4]), list(it[-1])])
+        elif j == 16:                                  # hook R's face: inner end -> outer start
+            out.append(['l', list(it[1]), list(moved_seg[17][1])])
+        else:                                          # the inner run, the artwork verbatim
+            out.append([it[0]] + [list(v) for v in it[1:]])
+    return out, worst
+
+
 if __name__ == '__main__':
     hoop, n = derived_hoop()
     print('  k %.4f  (HORIZ_JOIN %.2f against the mark\'s %.2f)' % (K, core._JOIN_AT_11 * core._band_k(), core._JOIN_AT_11))

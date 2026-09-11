@@ -28,6 +28,7 @@ sys.path.insert(0, os.path.join(HERE, 'lib')); sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(HERE, 'measure'))
 import rules
 from mark_derived import parts
+from hoop_derived import derived_hoop_items
 
 SRC_PATH = os.path.join(HERE, 'source', 'ai_objects.json')
 OUT = os.path.join(os.path.dirname(HERE), 'design', 'logo-animation', 'ai_objects_derived.json')
@@ -48,7 +49,8 @@ def main():
     doc = json.load(open(SRC_PATH))
     page = doc['AO'][0]
     objs = {o['role']: o for o in page['objects']}
-    a_poly, _o_out, _o_in, hoop = parts()
+    a_poly, _o_out, _o_in, _hoop = parts()
+    hoop_items, hoop_err = derived_hoop_items()
     g = rules.RING_GAIN
 
     ring = objs['ring']
@@ -68,15 +70,18 @@ def main():
             o['vertices'] = verts
             o['items'] = [['l', verts[i], verts[(i + 1) % len(verts)]] for i in range(len(verts))]
         elif o['role'] == 'bar':
-            o['items'] = contour_items(hoop)
+            # the artwork's own 18-segment topology, because derive_geometry indexes the hoop by
+            # position: bar[1:5] the top run, bar[5:7] the left hook, bar[7] its face, and so on
+            o['items'] = hoop_items
     page['derived_from'] = dict(
         note='the mark re-derived from the typeface; see font/measure/emit_derived_objects.py',
         ring_gain=g, ring_band_mark_units=band * g, ring_offset_mark_units=(dx * g, dy * g),
-        a_vertices=len(verts), bar_segments=len(contour_items(hoop)))
+        a_vertices=len(verts), bar_segments=len(hoop_items), hoop_fit_err=hoop_err)
     json.dump(doc, open(OUT, 'w'))
     print('  ring band  %.4f -> %.4f mark units  (gain %.4f)' % (band, band * g, g))
     print('  ring offset %.4f -> %.4f' % ((dx**2 + dy**2) ** .5, ((dx*g)**2 + (dy*g)**2) ** .5))
-    print('  A vertices: %d, hoop segments: %d' % (len(verts), len(contour_items(hoop))))
+    print('  A vertices: %d, hoop segments: %d (worst single-cubic fit %.4f mark units)'
+          % (len(verts), len(hoop_items), hoop_err))
     print('  wrote %s' % os.path.relpath(OUT, os.path.dirname(HERE)))
 
 
