@@ -30,7 +30,15 @@ FONT = ROOT.parent / 'font' / 'font'
 sys.path.insert(0, str(FONT / 'lib'))
 from pen import source_contours                                     # noqa: E402
 
-SRC = json.load(open(FONT / 'source' / 'ai_objects.json'))['AO'][0]
+# --ai lets the trail be re-anchored to a re-derived mark.  The head is built to start on the A's
+# rcut and rtip and the tail is rebuilt onto the bar's left hook, so both joins follow whichever
+# description is passed; with the artwork's file this is exactly what it always did.
+import argparse as _argparse
+_ap = _argparse.ArgumentParser()
+_ap.add_argument('--ai', default=str(FONT / 'source' / 'ai_objects.json'))
+_args, _ = _ap.parse_known_args()
+SRC = json.load(open(_args.ai))['AO'][0]
+print(f'  reading {_args.ai}')
 OBJ = {o['role']: o for o in SRC['objects']}
 (sw,) = source_contours(OBJ['white']['items'])
 (bar,) = source_contours(OBJ['bar']['items'])
