@@ -1,10 +1,11 @@
 """Draw where the swash leaves the A's right foot, three ways.
 
-The artwork grows the swash straight out of the leg -- its outer edge leaves V[3] collinear
-with the leg edge arriving there, 1.04 deg off.  Warping the swash onto the re-derived
-mark does not keep that on its own: scaling about a centre-line rotates a tangent wherever
-the edge and the centre-line are not parallel, and at a cut they never are.  This is the
-sheet that shows it, and that measure/swash_derived's departure matching puts it back.
+Leaving the foot, the artwork's two edges disagree about what they are doing: the outer
+runs ALONG the stroke and the inner runs ACROSS it, so the swash opens out of the cut as a
+mouth rather than carrying on as a stroke.  On the artwork that is a small wedge; against
+the A's 60% wider foot it is a long spike of leg with the hook hung off the side of it.
+This is the sheet that shows it, and that holding the inner edge parallel over the head
+makes the stroke run out of the leg and then turn.
 
     <venv>/bin/python design/logo-animation/plot_swash_departure.py
 """
@@ -35,11 +36,11 @@ def flatten(items, n=140):
 
 
 def turn(O):
-    """The swash's outer edge leaving V[3], measured against the leg edge arriving there."""
+    """The INNER edge leaving V[4], measured against the leg edge arriving there."""
     V = [complex(*v) for v in O['A']['vertices']]
     w = O['white']['items']
-    t = complex(*w[3][4]) - complex(*w[3][3])
-    return (math.degrees(cmath.phase(t / (V[3] - V[2]))) + 180) % 360 - 180
+    t = complex(*w[6][2]) - complex(*w[6][1])
+    return (math.degrees(cmath.phase(t / (V[4] - V[5]))) + 180) % 360 - 180
 
 
 def panel(O, label):
@@ -59,19 +60,19 @@ def main():
     env = dict(os.environ)
     cols = []
     art = objects(os.path.join(ROOT, 'font', 'source', 'ai_objects.json'))
-    cols.append(panel(art, 'the artwork  --  %.2f deg, collinear with the leg' % turn(art)))
-    for flag, name in (('0', 'warped onto the new cut, angles left to the warp'),
-                       ('1', 'departures matched back to the artwork  (landed)')):
+    cols.append(panel(art, 'the artwork  --  inner edge %.2f deg off the leg' % turn(art)))
+    for flag, name in (('0.0005', 'rebuilt, edges left to their own angles'),
+                       ('0', 'inner edge held parallel over the head  (landed)')):
         subprocess.run([sys.executable, EMIT], check=True, capture_output=True,
-                       env=dict(env, ORPHAN_SWASH_DEPART=flag))
+                       env=dict(env, ORPHAN_SWASH_PATH=flag))
         O = objects(DERIVED)
         cols.append(panel(O, '%s  --  %.2f deg' % (name, turn(O))))
 
     sheet = Image.new('RGB', (len(cols) * (WP + 50) + 20, HP + 100), (13, 20, 26))
     d = ImageDraw.Draw(sheet)
     d.text((16, 10), "Where the swash leaves the A's right foot", fill=(235, 229, 233))
-    d.text((16, 26), "white = the A, blue = the swash.  The artwork grows the swash straight "
-                     "out of the leg edge; the warp turns it off by 20 deg.",
+    d.text((16, 26), "white = the A, blue = the swash.  The angle quoted is the INNER edge "
+                     "against the leg edge it leaves from; 0 is parallel.",
            fill=(140, 160, 175))
     for i, (im, lab) in enumerate(cols):
         sheet.paste(im, (20 + i * (WP + 50), 66))
