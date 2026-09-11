@@ -243,13 +243,15 @@ Partial rounds (C, G, S, U, the bowls of B, D, P, R, the digits) are arcs of
 that construction with radial cuts.
 
 **R2. Diagonals.** The A's legs, as a weight field over height: a stroke
-leaning like "/" is **59.90** units wide at the baseline and **25.99** at the
-cap line, one leaning like "\\" is **57.54** and **24.46**, linear in between.
+leaning like "/" is **65.00** units wide at the baseline and **20.89** at the
+cap line, one leaning like "\\" is **62.64** and **19.36**, linear in between.
 Shorter diagonals take the widths at whatever heights they span. Applies to V,
 W, M, N, K, X, Y, Z, 4, 7.
 
-The **baselines carry a +20 that is not measured** — see R2b. The mark's own
-legs are 39.90 and 37.54 there; the cap widths are the mark's.
+Neither end of that field is the mark's. The mark's own legs are **39.90** and
+**37.54** at the baseline and **25.99** and **24.46** at the cap. R2b adds 20
+units at the base and R2c tilts a further 5.10 out of the cap and into it —
+three rules that are one decision, and `ORPHAN_FOOT=0` turns off all of them.
 
 Those four numbers were **39.5 / 27.1** and **37.2 / 25.5** until the A's
 counter was derived and the discrepancy surfaced. §2.2 measured the legs at the
@@ -267,14 +269,19 @@ displacement, both fixed to the page rather than to height. Left alone the
 face's straights averaged **42.9** units against its rounds' **33.2**, a 29%
 split the mark does not have, and an O beside an H looked starved.
 
-So the round takes the same gain, as a ratio: the band **and** the
-displacement are both multiplied by `1 + (FOOT_WIDEN/2) / RING_W`, the
-fraction by which R2b lifts the straights' mean. RING_W goes 33.19 → **43.19**
-and the displacement 19.83 → **25.81**. Two things follow. R3's check keeps
-holding at its own original 0.75%, because both sides moved by the same
-fraction. And the round's contrast is untouched — thick over thin stays the
-mark's 3.97 — so PUSH means what it meant. At `ORPHAN_FOOT=0` it reduces to
-the mark exactly.
+So the round takes that gain, as a ratio: the band **and** the displacement are
+both multiplied by `1 + FOLLOW × (FOOT_WIDEN/2) / RING_W`, where the fraction
+before FOLLOW is how much R2b lifts the straights' mean. The round's contrast
+is untouched whatever FOLLOW is — thick over thin stays the mark's **3.97** —
+so PUSH means what it meant, and at `ORPHAN_FOOT=0` it reduces to the mark
+exactly.
+
+`FOLLOW` is **0.75**, not 1. At 1 the straights and the rounds are exactly
+level and R3's check holds at its own original 0.75%; the round is deliberately
+let fall a quarter of the way behind instead, because that is half of what pays
+for R2c. RING_W goes 33.19 → **40.69** and the displacement 19.83 → **24.31**,
+which leaves the straights **5.5%** over the rounds. See R2c for the trade, and
+for why 5.5% is the affordable end of it.
 
 This looked unaffordable when it was first measured. The WEIGHT ceiling at
 PUSH 1.00 appeared to fall from 2.302 to 1.638 with the band alone and to
@@ -290,10 +297,11 @@ axis had more room than anyone thought at the mark's numbers too.
 
 **R2b. The widened base.** One number in this face is a design decision rather
 than a reading: the base of R2's field is **20 units wider than the mark's**,
-and the cap is the mark's exactly. A stroke is 59.90 at the baseline and still
-25.99 at the cap line, so the taper is steeper and the whole lower half of the
-face is planted rather than merely tipped. It scales with WEIGHT like the rest
-of R2.
+and the cap is the mark's exactly. On its own it puts a stroke at 59.90 at the
+baseline and still 25.99 at the cap line, so the taper is steeper and the whole
+lower half of the face is planted rather than merely tipped. It scales with
+WEIGHT like the rest of R2. (R2c then tilts a further 5.10 out of the cap and
+into the base; the field's published numbers under R2 are both rules together.)
 
 Three alternatives were measured and drawn before this one was taken — the
 mark's own taper, a wider foot with a **curved** taper, and a **true flare**
@@ -310,18 +318,77 @@ What it costs is R3's corroboration, below, and a colour difference between
 the face's straights and its rounds that the mark does not have. The rounds
 have no foot to widen: a round's weight is modulated by stress, not by height.
 
+**R2c. The foot meets the round.** R2b widened the base and R1b brought the
+rounds up with it, which left the foot at **59.90** against a round that
+reaches **69.0** where it is thickest — 87% of the heaviest stroke in the face.
+`measure/evidence/stem-vs-round-profile.png` is where that was read off: a
+stem's width plotted against height, beside the band of the round standing next
+to it. R2c closes the last 13% and states the result as the rule:
+
+> **A stroke at the baseline is as wide as a round at its thickest.**
+
+It is paid for from two places at once, because neither alone is affordable.
+**TAPER** moves the base up and the cap *down* by the same amount, so the
+field's mean does not move and nothing keyed to the mean moves either; alone it
+needs 9.1 units and takes the cap to 16.90, under ROUND_THIN, and to 12 units
+at the Thin master, which drops out below about 16px. **FOLLOW** (R1b) lets the
+round fall behind instead; alone it needs the round held to 0.43 of R2b's gain
+and runs the straights 14.6% over them, which is where an O starts to look
+starved — the very thing R1b was written to fix.
+
+Solving `base = ROUND_THICK` leaves a one-parameter family and FOLLOW picks the
+point on it. Every row reads foot/thickest = 100.0% in a real build, and every
+row builds all 18 masters:
+
+| FOLLOW | TAPER | foot | cap | colour | taper ratio |
+|---|---|---|---|---|---|
+| 1.00 | +9.09 | 68.99 | 16.90 | −0.6% | 4.08:1 |
+| **0.75** | **+5.10** | **65.00** | **20.89** | **+5.5%** | **3.11:1** |
+| 0.50 | +1.11 | 61.01 | 24.88 | +12.5% | 2.45:1 |
+| 0.43 | 0.00 | 59.90 | 25.99 | +14.6% | 2.30:1 |
+
+**0.75** is where both costs are small: 5.1 units of cap, which leaves it at
+20.89 and still above the round's thinnest stroke, and 5.5% of colour, a fifth
+of the split R1b was written to close. `measure/evidence/foot-blend.png` is the
+family as letters.
+
+TAPER is **derived**, not set, so the rule goes on holding if FOOT_WIDEN or
+FOLLOW is moved. Two things about where it holds, both consequences of the axes
+rather than slips. It is solved at the **default cut** and scaled with WEIGHT
+like the rest of R2, so foot over thickest reads 100.0% at (1, 1) and drifts
+either side: **86% at Thin, 123% at Black, 136% at PUSH 0.30**. A round's
+thickest point is `RING_W × WEIGHT + 19.83 × PUSH` — the band scales with
+weight and the displacement does not — while a straight scales with weight
+alone. Chasing the invariant along the axes would mean the contrast axis
+redrawing the skeleton, which is the one thing PUSH must not do. The rule is a
+statement about the face, read at the face's own weight.
+
+And it switches off with the widening: R2c is not a separate idea from R2b but
+the rest of the same one, so `ORPHAN_FOOT=0` turns off R2b, R1b's gain and this
+together and the face reproduces the mark exactly — which is what
+`proof.py --overlay` is built with.
+
+The rule is stated on the stem field. The backslash field keeps its own
+measured offset from it, 2.36 units lighter, exactly as it does everywhere else
+in R2.
+
 **R3. Verticals.** No exemplar exists, so a stem takes the left leg's profile:
-**59.90 at the baseline tapering to 25.99 at the cap line** — R2b reaches
+**65.00 at the baseline tapering to 20.89 at the cap line** — R2b and R2c reach
 every upright in the face through this rule, which is the whole of its scope.
 
 The check on borrowing the leg was the O: a stem beside an O should carry the
 O's average weight, and before R2b the profile's width at mid-height
 (**32.94**) sat within **0.73%** of the O's mean stroke (33.19). Under R2's
 pre-correction numbers it was 33.30, within 0.34%. **R2b breaks that check**:
-mid-cap is now **42.94**, 29% over the O's band. The check was always a
-corroboration rather than a derivation, and what it corroborated — where the
-stem's profile came from — has not changed. But it no longer lands, and that
-is the strongest argument against R2b.
+mid-cap is now **42.94** against a round band of **40.69**, 5.5% over. The
+check was always a corroboration rather than a derivation, and what it
+corroborated — where the stem's profile came from — has not changed. But it no
+longer lands exactly, and that is the strongest argument against R2b.
+
+It broke by 29% before R1b, and R1b could close it completely by setting FOLLOW
+to 1. The 5.5% that is left is bought, not conceded: it is the price of R2c's
+wider foot, and the alternative was to take the whole of that price out of the
+cap width instead.
 
 R2b does not fit through the axes for free either. The U's left stem is set
 tangent to the counter on its bowl's heavy side, which fixes the inner edge

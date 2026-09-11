@@ -64,10 +64,13 @@ _OFF_MUL  = float(os.environ.get('ORPHAN_OFF_MUL', 1.0))     # TEST KNOB: counte
 _RING_MARK = (_ring['outer'][2] - _ring['inner'][2]) * _sO                        # 33.19, the mark's band
 _FOOT1   = float(os.environ.get('ORPHAN_FOOT', 20.0))                             # R2b at WEIGHT 1
 RING_GAIN = 1.0 + (_FOOT1 / 2) / _RING_MARK                                       # 1.3013 at FOOT 20
-if os.environ.get('ORPHAN_R1B', '1') != '1': RING_GAIN = 1.0    # TEST KNOB: rounds left at the mark's
-# TEST KNOB: how much of R2b's gain the rounds follow.  1.0 is R1b as written and keeps the straights
-# and the rounds level; 0.0 leaves the rounds at the mark and lets the straights run away from them.
-RING_GAIN = 1.0 + float(os.environ.get('ORPHAN_R1B_FRAC', 1.0)) * (RING_GAIN - 1.0)
+#
+# FOLLOW is how much of that gain the round actually takes.  1.0 keeps the straights and the rounds
+# exactly level and is what this rule meant when it was written.  It is 0.75 now: the round is let
+# fall a little behind ON PURPOSE, because half of what buys R2c's wider foot comes from here.  The
+# two are set together and R2c is where the reasoning lives.
+FOLLOW = float(os.environ.get('ORPHAN_FOLLOW', 0.75))
+RING_GAIN = 1.0 + FOLLOW * (RING_GAIN - 1.0)                                      # 1.2260 at 0.75
 RING_W   = (_RING_MARK * RING_GAIN + _RING_ADD) * WEIGHT                          # 43.19 at WEIGHT 1
 _OFF0    = ((_ring['inner'][0]-_ring['outer'][0]) * _sO, (_ring['inner'][1]-_ring['outer'][1]) * _sO)   # (14.0, 14.0)
 RING_OFF = (_OFF0[0] * PUSH * _OFF_MUL * RING_GAIN, _OFF0[1] * PUSH * _OFF_MUL * RING_GAIN)
@@ -133,13 +136,59 @@ def round_arc(c, r_out, a0, a1):
 # by whichever tangency keeps it inside its bowl.
 FOOT_WIDEN = float(os.environ.get('ORPHAN_FOOT', 20.0)) * WEIGHT
 
-_CAP_NARROW = float(os.environ.get('ORPHAN_CAP_NARROW', 0.0)) * WEIGHT   # TEST KNOB
-# TEST KNOB: TAPER moves the base up and the cap down by the SAME amount, so the field's mean does
-# not move -- and R1b keys off the mean, so the rounds do not move either.  It buys a wider foot
-# against an unchanged O, which is a different question from FOOT_WIDEN's.
-_TAPER = float(os.environ.get('ORPHAN_TAPER', 0.0)) * WEIGHT
-SLASH_BASE, SLASH_CAP = 39.899 * WEIGHT + FOOT_WIDEN + _TAPER, 25.987 * WEIGHT - _CAP_NARROW - _TAPER
-BACK_BASE,  BACK_CAP  = 37.544 * WEIGHT + FOOT_WIDEN + _TAPER, 24.464 * WEIGHT - _CAP_NARROW - _TAPER
+# R2c. The foot meets the round.
+#
+# R2b widened the base and R1b brought the rounds up with it, which left the foot at 59.9 against a
+# round that reaches 69.0 where it is thickest: 87% of the heaviest stroke in the face.  R2c closes
+# that last 13% and states the result as the rule --
+#
+#     A STROKE AT THE BASELINE IS AS WIDE AS A ROUND AT ITS THICKEST.
+#
+# measure/evidence/stem-vs-round-profile.png is where that 87% was read off: a stem's width plotted
+# against height beside the band of the round standing next to it.
+#
+# It is paid for from two places at once, because neither alone is affordable:
+#
+#   * TAPER moves the base up and the cap DOWN by the same amount, so the field's mean does not move
+#     and nothing keyed to the mean moves either.  Alone it needs 9.1 units and takes the cap to
+#     16.90 -- under ROUND_THIN, and 12 units at the Thin master, which drops out below about 16px.
+#   * FOLLOW (R1b, above) lets the round fall behind instead.  Alone it needs the round held to 0.43
+#     of R2b's gain and runs the straights 14.6% over them, which is where an O starts to look
+#     starved: the very thing R1b was written to fix.
+#
+# Solving base = ROUND_THICK leaves a one-parameter family and FOLLOW picks the point on it.  Every
+# row here reads foot/thickest = 100.0% in a real build and builds all 18 masters:
+#
+#     FOLLOW  TAPER    foot     cap    colour   taper ratio
+#      1.00   +9.09   68.99   16.90    -0.6%      4.08:1
+#      0.75   +5.10   65.00   20.89    +5.5%      3.11:1
+#      0.50   +1.11   61.01   24.88   +12.5%      2.45:1
+#      0.43    0.00   59.90   25.99   +14.6%      2.30:1
+#
+# 0.75 is where both costs are small: 5.1 units of cap, which leaves it at 20.89 and still above the
+# round's thinnest stroke, and 5.5% of colour, a fifth of the split R1b was written to close.
+#
+# TAPER is DERIVED rather than set, so the rule goes on holding if FOOT_WIDEN or FOLLOW is moved.
+#
+# Two things about WHERE it holds, both of which are consequences of the axes rather than slips.
+# It is solved at the DEFAULT CUT and scaled with WEIGHT like the rest of R2, so foot over thickest
+# reads 100.0% at (1, 1) and drifts either side of it: 86% at Thin, 123% at Black, 136% at PUSH
+# 0.30.  That is because a round's thickest point is RING_W * WEIGHT + 19.83 * PUSH -- the band
+# scales with weight and the displacement does not -- while a straight scales with weight alone.
+# Chasing the invariant along the axes would mean the contrast axis redrawing the skeleton, which
+# is the one thing PUSH must not do.  The rule is a statement about the face, read at the face's
+# own weight.
+#
+# And it switches off with the widening.  R2c is not a separate idea from R2b, it is the rest of
+# the same one, so ORPHAN_FOOT=0 turns off all three of R2b, R1b's gain and this, and the face
+# reproduces the mark exactly -- which is what proof.py --overlay is built with.
+#
+# The rule is stated on the stem field.  The backslash field keeps its own measured offset from it,
+# 2.36 units lighter, exactly as it does everywhere else in R2.
+TAPER = 0.0 if _FOOT1 <= 0 else ((_RING_MARK + norm(_OFF0)) * RING_GAIN - (39.899 + _FOOT1)) * WEIGHT
+
+SLASH_BASE, SLASH_CAP = 39.899 * WEIGHT + FOOT_WIDEN + TAPER, 25.987 * WEIGHT - TAPER   # "/" and stems
+BACK_BASE,  BACK_CAP  = 37.544 * WEIGHT + FOOT_WIDEN + TAPER, 24.464 * WEIGHT - TAPER   # "\\"
 
 def w_slash(y):     return SLASH_BASE + (SLASH_CAP - SLASH_BASE) * (y / CAP)
 def w_backslash(y): return BACK_BASE  + (BACK_CAP  - BACK_BASE)  * (y / CAP)
