@@ -60,6 +60,25 @@ def parts():
     return a_poly, o_out, o_in, hoop
 
 
+def artwork_polygon():
+    """The same union taken on the ARTWORK, so the two can be compared as like for like."""
+    import json as _j
+    src = _j.load(open(os.path.join(HERE, 'source', 'ai_objects.json')))['AO'][0]
+    obj = {o['role']: o for o in src['objects']}
+    from pen import source_contours, from_poly
+    ring_cs = source_contours(obj['ring']['items'])
+    o_out, o_in = ring_cs[0], ring_cs[1]
+    if Polygon(o_out.flatten(per=PER)).area < Polygon(o_in.flatten(per=PER)).area:
+        o_out, o_in = o_in, o_out
+    ring = Polygon(o_out.flatten(per=PER), [o_in.flatten(per=PER)])
+    bar = unary_union([Polygon(c.flatten(per=PER)).buffer(0) for c in source_contours(obj['bar']['items'])])
+    a = Polygon([tuple(v) for v in obj['A']['vertices']]).buffer(0)
+    u = unary_union([ring.buffer(0), bar, a])
+    if u.geom_type == 'MultiPolygon':
+        u = max(u.geoms, key=lambda g: g.area)
+    return u
+
+
 def union_polygon():
     a_poly, o_out, o_in, hoop = parts()
     ring = Polygon(o_out.flatten(per=PER), [o_in.flatten(per=PER)])
@@ -108,8 +127,8 @@ def to_contour(ring_pts):
     return k, worst, len(runs)
 
 
-def derive():
-    u = union_polygon()
+def fit_union(u):
+    """A shapely polygon back to cubic contours, corners preserved."""
     rings = [list(u.exterior.coords)] + [list(h.coords) for h in u.interiors]
     out, worst, runs = [], 0.0, 0
     for r in rings:
@@ -117,6 +136,10 @@ def derive():
         out.append(c); worst = max(worst, e); runs += n
     return out, dict(worst_fit=worst, runs=runs, contours=len(out),
                      area=u.area, holes=len(u.interiors))
+
+
+def derive():
+    return fit_union(union_polygon())
 
 
 if __name__ == '__main__':
