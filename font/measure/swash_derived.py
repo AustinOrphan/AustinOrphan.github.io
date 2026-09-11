@@ -1,117 +1,171 @@
 """The swash, re-derived for the mark the typeface draws.
 
-The swash is construction, not ink: it is the gesture the write-on pen follows, and
+The swash is construction rather than ink: it is the gesture the write-on pen follows, and
 design/logo-animation/derive_trail.py reads its two long edges to get a centre-line and a
-width profile.  It is NOT a free curve -- the artwork authors it to span exactly cut to
-cut, and both of those cuts have moved:
+width profile.  It is not a free curve -- the artwork authors it to span exactly cut to
+cut, and both of those cuts moved:
 
-    head   items 4+5 run from the A's V[3] to its V[4], i.e. along the right foot's cut.
-           R2c widened that cut from 6.2441 to 9.9763 mark units.
-    tail   item 11 runs along the hoop's hook face, item 7 of the bar.  R1b thickened the
-           band, so the face grew from 3.3483 to 4.1037.
+    head   items 4+5 run from the A's V[3] to its V[4], along the right foot's cut, which
+           R2c widened from 6.2436 to 9.9763 mark units
+    tail   item 11 runs along the hoop's hook face, bar item 7, which R1b's thicker band
+           grew from 3.3477 to 4.1037
 
-Leaving the swash alone therefore does not "keep the artwork's gesture", it breaks the one
-thing the artwork actually pinned: the pen started as wide as the foot it starts on, and
-ended as wide as the face it hands off to.  Against the re-derived mark the old swash is
-37% too narrow at the foot and its head sits 268 path units off the foot it claims to
-leave from.
+Leaving the swash alone does not keep the artwork's gesture, it breaks the one thing the
+artwork pinned: the pen started on the foot it starts from and ended on the face it hands
+off to.  Against the re-derived mark it started 268 path units away from that foot and 37%
+narrower than it.
 
-The re-derivation is fixed by those two cuts and has no free parameter:
+    THE SWASH IS A STROKE, AND IS WIDENED AS ONE.
 
-    caps        the similarity that carries the old cut onto the new one, so the cap lands
-                on the new cut exactly and keeps whatever bow the artwork drew into it
-    long edges  a uniform scale by k(u) about the artwork's own centre-line, then a shift
-                by d(u), with u each point's arc fraction from head to tail
+That is the whole of this file.  The obvious approach -- treat the swash as an outline and
+scale each edge about a centre-line paired by ARC FRACTION -- is wrong, because the outer
+edge of a loop is far longer than the inner one, so the two samples are nowhere near across
+from each other.  The "centre" is skewed, the "half-width" points the wrong way, and the
+ribbon comes out swelling and pinching: measured perpendicular width 1.05 to 1.35 times the
+artwork's where a flat 1.226 was asked for.
 
-Each cap's similarity IS a scale about its own midpoint plus a shift, so taking k and d
-to the cap values at u=0 and u=1 makes the long edges agree with the caps exactly.  k is
-carried as the complex ratio, not its magnitude: the cuts very nearly hold their angle
-(-25.0 deg at the foot, 114.3 at the hook face) but not exactly, and dropping the 0.012
-deg they do turn leaves the edges 0.001 units off the caps at all four junctions.  With
-it the junctions close and the topology, 15 items in the source's order, which
-derive_trail indexes by position, is untouched.
+So the pairing is done properly -- marching, monotone, local, described at _pair -- and
+then each edge is moved along ITS OWN half-width vector, which is the identity at gain 1
+and leaves both edges with their own sampling and their own shape.  Only the ends need
+more: the gain ramps out where the pairing bridges the cuts rather than crossing the
+ribbon, and a blend carries the edges onto the cuts themselves.
 
-k is scaled about the CENTRE-LINE rather than each edge being displaced on its own.
-Displacing the edges is exact at both ends too, but it adds a near-constant vector to a
-width vector that rotates through the loop, so wherever the loop has turned away from the
-cut the two partly cancel: it took the widest part of the trail from 1303 to 1150 path
-units while every other part of the mark grew.  Scaling cannot do that -- the width is
-multiplied by k(u) whatever direction it points.
+There is no width profile decision left to make.  The head cut grew 1.5978, but that is the
+length of an OBLIQUE cut, not a stroke width: the perpendicular width just past it is 3.48,
+not 6.24.  A wider cut at the same perpendicular width simply means a more oblique cut,
+which is what R2c did to the A's foot, so the gain is RING_GAIN the whole way and the
+obliqueness absorbs the rest.  An earlier cut of this carried the foot's 1.5978 into the
+body and scaled the loop -- already the widest thing in the mark -- from 1303 to 1947 path
+units, which filled the counter in and read as a slab.
 
-The widening is not chosen anywhere: k(0) and k(1) are the two cuts' own growth, 1.5978
-and 1.2258.  What IS a decision is how far the head's share of that reaches, and taking
-it linearly to the tail is wrong: the foot cut grew by 1.5978 because R2c flares the
-stroke AT THE BASELINE and tapers it away over the letter's height, so it is a local
-fact about the foot, not a weight the whole gesture shares.  Carried the full length it
-scales the loop -- already the widest thing in the mark at 1303 path units, wider than
-the A's own stem -- to 1947, and the sweep reads as a blob rather than a swash.
-
-So the head's share is released over the first 5% of the trail and the body sits at
-k_tail, the ring's gain, which is what the rest of the mark gained.  5% is derive_trail's
-own number: it is how far it holds the trail on the swash's authored edges before
-building its own head, so past it the cut has stopped being what the trail follows.
-
-The release has to be that short because of where the loop is.  The pen leaves the foot
-and curls immediately, so the loop occupies roughly u 0.1 to 0.35 -- releasing over
-derive_trail's full hold-to-release window, (0.05, 0.32), swallows the whole loop and
-lands within 15 path units of the linear profile.  Against the artwork the loop is the
-tell: it is a tapered ribbon around an open counter, and at 1.5 it fills in to a slab
-with the counter all but closed.  At the ring's gain the counter stays open.  That is
-also where derive_trail's own guard sits -- past about 1.3 the loop is wide enough that
-the mask's lead-in sweeps over outline points belonging elsewhere on the trail and the
-derivation refuses to write.
+One thing no offset construction gets for free is the angle the swash leaves the foot at.
+The artwork grows it straight out of the leg: its outer edge leaves V[3] collinear with the
+leg edge arriving there, 1.04 deg off.  Rebuilding leaves that at about 20 deg, a kink
+exactly where the eye is drawn, so both departure handles are set back to the artwork's own
+angles, measured AGAINST the A's edges rather than absolutely.  That is what makes the
+swash follow the foot: R2c's flare turns the leg edge 2.3 deg and the swash turns with it.
+Only the handles move; every anchor stays where the rebuild put it.
 """
-import json, math, os, sys
+import cmath, json, math, os, sys
+
+import numpy as np
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(HERE, 'lib')); sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(HERE, 'measure'))
 
+import rules
+from pen import fit_cubics
+
 SRC_PATH = os.path.join(HERE, 'source', 'ai_objects.json')
 
-HEAD_CAP = (4, 5)       # the A's right foot cut, V[3] -> V[4]
-TAIL_CAP = (11,)        # the hoop's hook face, bar item 7
+HEAD_CAP = (4, 5)                 # the A's right foot cut, V[3] -> V[4]
+TAIL_CAP = (11,)                  # the hoop's hook face, bar item 7
 # each long edge walked HEAD -> TAIL, as (item index, walked backwards?)
 EDGE_INNER = [(6, False), (7, False), (8, False), (9, False), (10, False)]
 EDGE_OUTER = [(3, True), (2, True), (1, True), (0, True), (14, True), (13, True), (12, True)]
+# (item, index of the anchor in it, index of its handle, the A's edge to measure against)
+DEPARTURES = ((3, 4, 3, (2, 3)), (6, 1, 2, (4, 5)))
 
-# how much of the trail the foot cut's extra width is spent over: full at the cut, gone by
-# 5%, which is as far as derive_trail holds the trail on the swash's own authored edges
-HEAD_REACH = tuple(float(v) for v in os.environ.get('ORPHAN_SWASH_REACH', '0.0,0.05').split(','))
-PROFILE = os.environ.get('ORPHAN_SWASH_PROFILE', 'ramp')      # 'ramp' | 'linear'
-
-
-def _head_share(u):
-    """How much of the head's correction still applies at arc fraction u."""
-    if PROFILE == 'linear':
-        return 1.0 - u
-    a, b = HEAD_REACH
-    if u <= a:
-        return 1.0
-    if u >= b:
-        return 0.0
-    return 0.5 * (1.0 + math.cos(math.pi * (u - a) / (b - a)))
+NS = 1500                                                     # samples along the spine
+END_BLEND = float(os.environ.get('ORPHAN_SWASH_END', 0.06))   # where the cuts are met
+GAIN = float(os.environ.get('ORPHAN_SWASH_GAIN', 0.0)) or rules.RING_GAIN
+DEPART = os.environ.get('ORPHAN_SWASH_DEPART', '1') != '0'    # 0 shows the rebuild's angles
 
 
 def _C(p):
     return complex(p[0], p[1])
 
 
-def _seg_pts(it, n=96):
+def _seg_pts(it, n=160):
     P = [_C(q) for q in it[1:]]
+    ts = [i / (n - 1.) for i in range(n)]
     if it[0] == 'l':
-        return [P[0] * (1 - t) + P[1] * t for t in (i / (n - 1.) for i in range(n))]
+        return [P[0] * (1 - t) + P[1] * t for t in ts]
     return [(1 - t) ** 3 * P[0] + 3 * (1 - t) ** 2 * t * P[1] + 3 * (1 - t) * t * t * P[2]
-            + t ** 3 * P[3] for t in (i / (n - 1.) for i in range(n))]
+            + t ** 3 * P[3] for t in ts]
 
 
-def _arclen(it):
-    p = _seg_pts(it)
-    return sum(abs(p[i + 1] - p[i]) for i in range(len(p) - 1))
+def _walk(items, walk, n=160):
+    """The edge as one polyline, head -> tail."""
+    pts = []
+    for k, rev in walk:
+        p = _seg_pts(items[k], n)
+        if rev:
+            p = p[::-1]
+        pts += p[1:] if pts else p
+    return np.array(pts)
+
+
+def _pair(outer, inner, window=0.06):
+    """Which inner sample sits ACROSS the ribbon from each outer one.
+
+    A plain nearest-point search does not work on this shape.  The swash curls into a loop,
+    so the outer edge of one part of the ribbon runs close to the INNER edge of another
+    part, and the nearest inner sample to a point on the loop's outside is often most of
+    the way round the gesture.  So the search marches: it starts paired head to head and
+    may only ever move forward, within a window of where it already is, which is both local
+    and monotone, the two things a ribbon's correspondence has to be.
+    """
+    w = max(2, int(window * len(inner)))
+    out, j = np.empty(len(outer), dtype=int), 0
+    for i, o in enumerate(outer):
+        hi = min(len(inner), j + w + 1)
+        j = j + int(np.abs(inner[j:hi] - o).argmin())
+        out[i] = j
+    return out
+
+
+def _smooth(z, frac):
+    """A light box filter, reflected at the ends so they do not drift."""
+    w = max(3, int(frac * len(z)) | 1)
+    return np.convolve(np.pad(z, w // 2, mode='reflect'), np.ones(w) / w, 'valid')
+
+
+def _arcfrac(P):
+    d = np.r_[0.0, np.cumsum(np.abs(np.diff(P)))]
+    return d / d[-1]
+
+
+def _at(P, s):
+    """The curve P sampled at arc fractions s."""
+    f = _arcfrac(P)
+    return np.interp(s, f, P.real) + 1j * np.interp(s, f, P.imag)
+
+
+def _half(a_edge, b_edge, glide=0.02):
+    """The half-width vector at every sample of `a_edge`, pointing at `b_edge`.
+
+    The pairing is monotone but it STALLS: long runs of samples on one edge share a single
+    sample on the other wherever the ribbon turns, so `b_edge[pair]` repeats points and
+    then jumps.  What gets smoothed is therefore the CORRESPONDENCE, not the geometry: the
+    pairing is really a monotone map between the two edges' arc fractions, smoothing that
+    scalar map makes it glide instead of stalling, and the other edge is then read off at
+    the smoothed parameter rather than being averaged, so neither edge is distorted.
+    """
+    t = _smooth(_arcfrac(b_edge)[_pair(a_edge, b_edge)], glide)
+    t = np.clip(np.maximum.accumulate(t), 0.0, 1.0)
+    return (_at(b_edge, t) - a_edge) / 2
+
+
+def _fit_edge(pts, nseg):
+    P = [(z.real, z.imag) for z in pts]
+    t = np.gradient(pts)
+    t = t / np.abs(t)
+    T = [(z.real, z.imag) for z in t]
+    return fit_cubics(P, T, nseg=nseg)
+
+
+def _write_chain(items, walk, start, segs):
+    """Lay a fitted head -> tail chain back into the source's items and directions."""
+    cur = (start.real, start.imag)
+    for (k, rev), (c1, c2, p3) in zip(walk, segs):
+        items[k] = ['c', list(p3), list(c2), list(c1), list(cur)] if rev else \
+                   ['c', list(cur), list(c1), list(c2), list(p3)]
+        cur = p3
 
 
 def _similarity(a, b, A, B):
-    """The similarity carrying the segment a->b onto A->B."""
     k = (B - A) / (b - a)
     return lambda z: A + k * (z - a)
 
@@ -122,56 +176,44 @@ def _warp_cap(items, idxs, old_a, old_b, new_a, new_b):
         items[k] = [items[k][0]] + [[f(_C(p)).real, f(_C(p)).imag] for p in items[k][1:]]
 
 
-def _edge_u(items, walk):
-    """Each item's (u at forward control point 0, u at forward control point 3)."""
-    lens = [_arclen(items[k]) for k, _ in walk]
-    total, acc, out = sum(lens), 0.0, {}
-    for (k, rev), L in zip(walk, lens):
-        u0, u1 = acc / total, (acc + L) / total
-        acc += L
-        out[k] = (u1, u0) if rev else (u0, u1)
-    return out
+def _departure_turns(items, verts):
+    V = [_C(v) for v in verts]
+    return [(_C(items[i][h]) - _C(items[i][a])) / (V[e1] - V[e0])
+            for i, a, h, (e0, e1) in DEPARTURES]
 
 
-def _edge_samples(items, walk, n=1200):
-    """The edge resampled head -> tail at n points evenly spaced in arc length."""
-    pts = []
-    for k, rev in walk:
-        p = _seg_pts(items[k])
-        pts += (p[::-1] if rev else p)[(1 if pts else 0):]
-    d = [0.0]
-    for i in range(len(pts) - 1):
-        d.append(d[-1] + abs(pts[i + 1] - pts[i]))
-    total, out, j = d[-1], [], 0
-    for i in range(n):
-        target = total * i / (n - 1.)
-        while j < len(d) - 2 and d[j + 1] < target:
-            j += 1
-        span = d[j + 1] - d[j]
-        f = 0.0 if span <= 0 else (target - d[j]) / span
-        out.append(pts[j] * (1 - f) + pts[j + 1] * f)
-    return out
+def _match_departures(items, verts, turns):
+    V = [_C(v) for v in verts]
+    got = []
+    for (i, ai, hi, (e0, e1)), r in zip(DEPARTURES, turns):
+        a, h = _C(items[i][ai]), _C(items[i][hi])
+        want = (V[e1] - V[e0]) * r / abs(r)
+        new = a + abs(h - a) * want / abs(want)
+        got.append(math.degrees(cmath.phase((new - a) / (h - a))))
+        items[i][hi] = [new.real, new.imag]
+    return got
 
 
-def _warp_edges(items, edges, centre, k_head, k_tail, d_head, d_tail):
-    """Scale by k(u) about the artwork's centre-line, then shift by d(u)."""
-    n = len(centre)
-    for walk in edges:
-        for k, (ua, ub) in _edge_u(items, walk).items():
-            m = len(items[k]) - 1
-            pts = []
-            for i, p in enumerate(items[k][1:]):
-                u = ua + (ub - ua) * (i / (m - 1.))
-                c = centre[min(n - 1, max(0, int(round(u * (n - 1)))))]
-                h = _head_share(u)
-                kk = k_head * h + k_tail * (1 - h)
-                z = c + kk * (_C(p) - c) + d_head * h + d_tail * (1 - h)
-                pts.append([z.real, z.imag])
-            items[k] = [items[k][0]] + pts
+def _width_ratio(before, after):
+    """How much wider the ribbon actually got, along the body, as (p10, p50, p90).
+
+    Measured perpendicular width, at matched arc length along the outer edge, with the
+    end regions left out: there the cap governs the width and a cut is not a width.  The
+    interesting number is the SPREAD -- a gain that is not uniform is what makes a ribbon
+    swell and pinch instead of reading as one stroke.
+    """
+    w = []
+    for it in (before, after):
+        o, i = _walk(it, EDGE_OUTER), _walk(it, EDGE_INNER)
+        w.append((_arcfrac(o), np.abs(o - _at(i, np.clip(np.maximum.accumulate(
+            _smooth(_arcfrac(i)[_pair(o, i)], 0.02)), 0, 1)))))
+    g = np.linspace(END_BLEND, 1 - END_BLEND, 400)
+    r = np.interp(g, *w[1]) / np.interp(g, *w[0])
+    return tuple(float(v) for v in np.percentile(r, (10, 50, 90)))
 
 
 def derived_swash_items(a_verts=None, hoop_items=None):
-    """The artwork's swash carried onto the re-derived mark's two cuts.
+    """The artwork's swash rebuilt as a stroke on the re-derived mark's two cuts.
 
     Returns (items, report).  Pass the re-derived A vertices and hoop items to avoid
     recomputing them; both default to deriving them here.
@@ -189,49 +231,78 @@ def derived_swash_items(a_verts=None, hoop_items=None):
     page = json.load(open(SRC_PATH))['AO'][0]
     src = {o['role']: o for o in page['objects']}
     items = [list(it) for it in src['white']['items']]
+    before = [list(it) for it in items]
+    turns = _departure_turns(items, src['A']['vertices'])      # before anything moves
 
-    # The four points the swash is pinned to, before and after.  The BEFORE anchors are
-    # taken from the swash's own copies of them, not from the A's vertices and the bar's
-    # item 7: the source rounds each object's coordinates independently, so those agree
-    # only to about 5e-4, and anchoring the caps to one copy while the long edges carry
-    # the other reopens that difference as a gap at all four junctions.
+    # the four points the swash is pinned to.  The BEFORE anchors come from the swash's own
+    # copies of them: the source rounds each object independently, so the A's vertices and
+    # bar item 7 agree with the swash's copies only to about 5e-4.
     nV3, nV4 = _C(a_verts[3]), _C(a_verts[4])
     nf0, nf1 = _C(hoop_items[7][1]), _C(hoop_items[7][-1])
     oV3, oV4 = _C(items[HEAD_CAP[0]][1]), _C(items[HEAD_CAP[-1]][-1])
     of0, of1 = _C(items[TAIL_CAP[0]][1]), _C(items[TAIL_CAP[-1]][-1])
 
-    k_head, k_tail = (nV4 - nV3) / (oV4 - oV3), (nf1 - nf0) / (of1 - of0)
-    d_head, d_tail = (nV3 + nV4) / 2 - (oV3 + oV4) / 2, (nf0 + nf1) / 2 - (of0 + of1) / 2
+    # Each edge is moved along its OWN half-width vector, so at GAIN 1 nothing happens at
+    # all and each edge keeps its own sampling and its own shape.  Rebuilding both edges
+    # off a shared resampled spine is the tempting alternative and it loses exactly that:
+    # the inner edge comes back as something a 5-cubic refit misses by 0.4 mark units,
+    # against 0.11 for the artwork's own.
+    outer, inner = _walk(items, EDGE_OUTER), _walk(items, EDGE_INNER)
+    h_out, h_in = _half(outer, inner), _half(inner, outer)
 
-    # the artwork's own centre-line, the axis the width is scaled about.  Both edges are
-    # resampled head -> tail in arc fraction, which is the same pairing derive_trail uses
-    # to read a width profile back off the result.
-    inner = _edge_samples(items, EDGE_INNER)
-    outer = _edge_samples(items, EDGE_OUTER)
-    centre = [(a + b) / 2 for a, b in zip(inner, outer)]
+    # The gain ramps out at the ends, where the pairing bridges an OBLIQUE cut -- V[3] to
+    # V[4], and the hook face -- rather than crossing the ribbon.  It reports half the cut
+    # there, 3.12 units at the head against a real half-width of about 1.74, and swings to
+    # the true one within a couple of percent of arc; multiplying through that puts a
+    # moving excess on a fast-moving vector and curls the inner edge into a cusp.  A cut is
+    # not a width, so the ends keep the artwork's geometry and the blend below is what
+    # carries them out onto the cuts.
+    # The ribbon moves as ONE: the displacement is the CUTS' midpoints, common to both
+    # edges.  Anchoring each edge to its own two endpoints instead pulls them apart by the
+    # cut's whole growth, 3.73 mark units, right through the middle of the gesture -- the
+    # ribbon then widens by 1.7 units at mid-length whatever the gain is set to.  How far
+    # apart the two edges sit is the gain's business and the blend's; where the ribbon is
+    # is the spine's.
+    d_head = (nV3 + nV4) / 2 - (oV3 + oV4) / 2
+    d_tail = (nf0 + nf1) / 2 - (of0 + of1) / 2
 
-    _warp_edges(items, (EDGE_INNER, EDGE_OUTER), centre, k_head, k_tail, d_head, d_tail)
+    def place(edge, h, head, tail):
+        u = _arcfrac(edge)
+        a = 0.5 * (1 + np.cos(np.pi * np.minimum(1.0, u / END_BLEND)))
+        b = 0.5 * (1 + np.cos(np.pi * np.minimum(1.0, (1 - u) / END_BLEND)))
+        p = edge - (GAIN - 1.0) * (1.0 - a - b) * h + d_head * (1 - u) + d_tail * u
+        return p + (head - p[0]) * a + (tail - p[-1]) * b
+
+    outer = place(outer, h_out, nV3, nf1)
+    inner = place(inner, h_in, nV4, nf0)
+
+    (so, eo), (si, ei) = _fit_edge(outer, len(EDGE_OUTER)), _fit_edge(inner, len(EDGE_INNER))
+    _write_chain(items, EDGE_OUTER, outer[0], so)
+    _write_chain(items, EDGE_INNER, inner[0], si)
     _warp_cap(items, HEAD_CAP, oV3, oV4, nV3, nV4)
     _warp_cap(items, TAIL_CAP, of0, of1, nf0, nf1)
+    rotated = _match_departures(items, a_verts, turns) if DEPART else [0.0, 0.0]
 
-    gaps = []
-    for i in range(len(items)):
-        a = _C(items[i][-1]); b = _C(items[(i + 1) % len(items)][1])
-        if abs(a - b) > 1e-9:
-            gaps.append((i, abs(a - b)))
-    report = dict(
-        head_cut=(abs(oV4 - oV3), abs(nV4 - nV3)),
-        tail_face=(abs(of1 - of0), abs(nf1 - nf0)),
-        k=(abs(k_head), abs(k_tail)), gaps=gaps)
+    gaps = [(i, abs(_C(items[i][-1]) - _C(items[(i + 1) % len(items)][1])))
+            for i in range(len(items))
+            if abs(_C(items[i][-1]) - _C(items[(i + 1) % len(items)][1])) > 1e-9]
+    r = _width_ratio(before, items)
+    report = dict(head_cut=(abs(oV4 - oV3), abs(nV4 - nV3)),
+                  tail_face=(abs(of1 - of0), abs(nf1 - nf0)),
+                  gain=GAIN, fit_err=(eo, ei), ratio=r,
+                  departures_rotated_deg=rotated, gaps=gaps)
     return items, report
 
 
 if __name__ == '__main__':
     it, r = derived_swash_items()
-    print('  head cut  %.4f -> %.4f mark units  (x%.4f)'
+    print('  head cut  %.4f -> %.4f mark units  (x%.4f, absorbed by the cut going oblique)'
           % (r['head_cut'][0], r['head_cut'][1], r['head_cut'][1] / r['head_cut'][0]))
-    print('  tail face %.4f -> %.4f mark units  (x%.4f)'
+    print('  tail face %.4f -> %.4f  (x%.4f)'
           % (r['tail_face'][0], r['tail_face'][1], r['tail_face'][1] / r['tail_face'][0]))
+    print('  width x%.4f asked for; body delivered %.3f / %.3f / %.3f  (p10/p50/p90)'
+          % ((r['gain'],) + r['ratio']))
+    print('  refit worst %.4f (outer) / %.4f (inner) mark units' % r['fit_err'])
+    print('  departures rotated back by %s deg'
+          % ', '.join('%.2f' % v for v in r['departures_rotated_deg']))
     print('  %d items, %d continuity gaps' % (len(it), len(r['gaps'])))
-    for i, g in r['gaps']:
-        print('    gap after item %d: %.6f' % (i, g))
