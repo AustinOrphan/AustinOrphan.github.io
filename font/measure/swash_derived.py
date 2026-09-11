@@ -76,7 +76,7 @@ PATH_REACH = float(os.environ.get('ORPHAN_SWASH_PATH', 0.0))    # 0 = one cut-le
 # stays at a tenth of the curvature the stroke itself carries: at 4% of the trail it is
 # 8.5%, at 5% it is 10.1%, at 6% 15.3%, and at one cut-length 86% -- by which point the S is
 # plainly visible and the inner edge has stopped being fittable.  See `straighten`.
-HOLD = tuple(float(v) for v in os.environ.get('ORPHAN_SWASH_HOLD', '0.05,0.15').split(','))
+HOLD = tuple(float(v) for v in os.environ.get('ORPHAN_SWASH_HOLD', '0.025,0.08').split(','))
 GAIN = float(os.environ.get('ORPHAN_SWASH_GAIN', 0.0)) or rules.RING_GAIN
 
 
@@ -396,48 +396,16 @@ def derived_swash_items(a_verts=None, hoop_items=None):
 
     # Leaving the foot, the two edges disagree about what they are doing: the outer runs
     # ALONG the stroke, 77.6 deg, and the inner runs ACROSS it, 16.9 deg, so the swash opens
-    # out of the cut as a mouth rather than carrying on as a stroke.  On the artwork that is
-    # a small wedge; against the A's 60% wider foot it is a long spike of leg with the hook
-    # hung off the side of it.
+    # out of the cut as a mouth rather than carrying on as a stroke.
     #
-    # So over the head the inner edge is the OUTER edge offset by the cut, which is the one
-    # thing that makes the pair parallel, and it blends back to its own shape by PATH_REACH.
-    # The midline is already right -- the artwork leaves the foot within 0.2 deg of the
-    # leg's axis -- so the stroke now runs out of the leg parallel-sided and then turns,
-    # rather than turning the moment it leaves.
-    # Over the same one cut-length as the flare and the straight run.  ONE length governs
-    # the whole head: the foot is one cut-length wide, so for one cut-length of travel the
-    # stroke is still leaving the foot -- it runs straight, it stays parallel-sided, and it
-    # carries the foot's extra width -- and then it turns, easing onto the artwork's own
-    # path over the two cut-lengths after that.  Holding the edges parallel much further
-    # closes the hook's mouth on itself; by a third of the trail the outline self-intersects.
-    ui = _arcfrac(inner)
-    w = 0.5 * (1 + np.cos(np.pi * np.minimum(1.0, ui / (PATH_REACH or reach))))
-    inner = inner + w * (_at(outer, ui) + (nV4 - nV3) - inner)
-
-    # The OUTER edge leaves the foot cut running along the leg edge it meets, so the leg
-    # runs on into the hook rather than the hook being stuck onto it.  The artwork is 1.04
-    # deg off parallel there, near enough that it already reads as a continuation, and the
-    # 1 deg is given up so the rule is exact and follows the leg: R2c's flare turns that
-    # edge 2.3 deg and the swash turns with it.
-    #
-    # The INNER edge is left to follow the rebuilt geometry.  It has no anchor in the leg
-    # to inherit: V[4] is the MOUTH of the hook, where the ribbon opens away from the leg
-    # rather than running on down it.  Forcing it parallel to the leg's other edge makes
-    # its first piece leave steeply downhill and double back to a knot that is up and to
-    # the right -- a hairpin inside one short segment, curvature peaking at 78 against the
-    # artwork's 0.77.  Imposing the ARTWORK's own angle there is not much better: the
-    # wider foot has swung that piece's chord 20 deg, so the old angle no longer suits it
-    # and the fit answers by collapsing both handles to about an eighth of the chord,
-    # which is a straight line with a corner at each end.
-    #
-    # It goes in as a tangent CONSTRAINT on the fit.  Fitting first and rotating the handle
-    # afterwards puts the angle right and the curve wrong: the piece has to reach the same
-    # far knot from a direction it was not fitted for, and it arrives stalled -- sample steps
-    # of 0.010 against a median of 0.111, curvature peaking at 104 where the artwork peaks at
-    # 0.77.  That is a cusp a hundredth of a unit across sitting in the first knot of the
-    # hook, which is exactly the kind of bulge this is meant to remove.
-    t_out = aV[3] - aV[2]
+    # That is fixed by constraining the inner edge's departure TANGENT, never its position.
+    # Placing it -- running it parallel to the outer edge, offset by the cut, over the head
+    # -- does make the pair parallel, and it overrides the width while it does so: the cut
+    # is 9.98 units long where the ribbon just past it is meant to be 4.6, so the stroke is
+    # held open at the cut's width and then has to collapse back, leaving a waist of 4.17
+    # where the profile asks for 5.12.  The artwork swells smoothly from 3.47 to 5.93 and
+    # never reverses; that waist is the one thing in the whole head that does.
+    t_out, t_in = aV[3] - aV[2], aV[4] - aV[5]
     keep = False                       # the artwork's knots only suit the artwork's path
     (so, eo), (si, ei) = (_fit_edge(outer, EDGE_OUTER, t_out / abs(t_out), keep),
                           _fit_edge(inner, EDGE_INNER, None, keep))
