@@ -71,13 +71,12 @@ NS = 1500                                                     # samples along th
 END_BLEND = float(os.environ.get('ORPHAN_SWASH_END', 0.06))   # residual anchoring span
 HEAD_REACH = float(os.environ.get('ORPHAN_SWASH_REACH', 0.0))   # 0 = one cut-length of travel
 PATH_REACH = float(os.environ.get('ORPHAN_SWASH_PATH', 0.0))    # 0 = one cut-length, as above
-# How long the stroke may run STRAIGHT out of the leg before it starts to turn, and where
-# it is back on the artwork's path, as fractions of the trail.  Off by default: running it
-# straight for a cut-length and easing back over the two after reads as a longer, fuller
-# stroke in outline, but it is bought by bending the hook, and the hook will not take it --
-# the inner edge stops being fittable (2.32 mark units against 0.25) and derive_trail's own
-# mask guard rejects the result.
-HOLD = tuple(float(v) for v in os.environ.get('ORPHAN_SWASH_HOLD', '0,0').split(','))
+# How long the stroke runs STRAIGHT out of the leg before it turns, and where it is back on
+# the artwork's path, as fractions of arc length.  Set where the counter-turn the run forces
+# stays at a tenth of the curvature the stroke itself carries: at 4% of the trail it is
+# 8.5%, at 5% it is 10.1%, at 6% 15.3%, and at one cut-length 86% -- by which point the S is
+# plainly visible and the inner edge has stopped being fittable.  See `straighten`.
+HOLD = tuple(float(v) for v in os.environ.get('ORPHAN_SWASH_HOLD', '0.05,0.15').split(','))
 GAIN = float(os.environ.get('ORPHAN_SWASH_GAIN', 0.0)) or rules.RING_GAIN
 
 
@@ -179,7 +178,7 @@ def _half(a_edge, b_edge, glide=0.02):
     return h
 
 
-def _fit_edge(pts, walk, head_tangent=None, n=WALK_N):
+def _fit_edge(pts, walk, head_tangent=None, per_item=True, n=WALK_N):
     """One cubic per SOURCE item, over that item's own stretch of the edge.
 
     Refitting the edge as a whole and letting the fitter place its own knots by worst error
@@ -205,6 +204,13 @@ def _fit_edge(pts, walk, head_tangent=None, n=WALK_N):
     tan = tan / np.abs(tan)
     if head_tangent is not None:
         tan[0] = head_tangent               # a CONSTRAINT on the fit, not a twist after it
+    if not per_item:
+        # The source's knots only suit the source's shape.  Once the path is reshaped the
+        # head needs its knots somewhere else, and holding them where the artwork put them
+        # costs the inner edge 3 to 15 mark units of fit.  derive_trail reads items 6-10 as
+        # a RUN, so where the knots fall inside it is ours to choose.
+        return fit_cubics([(z.real, z.imag) for z in pts],
+                          [(z.real, z.imag) for z in tan], nseg=len(walk))
     segs, err = [], 0.0
     for k in range(len(walk)):
         a = k * (n - 1)
@@ -334,13 +340,22 @@ def derived_swash_items(a_verts=None, hoop_items=None):
 
     def straighten(mid, hold, release):
         """Run the midline straight out along the leg for `hold`, back on its own path by
-        `release`.
+        `release`.  Blended by POSITION, so past `release` the path IS the artwork's and the
+        tail still arrives at the hoop exactly.
 
-        Blended by POSITION, not by direction.  Rotating each tangent and re-integrating
-        holds the direction correctly but every later point inherits the correction, so the
-        tail walks off the hoop -- 13 to 45 mark units of it, depending how long the hold
-        is.  Blending toward a straight ray and back again keeps the change local: past
-        `release` the path is the artwork's, to the unit.
+        This buys the straight run with an INFLECTION: the stroke bends off the artwork's
+        curve, runs straight, and has to bend the other way to rejoin before resuming the
+        curl.  That is not an artefact of this particular blend, it is the geometry.  Fix
+        the arc length and ask for a straight run at the head and a single-signed turn after
+        it, and the far end misses the hook face by 13 to 34 mark units depending how long
+        the run is; let a solver close that by choosing the length, and it does -- at 2.27
+        times the length, winding the same 266 degrees round a completely different gesture.
+        There is no straight run at this arc length that lands on the hoop without one.
+
+        So `hold` is a dial on a real trade, and it is set where the counter-turn stays
+        under a tenth of the curvature the stroke itself carries -- visible in the numbers,
+        not in the mark.  Turn it up with ORPHAN_SWASH_HOLD and the stroke leaves the leg
+        straighter for longer and the S becomes something you can see.
         """
         if release <= hold:
             return mid
@@ -354,10 +369,22 @@ def derived_swash_items(a_verts=None, hoop_items=None):
     axis = e1 / abs(e1) + e2 / abs(e2)
     axis = axis / abs(axis)
 
+    # Reshaped ONCE, on the outer edge's copy of the midline, and both edges then read the
+    # same displacement off it by arc fraction.  Reshaping each edge's own copy separately
+    # is the trap: they are the same curve but parameterised differently, so they come back
+    # as two different curves and the pair stops bounding a ribbon at all -- the measured
+    # width collapses to a quarter of the artwork's.
+    mid_ref = outer + h_out
+    disp_ref = straighten(mid_ref, HOLD[0], HOLD[1]) - mid_ref
+    u_ref = _arcfrac(mid_ref)
+
     def place(edge, h, head, tail):
         u = _arcfrac(edge)
         g = GAIN + (k_head - GAIN) * 0.5 * (1 + np.cos(np.pi * np.minimum(1.0, u / reach)))
-        mid = straighten(edge + h, HOLD[0], HOLD[1])
+        mid = edge + h
+        um = _arcfrac(mid)
+        mid = mid + (np.interp(um, u_ref, disp_ref.real)
+                     + 1j * np.interp(um, u_ref, disp_ref.imag))
         p = mid - g * h + d_head * (1 - u) + d_tail * u
         a = 0.5 * (1 + np.cos(np.pi * np.minimum(1.0, u / END_BLEND)))
         b = 0.5 * (1 + np.cos(np.pi * np.minimum(1.0, (1 - u) / END_BLEND)))
@@ -411,8 +438,9 @@ def derived_swash_items(a_verts=None, hoop_items=None):
     # 0.77.  That is a cusp a hundredth of a unit across sitting in the first knot of the
     # hook, which is exactly the kind of bulge this is meant to remove.
     t_out = aV[3] - aV[2]
-    (so, eo), (si, ei) = (_fit_edge(outer, EDGE_OUTER, t_out / abs(t_out)),
-                          _fit_edge(inner, EDGE_INNER))
+    keep = False                       # the artwork's knots only suit the artwork's path
+    (so, eo), (si, ei) = (_fit_edge(outer, EDGE_OUTER, t_out / abs(t_out), keep),
+                          _fit_edge(inner, EDGE_INNER, None, keep))
     _write_chain(items, EDGE_OUTER, outer[0], so)
     _write_chain(items, EDGE_INNER, inner[0], si)
     _warp_cap(items, HEAD_CAP, oV3, oV4, nV3, nV4)
@@ -441,6 +469,8 @@ if __name__ == '__main__':
     print("  head gain x%.4f (the cut's own growth) spent by %d%% of the trail;"
           ' the anchors need %.4f units of forcing' % (r['k_head'], round(r['reach'] * 100),
                                                        r['residual']))
+    print('  straight out of the leg for %g%% of the trail, back on its path by %g%%'
+          % (HOLD[0] * 100, HOLD[1] * 100))
     print('  refit worst %.4f (outer) / %.4f (inner) mark units' % r['fit_err'])
     print('  edges leave the foot off parallel with the leg by %s deg'
           % ', '.join('%.2f' % v for v in r['departures_rotated_deg']))
