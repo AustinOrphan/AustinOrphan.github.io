@@ -84,6 +84,13 @@ HOLD = tuple(float(v) for v in os.environ.get('ORPHAN_SWASH_HOLD', '0.025,0.08')
 # width between the two arms of the curl.
 OPEN = float(os.environ.get('ORPHAN_SWASH_OPEN', 0.86))
 OPEN_TO = float(os.environ.get('ORPHAN_SWASH_OPEN_TO', 0.30))
+# How much deeper the bottom of the hook sits, in mark units, and over how much of the
+# trail either side of it that is spread.  Opening the curvature deepens too, but it
+# deepens by inflating the whole curl -- to reach 1.8 units it throws the swash out to
+# x=117 against the artwork's 94.5, well outside the mark -- so the depth is put in
+# locally instead, as a bump on the midline centred on the hook's lowest point.
+DEEPEN = float(os.environ.get('ORPHAN_SWASH_DEEPEN', 2.9))
+DEEPEN_SPAN = float(os.environ.get('ORPHAN_SWASH_DEEPEN_SPAN', 0.22))
 GAIN = float(os.environ.get('ORPHAN_SWASH_GAIN', 0.0)) or rules.RING_GAIN
 
 
@@ -406,7 +413,23 @@ def derived_swash_items(a_verts=None, hoop_items=None):
         P = P - (P[-1] - m[-1]) * (v * v * (3 - 2 * v))
         return np.interp(d / d[-1], t, P.real) + 1j * np.interp(d / d[-1], t, P.imag)
 
-    mid_ref = open_hook(outer + h_out, OPEN, OPEN_TO)
+    def deepen(mid, amount, span):
+        """Drop the bottom of the hook by `amount`, tapering to nothing `span` either side."""
+        if amount == 0.0:
+            return mid
+        u = _arcfrac(mid)
+        u0 = u[int(np.argmin(mid.imag))]                  # the hook's lowest point
+        # The bump has to reach zero at BOTH ends of the trail, and the hook's lowest point
+        # sits at about 15% of it, closer to the head than `span`.  A symmetric window
+        # therefore still has height left at u=0 and drags the head off the foot cut -- 1.53
+        # mark units of it, which the end blend then has to force back.  So the left side
+        # tapers over however much room there actually is.
+        left = np.clip(1.0 - (u0 - u) / max(u0, 1e-6), 0.0, 1.0)
+        right = np.clip(1.0 - (u - u0) / span, 0.0, 1.0)
+        w = np.where(u < u0, left, right)
+        return mid - 1j * amount * 0.5 * (1 - np.cos(np.pi * w))
+
+    mid_ref = deepen(open_hook(outer + h_out, OPEN, OPEN_TO), DEEPEN, DEEPEN_SPAN)
     disp_ref = straighten(mid_ref, HOLD[0], HOLD[1]) - (outer + h_out)
     u_ref = _arcfrac(mid_ref)
 
