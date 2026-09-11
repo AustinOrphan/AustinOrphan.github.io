@@ -29,8 +29,8 @@
    },
    "right_foot_tip": {
     "src": {
-     "x": 81.2,
-     "y": 4.8
+     "x": 81.0,
+     "y": 5.6
     },
     "site": {
      "x": 8737.0,
@@ -40,9 +40,9 @@
   },
   "residual": {
    "samples": 630,
-   "mean": 65.87107701033406,
-   "p95": 188.42850789184516,
-   "max": 306.52180130127505,
+   "mean": 3.175871038922681,
+   "p95": 8.337514885046831,
+   "max": 18.401395088472825,
    "unit": "site path units (1 unit = 0.1 viewBox unit)",
    "note": "distance from each site-path sample to the nearest transformed source outline"
   }
@@ -50,24 +50,24 @@
  "A": {
   "vertices": {
    "ltip": {
-    "x": 1274.1,
-    "y": 1100.2
+    "x": 1232.5,
+    "y": 1018.1
    },
    "lcut": {
-    "x": 1971.5,
-    "y": 1302.5
+    "x": 2323.7,
+    "y": 1334.6
    },
    "counter": {
-    "x": 5831.9,
-    "y": 9274.4
+    "x": 5845.4,
+    "y": 9416.0
    },
    "rcut": {
-    "x": 8135.8,
-    "y": 474.2
+    "x": 7751.6,
+    "y": 730.4
    },
    "rtip": {
-    "x": 8737.0,
-    "y": 194.0
+    "x": 8712.1,
+    "y": 282.6
    },
    "apex": {
     "x": 5916.0,
@@ -75,63 +75,63 @@
    }
   },
   "left_foot_cut_mid": {
-   "x": 1622.8,
-   "y": 1201.3
+   "x": 1778.1,
+   "y": 1176.4
   },
   "right_foot_cut_mid": {
-   "x": 8436.4,
-   "y": 334.1
+   "x": 8231.8,
+   "y": 506.5
   },
   "leg_left_centre": {
-   "d": "M1623 1201 L5916 10247",
-   "length": 10012.759227492412
+   "d": "M1778 1176 L5916 10247",
+   "length": 9969.877256874892
   },
   "leg_right_centre": {
-   "d": "M5916 10247 L8436 334",
-   "length": 10228.27292295324
+   "d": "M5916 10247 L8232 506",
+   "length": 10012.03490876855
   },
-  "polygon_d": "M1274 1100 L1972 1302 L5832 9274 L8136 474 L8737 194 L5916 10247 Z",
-  "left_leg_quad_d": "M5916 10247 L1274 1100 L1972 1302 L5892 9269 L5962 10083 Z",
-  "right_leg_quad_d": "M5916 10247 L5832 9274 L8136 474 L8737 194 Z",
+  "polygon_d": "M1232 1018 L2324 1335 L5845 9416 L7752 730 L8712 283 L5916 10247 Z",
+  "left_leg_quad_d": "M5916 10247 L1232 1018 L2324 1335 L5905 9411 L5962 10082 Z",
+  "right_leg_quad_d": "M5916 10247 L5845 9416 L7752 730 L8712 283 Z",
   "note": "leg pieces: the A polygon splits at apex-counter into two quads, one per leg, so each leg's mask reveals only its own leg"
  },
  "bar": {
-  "outline_d": "M10728 6487 C10658 6782 10197 6930 9472 6951 C9410 6952 9347 6953 9282 6953 C8270 6952 6821 6732 5216 6330 C3929 6008 2757 5628 1862 5240 C1665 5155 1481 5070 1313 4984 C505 4575 44 4171 122 3834 C203 3483 809 3416 1742 3521 C1689 3627 1640 3735 1596 3845 C1239 3842 1024 3886 1000 3983 C976 4077 1131 4209 1424 4366 C1572 4445 1754 4530 1969 4620 C2794 4965 4075 5374 5533 5739 C7122 6136 8550 6388 9434 6448 C9502 6453 9567 6457 9629 6459 C10066 6475 10331 6433 10358 6324 C10387 6211 10156 6042 9736 5841 C9744 5758 9749 5673 9752 5588 C10425 5890 10798 6190 10728 6487 Z",
-  "centre_d": "M1669 3683 C1394 3661 1104 3640 832 3705 C571 3773 467 3935 647 4168 C736 4277 849 4363 964 4441 C1258 4637 1582 4787 1906 4925 C2311 5098 2725 5249 3142 5389 C3933 5654 4736 5879 5546 6077 C6317 6265 7095 6429 7879 6547 C8414 6628 10098 6882 10490 6498 C10570 6406 10553 6303 10488 6207 C10319 5978 9996 5832 9744 5715",
+  "outline_d": "M10812 6522 C10699 7000 9731 7053 9436 7062 C9398 7065 9340 7069 9272 7069 C7885 7067 6504 6804 5179 6473 C4039 6187 2911 5845 1809 5369 C1579 5269 1448 5205 1254 5107 C1046 5001 -211 4385 -76 3801 C67 3185 1537 3421 1776 3448 L1596 3845 C1239 3842 1024 3886 1000 3983 C976 4077 1131 4209 1424 4366 C1572 4445 1754 4530 1969 4620 C2794 4965 4075 5374 5533 5739 C7122 6136 8550 6388 9434 6448 C9502 6453 9567 6457 9629 6459 C10066 6475 10331 6433 10358 6324 C10387 6211 10156 6042 9736 5841 L9756 5531 C9970 5627 10926 6036 10812 6522 Z",
+  "centre_d": "M1686 3647 C1406 3620 475 3518 456 3946 C466 4159 676 4321 835 4437 C1073 4608 1337 4741 1602 4865 C2013 5057 2438 5219 2865 5370 C3659 5649 4467 5881 5282 6087 C6136 6302 6998 6488 7869 6615 C8199 6662 8531 6701 8863 6727 C9278 6760 10214 6836 10524 6527 C10620 6420 10598 6312 10522 6201 C10343 5959 10013 5809 9746 5686",
   "centre_segments": 10,
-  "centre_length": 13038.50937223862,
+  "centre_length": 13434.86414170603,
   "centre_marks_fraction_of_length": {
    "left_hook_tip": 0.0,
-   "left_hook_bend": 0.09139360272390568,
-   "bar_left_end": 0.18145305401771172,
-   "crosses_left_leg": 0.3726730012651749,
-   "crosses_right_leg": 0.6263351242929198,
-   "bar_right_end": 0.8312221565173988,
-   "right_hook_bend": 0.9146105151243361,
+   "left_hook_bend": 0.09873195913275153,
+   "bar_left_end": 0.19412820852716142,
+   "crosses_left_leg": 0.3931960232851077,
+   "crosses_right_leg": 0.6224367969149254,
+   "bar_right_end": 0.8272192793725973,
+   "right_hook_bend": 0.9126090026581497,
    "right_hook_tip": 1.0
   },
   "left_hook_tip": {
-   "x": 1669.1,
-   "y": 3683.3
+   "x": 1685.7,
+   "y": 3646.7
   },
   "right_hook_tip": {
-   "x": 9744.0,
-   "y": 5714.7
+   "x": 9745.9,
+   "y": 5686.0
   },
   "bar_left_end": {
-   "x": 1368.2,
-   "y": 4675.1
+   "x": 1338.5,
+   "y": 4736.2
   },
   "bar_right_end": {
-   "x": 9550.2,
-   "y": 6704.8
+   "x": 9547.9,
+   "y": 6761.1
   },
   "widths": {
-   "left_hook": 890.768424404363,
-   "run_mid": 650.4343002874341,
-   "run_left": 605.2115592887967,
-   "run_right": 499.35114048938607,
-   "right_hook": 516.2115426191472
+   "left_hook": 1092.133219363822,
+   "run_mid": 797.4567894399419,
+   "run_left": 740.4856483621003,
+   "run_right": 611.9421928023099,
+   "right_hook": 632.8715678544385
   },
   "note": "runs from the LEFT hook tip, around the hook, left-to-right along the bar, to the RIGHT hook tip; the first point equals the last point of the trail"
  },
@@ -142,63 +142,63 @@
    "r": 4233.51658501917
   },
   "inner": {
-   "cx": 5687.812295698434,
-   "cy": 5590.013361953432,
-   "r": 3843.2461312924834
+   "cx": 5725.027111990582,
+   "cy": 5627.329226189338,
+   "r": 3755.047869104584
   },
   "counter_offset": {
-   "dx": 164.6726690459036,
-   "dy": 165.11979834165504,
-   "length": 233.19870440268429,
-   "angle_deg": 45.07768099147041
+   "dx": 201.8874853380512,
+   "dy": 202.43566257756174,
+   "length": 285.89990244723464,
+   "angle_deg": 45.077680991470565
   },
   "stroke": {
-   "thick": 623.4691581293706,
-   "thin": 157.07174932400207,
-   "mean": 390.27045372668636
+   "thick": 764.3686183618202,
+   "thin": 192.56881346735094,
+   "mean": 478.4687159145856
   },
   "thin_circle": {
    "cx": 5523.139626652531,
    "cy": 5424.893563611777,
-   "r": 4154.980710357168,
+   "r": 4137.232178285494,
    "note": "centred on the OUTER circle; this radius keeps a thin stroke inside the ring band all round (band from the outer centre is [r_inner+offset, r_outer] at the thin side)",
-   "band_inner_at_thin_side": 4076.4448356951675
+   "band_inner_at_thin_side": 4040.9477715518187
   },
   "thicken": {
    "note": "to thicken with the outer edge fixed: r(t) = r_outer - w(t)/2 while w goes thin -> mean; at w = mean the uniform circle matches the true ring on the outer edge and on the average inner edge",
-   "r_at_mean_weight": 4038.3813581558265
+   "r_at_mean_weight": 3994.282227061877
   }
  },
  "stroke_widths": {
   "unit": "site path units",
   "pt": 106.23230596751567,
   "leg_mask": {
-   "covering_halfwidth_L": 397.28398990871665,
-   "covering_halfwidth_R": 331.6619946617056,
-   "recommended": 860.0,
+   "covering_halfwidth_L": 568.0832807927457,
+   "covering_halfwidth_R": 529.9012749383904,
+   "recommended": 1230.0,
    "note": "stroke along apex->foot-cut midpoint, round caps; must be >= 2*covering halfwidth"
   },
   "bar_mask": {
-   "covering_halfwidth": 445.9524895667049,
-   "recommended": 970.0,
+   "covering_halfwidth": 546.6307074085402,
+   "recommended": 1190.0,
    "bar_widths": {
-    "left_hook": 890.768424404363,
-    "run_mid": 650.4343002874341,
-    "run_left": 605.2115592887967,
-    "run_right": 499.35114048938607,
-    "right_hook": 516.2115426191472
+    "left_hook": 1092.133219363822,
+    "run_mid": 797.4567894399419,
+    "run_left": 740.4856483621003,
+    "run_right": 611.9421928023099,
+    "right_hook": 632.8715678544385
    },
    "note": "the hooks are wider across the curl than the runs; the recommended value covers the whole outline"
   },
   "trail": {
-   "recommended": 380.0,
+   "recommended": 460.0,
    "note": "0.6 of the bar run weight (the clip measures 0.55-0.62), round caps; the weight of the trail=\"stroke\" mode, and only that mode: the default draws the swash outline itself. See trail_from_swash in derive_trail.py."
   },
   "thin_circle": {
-   "recommended": 100.0,
+   "recommended": 120.0,
    "note": "about a quarter of the ring mean weight"
   },
-  "ring_mean": 390.27045372668636
+  "ring_mean": 478.4687159145856
  },
  "trail_from_swash": {
   "note": "AUTHORITATIVE. The pen trail the component renders: written by derive_trail.py from the Illustrator swash. Use centre_joined_d (the sweep path / the trail=\"stroke\" line), outline_joined_d (the filled swash) and mask (the reveal path and its fractions); outline_d / centre_d are the same shape before the join fix, kept for reference.",

@@ -20,6 +20,13 @@ ap = argparse.ArgumentParser()
 ap.add_argument('--ai', default=str(ROOT.parent / 'font' / 'font' / 'source' / 'ai_objects.json'))
 ap.add_argument('--logo', default=str(ROOT / 'src' / 'components' / 'logo-mark.ts'),
                 help='the site path: logo-mark.ts (LOGO_MARK_D) or an .astro/.svg file with <path d="...">')
+ap.add_argument('--anchors', default=None,
+                help='where the two transform anchors come from; defaults to --ai. The source -> site '
+                     'transform is pinned to the A\'s apex and right foot tip against two recorded site '
+                     'coordinates, so those two vertices DEFINE the frame. Feed --ai a description of a '
+                     're-derived mark and the foot tip moves with the stroke, which drags the whole frame '
+                     'with it -- 106.232 to 107.177 and the origin 100 units away. Point this at the '
+                     'canonical ai_objects.json and the frame stays put while the shapes come from --ai.')
 args = ap.parse_args()
 
 # ---------------------------------------------------------------- source objects
@@ -36,12 +43,20 @@ bar_segs = [seg(i) for i in objs['bar']['items']]
 sw_segs = [seg(i) for i in objs['white']['items']]
 A_v = [C(v) for v in objs['A']['vertices']]  # ltip, lcut, counter, rcut, rtip, apex
 L_TIP, L_CUT, COUNTER, R_CUT, R_TIP, APEX = A_v
+# The two anchors that pin the frame. They are vertices, so they move if --ai describes a mark whose
+# strokes have changed; --anchors keeps them on the artwork so the coordinate system does not drift.
+_anch = objs
+if args.anchors and args.anchors != args.ai:
+    _ap = json.load(open(args.anchors))['AO'][0]
+    _anch = {o['role']: o for o in _ap['objects']}
+_A_anchor = [C(v) for v in _anch['A']['vertices']]
+ANCHOR_R_TIP, ANCHOR_APEX = _A_anchor[4], _A_anchor[5]
 ring_o = objs['ring']['outer']; ring_i = objs['ring']['inner']
 
 # ---------------------------------------------------------------- similarity transform
 # source pt -> site path units, from the two vertex correspondences given in the brief
-src1, dst1 = APEX, complex(5916, 10247)
-src2, dst2 = R_TIP, complex(8737, 194)
+src1, dst1 = ANCHOR_APEX, complex(5916, 10247)
+src2, dst2 = ANCHOR_R_TIP, complex(8737, 194)
 a = (dst2 - dst1) / (src2 - src1)          # complex scale*rotation
 b = dst1 - a * src1
 S = abs(a); THETA = math.degrees(math.atan2(a.imag, a.real))
