@@ -68,7 +68,8 @@ EDGE_OUTER = [(3, True), (2, True), (1, True), (0, True), (14, True), (13, True)
 DEPARTURES = ((3, 4, 3, (2, 3)), (6, 1, 2, (4, 5)))
 
 NS = 1500                                                     # samples along the spine
-END_BLEND = float(os.environ.get('ORPHAN_SWASH_END', 0.06))   # where the cuts are met
+END_BLEND = float(os.environ.get('ORPHAN_SWASH_END', 0.06))   # residual anchoring span
+HEAD_REACH = float(os.environ.get('ORPHAN_SWASH_REACH', 0.0))   # 0 = one cut-length of travel
 GAIN = float(os.environ.get('ORPHAN_SWASH_GAIN', 0.0)) or rules.RING_GAIN
 DEPART = os.environ.get('ORPHAN_SWASH_DEPART', '1') != '0'    # 0 shows the rebuild's angles
 
@@ -86,7 +87,10 @@ def _seg_pts(it, n=160):
             + t ** 3 * P[3] for t in ts]
 
 
-def _walk(items, walk, n=160):
+WALK_N = 160
+
+
+def _walk(items, walk, n=WALK_N):
     """The edge as one polyline, head -> tail."""
     pts = []
     for k, rev in walk:
@@ -144,16 +148,41 @@ def _half(a_edge, b_edge, glide=0.02):
     the smoothed parameter rather than being averaged, so neither edge is distorted.
     """
     t = _smooth(_arcfrac(b_edge)[_pair(a_edge, b_edge)], glide)
-    t = np.clip(np.maximum.accumulate(t), 0.0, 1.0)
+    t = np.maximum.accumulate(t)
+    # Span [0, 1] exactly.  Smoothing a monotone rising map lifts its first value off zero,
+    # which would leave the half-width vector at the head pointing somewhere just short of
+    # the far side of the cut -- and the head's whole anchoring rests on that vector BEING
+    # the half-cut, so the ends would then need almost two mark units of forcing to reach
+    # the cut they are supposed to land on by construction.
+    t = np.clip((t - t[0]) / (t[-1] - t[0]), 0.0, 1.0)
     return (_at(b_edge, t) - a_edge) / 2
 
 
-def _fit_edge(pts, nseg):
-    P = [(z.real, z.imag) for z in pts]
-    t = np.gradient(pts)
-    t = t / np.abs(t)
-    T = [(z.real, z.imag) for z in t]
-    return fit_cubics(P, T, nseg=nseg)
+def _fit_edge(pts, walk, n=WALK_N):
+    """One cubic per SOURCE item, over that item's own stretch of the edge.
+
+    Refitting the edge as a whole and letting the fitter place its own knots by worst error
+    puts them where the curve strays most, which is the middle of the loop, and leaves the
+    head sharing a piece with a long run behind it.  Averaged over that piece the head
+    comes out straight -- spine curvature 0.001 where the artwork has 0.088 -- so the
+    stroke runs out of the leg dead flat and then snaps into the curl a mark unit later,
+    which is the break you see at the junction rather than a flow into the hook.
+
+    The artwork's own knots do not have that problem: a designer put them where the gesture
+    changes, and item 3 is the head's own piece.  So they are kept, and each item is fitted
+    over the stretch it already covered.  It keeps the source's 15-item topology honestly
+    too, rather than reusing the count while moving every boundary.
+    """
+    segs, err = [], 0.0
+    for k in range(len(walk)):
+        P = pts[k * (n - 1):k * (n - 1) + n]
+        t = np.gradient(P)
+        t = t / np.abs(t)
+        one, e = fit_cubics([(z.real, z.imag) for z in P],
+                            [(z.real, z.imag) for z in t], nseg=1)
+        segs += one
+        err = max(err, e)
+    return segs, err
 
 
 def _write_chain(items, walk, start, segs):
@@ -250,33 +279,44 @@ def derived_swash_items(a_verts=None, hoop_items=None):
     outer, inner = _walk(items, EDGE_OUTER), _walk(items, EDGE_INNER)
     h_out, h_in = _half(outer, inner), _half(inner, outer)
 
-    # The gain ramps out at the ends, where the pairing bridges an OBLIQUE cut -- V[3] to
-    # V[4], and the hook face -- rather than crossing the ribbon.  It reports half the cut
-    # there, 3.12 units at the head against a real half-width of about 1.74, and swings to
-    # the true one within a couple of percent of arc; multiplying through that puts a
-    # moving excess on a fast-moving vector and curls the inner edge into a cusp.  A cut is
-    # not a width, so the ends keep the artwork's geometry and the blend below is what
-    # carries them out onto the cuts.
+    # At the cut the gain is the CUT'S OWN growth, not the body's.  The pairing bridges an
+    # oblique cut at each end rather than crossing the ribbon, so what it reports there is
+    # the half-cut -- and multiplying the half-cut by how much the cut grew lands the edges
+    # on the new cut exactly, with nothing left for a blend to force.  Ramping the gain out
+    # to 1.0 at the ends instead, which is what an earlier cut of this did, leaves the pen
+    # at the ARTWORK's width where the A's foot is now 60% wider: the leg arrives 7.76 mark
+    # units across and the hook leaves at 3.48, a step of 0.45 where the artwork steps 0.72,
+    # and the stroke visibly drops rather than flowing on into the hook.
+    #
+    # At the tail the two already agree -- the hook face grew by RING_GAIN, which is the
+    # body's gain -- so only the head has a flare to spend.  It is spent over ONE
+    # CUT-LENGTH of travel, which is a measurement rather than a taste: the foot's
+    # influence on the stroke leaving it reaches as far along as the foot is wide, so a
+    # wider foot spends its flare over a proportionally longer run and the rule holds at
+    # any weight.  Here that is 9.9763 units of a 135.2580-unit edge, 7.4% of the trail.
+    k_head = abs(nV4 - nV3) / abs(oV4 - oV3)
+    reach = HEAD_REACH or abs(nV4 - nV3) / float(np.sum(np.abs(np.diff(outer))))
+
     # The ribbon moves as ONE: the displacement is the CUTS' midpoints, common to both
     # edges.  Anchoring each edge to its own two endpoints instead pulls them apart by the
     # cut's whole growth, 3.73 mark units, right through the middle of the gesture -- the
-    # ribbon then widens by 1.7 units at mid-length whatever the gain is set to.  How far
-    # apart the two edges sit is the gain's business and the blend's; where the ribbon is
-    # is the spine's.
+    # ribbon then widens by 1.7 units at mid-length whatever the gain is set to.
     d_head = (nV3 + nV4) / 2 - (oV3 + oV4) / 2
     d_tail = (nf0 + nf1) / 2 - (of0 + of1) / 2
 
     def place(edge, h, head, tail):
         u = _arcfrac(edge)
+        g = GAIN + (k_head - GAIN) * 0.5 * (1 + np.cos(np.pi * np.minimum(1.0, u / reach)))
+        p = edge - (g - 1.0) * h + d_head * (1 - u) + d_tail * u
         a = 0.5 * (1 + np.cos(np.pi * np.minimum(1.0, u / END_BLEND)))
         b = 0.5 * (1 + np.cos(np.pi * np.minimum(1.0, (1 - u) / END_BLEND)))
-        p = edge - (GAIN - 1.0) * (1.0 - a - b) * h + d_head * (1 - u) + d_tail * u
-        return p + (head - p[0]) * a + (tail - p[-1]) * b
+        return p + (head - p[0]) * a + (tail - p[-1]) * b, abs(head - p[0]), abs(tail - p[-1])
 
-    outer = place(outer, h_out, nV3, nf1)
-    inner = place(inner, h_in, nV4, nf0)
+    outer, r0, r1 = place(outer, h_out, nV3, nf1)
+    inner, r2, r3 = place(inner, h_in, nV4, nf0)
+    residual = max(r0, r1, r2, r3)
 
-    (so, eo), (si, ei) = _fit_edge(outer, len(EDGE_OUTER)), _fit_edge(inner, len(EDGE_INNER))
+    (so, eo), (si, ei) = _fit_edge(outer, EDGE_OUTER), _fit_edge(inner, EDGE_INNER)
     _write_chain(items, EDGE_OUTER, outer[0], so)
     _write_chain(items, EDGE_INNER, inner[0], si)
     _warp_cap(items, HEAD_CAP, oV3, oV4, nV3, nV4)
@@ -289,7 +329,7 @@ def derived_swash_items(a_verts=None, hoop_items=None):
     r = _width_ratio(before, items)
     report = dict(head_cut=(abs(oV4 - oV3), abs(nV4 - nV3)),
                   tail_face=(abs(of1 - of0), abs(nf1 - nf0)),
-                  gain=GAIN, fit_err=(eo, ei), ratio=r,
+                  gain=GAIN, k_head=k_head, reach=reach, residual=residual, fit_err=(eo, ei), ratio=r,
                   departures_rotated_deg=rotated, gaps=gaps)
     return items, report
 
@@ -302,6 +342,9 @@ if __name__ == '__main__':
           % (r['tail_face'][0], r['tail_face'][1], r['tail_face'][1] / r['tail_face'][0]))
     print('  width x%.4f asked for; body delivered %.3f / %.3f / %.3f  (p10/p50/p90)'
           % ((r['gain'],) + r['ratio']))
+    print("  head gain x%.4f (the cut's own growth) spent by %d%% of the trail;"
+          ' the anchors need %.4f units of forcing' % (r['k_head'], round(r['reach'] * 100),
+                                                       r['residual']))
     print('  refit worst %.4f (outer) / %.4f (inner) mark units' % r['fit_err'])
     print('  departures rotated back by %s deg'
           % ', '.join('%.2f' % v for v in r['departures_rotated_deg']))
