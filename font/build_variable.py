@@ -180,6 +180,15 @@ def main():
             run_master(w, p, otf)
             otfs.append(otf)
             made.append((w, p, ttf))
+    # Put build/glyphs.json back to the default cut.  run_master calls build_glyphs.py without
+    # --out, so every master overwrites it and the LAST one -- WEIGHT 2.00, PUSH 1.00 -- is what it
+    # holds when this finishes.  Everything downstream reads that path and says nothing: the
+    # specimen sheet was published as the Black master once already, and measure/axes.py carries
+    # the same restore for the same reason.
+    subprocess.run([sys.executable, os.path.join(HERE, 'build_glyphs.py')],
+                   check=True, cwd=HERE, capture_output=True,
+                   env={k: v for k, v in os.environ.items() if k not in ('ORPHAN_WEIGHT', 'ORPHAN_PUSH')})
+
     # One conversion for the whole set, so the masters stay interpolation-compatible.
     print(f'  converting {len(otfs)} masters to quadratic together')
     to_ttf_all(otfs, [f for _, _, f in made])
