@@ -142,10 +142,61 @@ def derive():
     return fit_union(union_polygon())
 
 
+def to_site(cs, geometry_json):
+    """Mark coordinates into the site's path units, using the transform geometry.json already fits
+    between the Illustrator source and the shipped path.  Going through that transform rather than
+    fitting a new one is what keeps the mark in the same place: every mask, viewBox and anchor in
+    the animation is expressed in these units and none of them has to move.
+
+    The check that it is the right transform: push the ARTWORK through it and the result lands on
+    the shipped path's own bounding box, 10623 x 10053 against 10622 x 10053."""
+    import math as _m
+    T = json.load(open(geometry_json))['transform']
+    s_, th = T['scale'], _m.radians(T['rotation_deg'])
+    tx, ty = T['translate']['x'], T['translate']['y']
+    co, si = _m.cos(th), _m.sin(th)
+    def f(p):
+        x, y = p
+        return (s_ * (x * co - y * si) + tx, s_ * (x * si + y * co) + ty)
+    return [c.map(f) for c in cs]
+
+
+def path_d(cs, ndigits=0):
+    """SVG path data, coordinates rounded.  The shipped path is written in whole path units -- a
+    tenth of a viewBox unit, 0.008% of the mark -- and matching that keeps the file small."""
+    r = (lambda v: int(round(v))) if ndigits == 0 else (lambda v: round(v, ndigits))
+    out = []
+    for c in cs:
+        d = ['M%s %s' % (r(c.start[0]), r(c.start[1]))]
+        for sg in c.segs:
+            if sg[0] == 'l':
+                d.append('L%s %s' % (r(sg[1][0]), r(sg[1][1])))
+            else:
+                d.append('C%s %s %s %s %s %s' % (r(sg[1][0]), r(sg[1][1]), r(sg[2][0]), r(sg[2][1]),
+                                                 r(sg[3][0]), r(sg[3][1])))
+        d.append('Z')
+        out.append(' '.join(d))
+    return ' '.join(out)
+
+
 if __name__ == '__main__':
     cs, info = derive()
     print('  union: %d contours (%d holes), %d smooth runs, worst fit %.5f mark units'
           % (info['contours'], info['holes'], info['runs'], info['worst_fit']))
-    json.dump(dict(info=info, contours=[c.to_json() for c in cs]),
-              open(os.path.join(HERE, 'build', 'mark.json'), 'w'))
+    geo = os.path.join(os.path.dirname(HERE), 'design', 'logo-animation', 'geometry.json')
+    payload = dict(info=info, contours=[c.to_json() for c in cs])
+    if os.path.exists(geo):
+        site = to_site(cs, geo)
+        from pen import bbox as _bb
+        x0, y0, x1, y1 = _bb([c.flatten() for c in site])
+        d = path_d(site)
+        payload['site_path'] = d
+        payload['site_bbox'] = [x0, y0, x1, y1]
+        print('  site units: %.0f x %.0f path units, path %d chars' % (x1 - x0, y1 - y0, len(d)))
+        # the same transform applied to the ARTWORK, as the check that it is the right one
+        acs, _ = fit_union(artwork_polygon())
+        ax0, ay0, ax1, ay1 = _bb([c.flatten() for c in to_site(acs, geo)])
+        print('  check: the artwork through the same transform is %.0f x %.0f'
+              ' (the shipped path is 10622 x 10053)' % (ax1 - ax0, ay1 - ay0))
+    json.dump(payload, open(os.path.join(HERE, 'build', 'mark.json'), 'w'))
     print('  wrote build/mark.json')
