@@ -172,6 +172,16 @@ def derived_hoop_items(per_seg=40):
         c1, c2, p3 = segs[0]
         moved_seg[j] = ['c', list(mv[0]), list(c1), list(c2), list(p3)]
 
+    # A shared endpoint sits on the boundary between two reference regions and gets pushed by each
+    # of them, so it lands in two slightly different places -- 0.29 mark units apart at the two
+    # region changes, which source_contours reads as a BREAK and the hoop arrives as three open
+    # contours instead of one closed one.  Meet in the middle and force both segments onto it.
+    for a, b in zip(OUT_RUN, OUT_RUN[1:]):
+        pa, pb = moved_seg[a][4], moved_seg[b][1]
+        mid = [(pa[0] + pb[0]) / 2, (pa[1] + pb[1]) / 2]
+        moved_seg[a][4] = list(mid)
+        moved_seg[b][1] = list(mid)
+
     out = []
     for j in range(len(items)):
         it = items[j]
