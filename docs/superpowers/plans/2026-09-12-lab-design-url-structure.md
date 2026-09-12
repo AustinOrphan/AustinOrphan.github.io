@@ -368,8 +368,10 @@ Replace the opening `<BaseLayout ...>` tag with:
 From `src/pages/logo-animation.astro`, copy three regions into `src/pages/design/ao/logo.astro`:
 
 1. Lines 9–128 (the `<main class="la-demo">` element, opening and closing tags included). Paste it inside the `<BaseLayout>`, immediately after `<WipBanner />` and *before* the existing `<main class="lab">`.
-2. Lines 131–194 and 328–430 (both `<style is:global>` blocks, tags included). Paste both after the existing `</style>` on line 252 of the original lab file.
-3. Lines 196–326 (the `<script>` block, tags included). Paste after the lab's existing `</script>` at the end of the file.
+2. Lines 131–194 and 328–430 (both `<style is:global>` blocks, tags included). Paste both immediately after the lab's own `<style is:global>…</style>` block, which is the first style block in the destination file.
+3. Lines 196–326 (the `<script>` block, tags included). Paste at the very end of the destination file, after the lab's own `<script>…</script>` block.
+
+Locate the destination positions **structurally**, by finding the lab's existing `</style>` and `</script>` closing tags. Do not use line numbers from this plan for the destination file: Step 3 rewrote its frontmatter, so every line number below that point has shifted. The source line ranges above are accurate, because `logo-animation.astro` is untouched until Step 4 completes.
 
 Astro bundles each `<script>` tag as its own module, so the two scripts' top-level declarations cannot collide.
 
