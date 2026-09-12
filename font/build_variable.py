@@ -71,6 +71,12 @@ def run_master(weight, push, out_otf):
     subprocess.run(['/opt/homebrew/bin/python3', os.path.join(HERE, 'compile_font.py')],
                    check=True, env=env, cwd=HERE, capture_output=True)
     shutil.copyfile(os.path.join(BUILD, 'OrphanDisplay-Regular.otf'), out_otf)
+    # Keep this master's own outlines too.  The OTF is the compiler's version of them, and
+    # the compiler runs removeOverlap: a boolean whose output point count depends on the
+    # geometry, so the same glyph comes back with 20 points at one weight and 18 at another
+    # even when the source is identical in both.  That was the real reason two thirds of the
+    # alphabet would not interpolate.  The VF is built from these instead.
+    shutil.copyfile(os.path.join(BUILD, 'glyphs.json'), out_otf[:-4] + '.json')
 
 
 def _split_contours(rec):
@@ -387,10 +393,31 @@ def to_ttf_all(srcs, dsts):
 
     fonts = [TTFont(s) for s in srcs]
     order = fonts[0].getGlyphOrder()
+    sources = [json.load(open(s[:-4] + '.json'))['glyphs'] for s in srcs]
     for f in fonts:
         if f.getGlyphOrder() != order:
             raise SystemExit('masters disagree about the glyph order')
     sets = [f.getGlyphSet() for f in fonts]
+
+    def draw_source(glyphs, name, pen):
+        """Replay a glyph's own contours, unmerged, the way build_glyphs left them.
+
+        Overlapping contours are fine in a variable font -- the rasteriser fills them with
+        the non-zero rule and the spec has a flag to say so -- and they are the only version
+        of the outline that is the same shape in every master.
+        """
+        g = glyphs.get(name) or glyphs.get(name.upper())
+        if not g:
+            return False
+        for c in g['contours']:
+            pen.moveTo(tuple(c['start']))
+            for sg in c['segs']:
+                if sg[0] == 'l':
+                    pen.lineTo(tuple(sg[1]))
+                else:
+                    pen.curveTo(tuple(sg[1]), tuple(sg[2]), tuple(sg[3]))
+            pen.closePath()
+        return True
     glyfs = []
     for f in fonts:
         g = newTable('glyf'); g.glyphOrder = order; g.glyphs = {}
@@ -399,8 +426,11 @@ def to_ttf_all(srcs, dsts):
     incompatible, aligned = [], []
     for name in order:
         recs = []
-        for gs in sets:
-            rp = RecordingPen(); gs[name].draw(rp); recs.append(rp.value)
+        for gs, glyphs in zip(sets, sources):
+            rp = RecordingPen()
+            if not draw_source(glyphs, name, rp):
+                gs[name].draw(rp)                    # .notdef and space: no source of our own
+            recs.append(rp.value)
         if len({tuple(op for op, _ in r) for r in recs}) != 1:
             if os.environ.get('ORPHAN_ALIGN_DEBUG'): print('    %s:' % name)
             fixed = align_masters(recs)
@@ -502,6 +532,18 @@ def main():
     from fontTools.varLib import build as varbuild
     doc = DesignSpaceDocument.fromfile(ds)
     vf, _, _ = varbuild(doc)
+    # The masters keep their overlaps -- that is the point of building from the sources
+    # rather than the compiler's merged outlines -- so say so.  OVERLAP_SIMPLE tells a
+    # rasteriser the contours may overlap and to fill them non-zero, which is what they all
+    # do anyway; without it a conservative one is entitled to drop the overlaps out.
+    from fontTools.ttLib.tables import _g_l_y_f as _glyf_mod
+    flag = getattr(_glyf_mod, 'flagOverlapSimple', 0x40)
+    glyf = vf['glyf']
+    for gname in glyf.keys():
+        g = glyf[gname]
+        if g.numberOfContours > 0 and getattr(g, 'flags', None) is not None and len(g.flags):
+            g.flags[0] |= flag
+
     out = os.path.join(BUILD, 'OrphanDisplay-VF.ttf')
     vf.save(out)
     _freeze_unverified(out, made)

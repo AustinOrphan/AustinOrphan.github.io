@@ -95,9 +95,51 @@ def ring_chord(x0, x1, y_mid=MID_LINE, mid=HORIZ_JOIN, end0=None, end1=None, sig
         w = w_horizontal(L, t, mid)
         return add(q, mul(r, w / 2)), sub(q, mul(r, w / 2))
 
-    ts = [t0 + (t1 - t0) * i / NSAMP for i in range(NSAMP + 1)]
-    top = [sample(t)[0] for t in ts]
-    bot = [sample(t)[1] for t in ts]
+    # SOLVED, not clipped.  This used to be built long -- extended past both ends "so the
+    # clip has material" -- and then cut back with pen.clip_half.  A clip keeps whichever
+    # pieces fall inside, so how many segments come back depends on which segment the cut
+    # lands in, and that moves with WEIGHT and PUSH; varLib then drops the glyph, which is
+    # what froze the arms out of the axis.  Solving for the parameter where each EDGE meets
+    # each end line and sampling only between them gives the same shape with a segment count
+    # that cannot move: CHORD_SEGS a side, two cut faces, always.
+    #
+    # Each edge is solved separately because they meet an oblique end at different parameters;
+    # the face between those two points is the cut, and lies on the line by construction.
+    ends = [end0, end1]
+    if sign < 0:                                   # the ends are given in final space
+        m = _mirror(y_mid)
+        ends = [None if e is None else (m(e[0]), m(e[1])) for e in ends]
+
+    def edge(i):
+        return lambda t: sample(t)[i]
+
+    def meet(fn, e, lo, hi):
+        """Where this edge crosses that end line, by bisection; None keeps the plain end."""
+        if e is None:
+            return None
+        nn = perp(unit(sub(e[1], e[0])))
+        f = lambda t: (fn(t)[0] - e[0][0]) * nn[0] + (fn(t)[1] - e[0][1]) * nn[1]
+        flo, fhi = f(lo), f(hi)
+        if (flo > 0) == (fhi > 0):
+            return None
+        for _ in range(60):
+            md = (lo + hi) / 2
+            if (f(lo) > 0) != (f(md) > 0): hi = md
+            else: lo = md
+        return (lo + hi) / 2
+
+    spans = []
+    for i in (0, 1):
+        fn = edge(i)
+        lo = meet(fn, ends[0], t0, 0.5)
+        hi = meet(fn, ends[1], 0.5, t1)
+        spans.append((0.0 if lo is None else lo, 1.0 if hi is None else hi))
+
+    def run(i):
+        lo, hi = spans[i]
+        return [sample(lo + (hi - lo) * j / NSAMP)[i] for j in range(NSAMP + 1)]
+
+    top, bot = run(0), run(1)
 
     def tangents(P):
         return [unit(sub(P[min(i + 1, len(P) - 1)], P[max(i - 1, 0)])) for i in range(len(P))]
@@ -119,10 +161,6 @@ def ring_chord(x0, x1, y_mid=MID_LINE, mid=HORIZ_JOIN, end0=None, end1=None, sig
         k = k.map(_mirror(y_mid)).ccw()
         p0, p1, L = chord_ends(x0, x1, y_mid, sign)
 
-    inside = mul(add(p0, p1), 0.5)
-    for e in (end0, end1):
-        if e is not None:
-            k = clip_half(k, e[0], e[1], inside)
     return k, dict(x=(x0, x1), y=(p0[1], p1[1]), length=L, tilt=sign * tilt_for(L),
                    rise=p1[1] - p0[1], w=(w_horizontal(L, 0, mid), w_horizontal(L, 1, mid)),
                    sagitta=Lc * Lc / (8 * ARC_R), fit_err=max(et, eb))
