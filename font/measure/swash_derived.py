@@ -170,6 +170,22 @@ def _smooth(z, frac):
     return np.convolve(np.pad(z, w // 2, mode='reflect'), np.ones(w) / w, 'valid')
 
 
+def _polish_edge(p, u, amount):
+    """Smooth an edge's body, handing its two ends back untouched.
+
+    A reflected box filter moves its own endpoints.  Letting it do that costs 0.84 mark
+    units of anchor forcing where everything else here needs 0.001, and the end blend then
+    takes that out inside 6% of the trail -- a fresh deformation on the foot it is trying
+    to land cleanly on.  So the correction is tapered out over the same span the blend uses.
+    """
+    if amount <= 0:
+        return p
+    q = _smooth(p.real, amount) + 1j * _smooth(p.imag, amount)
+    keep = np.maximum(_ease(1.0 - np.minimum(1.0, u / END_BLEND)),
+                      _ease(1.0 - np.minimum(1.0, (1 - u) / END_BLEND)))
+    return p * keep + q * (1 - keep)
+
+
 def _ease(x):
     """A C2 ease: zero first AND second derivative at both ends.
 
@@ -530,17 +546,7 @@ def derived_swash_items(a_verts=None, hoop_items=None):
             h = h * (1.0 + grow / np.maximum(np.abs(h), 1e-9))
         mid = mid + disp_ref[at]
         p = mid - g * h + d_head * (1 - u) + d_tail * u
-        if POLISH > 0:
-            # Smooth the body, but hand the ends back untouched and taper the correction in
-            # over the same span the blend below uses.  A reflected box filter still moves
-            # its own endpoints, and letting it do so here costs 0.84 mark units of anchor
-            # forcing where everything else in this file needs 0.001 -- which the end blend
-            # then has to take out inside 6% of the trail, putting a deformation exactly on
-            # the foot it was trying to land cleanly on.
-            q = _smooth(p.real, POLISH) + 1j * _smooth(p.imag, POLISH)
-            keep_ends = np.maximum(_ease(1.0 - np.minimum(1.0, u / END_BLEND)),
-                                   _ease(1.0 - np.minimum(1.0, (1 - u) / END_BLEND)))
-            p = p * keep_ends + q * (1.0 - keep_ends)
+        p = _polish_edge(p, u, POLISH)
         a = _ease(1.0 - np.minimum(1.0, u / END_BLEND))
         b = _ease(1.0 - np.minimum(1.0, (1 - u) / END_BLEND))
         return p + (head - p[0]) * a + (tail - p[-1]) * b, abs(head - p[0]), abs(tail - p[-1])
@@ -553,12 +559,26 @@ def derived_swash_items(a_verts=None, hoop_items=None):
     # thing that does not work is constraining the fit's departure tangent while leaving the
     # polyline at 70 degrees off, which collapses the first piece's handle to a cusp.
     if PARALLEL > 0:
+        # A true BEND: each tangent is rotated and the edge re-integrated, then the position
+        # error that leaves is taken back out over the same span.  Rotating the points about
+        # the anchor instead is a shear, not a bend -- it concentrates the whole turn near
+        # the anchor and leaves a bump, curvature peaking at 0.754 over the head where the
+        # artwork peaks at 0.243, and no span helps because the concentration is the
+        # mechanism rather than the amount.
         want = (aV[4] - aV[5]) / abs(aV[4] - aV[5])
-        t0 = inner[4] - inner[0]
-        rot = cmath.phase(want / (t0 / abs(t0)))
-        u = _arcfrac(inner)
-        w = _ease(1.0 - np.minimum(1.0, u / PARALLEL))
-        inner = nV4 + (inner - nV4) * np.exp(1j * rot * w)
+        ui = _arcfrac(inner)
+        t = np.gradient(_smooth(inner.real, 0.01) + 1j * _smooth(inner.imag, 0.01))
+        rot = cmath.phase(want / (t[0] / abs(t[0])))
+        w = _ease(1.0 - np.minimum(1.0, ui / PARALLEL))
+        ds = np.r_[0.0, np.abs(np.diff(inner))]
+        step = (t / np.abs(t)) * np.exp(1j * rot * w)
+        bent = inner[0] + np.cumsum(step * ds)
+        v = _ease(np.minimum(1.0, ui / PARALLEL))
+        bent = bent - (bent[-1] - inner[-1]) * 0.0        # the tail is pinned below anyway
+        inner = inner * v + bent * (1 - v)
+        inner = _polish_edge(inner, ui, POLISH)
+        inner = inner + (nV4 - inner[0]) * _ease(1.0 - np.minimum(1.0, ui / END_BLEND)) \
+                      + (nf0 - inner[-1]) * _ease(1.0 - np.minimum(1.0, (1 - ui) / END_BLEND))
     residual = max(r0, r1, r2, r3)
 
     # Leaving the foot, the two edges disagree about what they are doing: the outer runs
