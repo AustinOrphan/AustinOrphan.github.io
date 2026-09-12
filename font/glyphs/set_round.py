@@ -848,7 +848,20 @@ def build_U():
     # half times and the U came apart -- at every WEIGHT above about 1.05, which is most of the
     # variable font's range.  Normalise the sweep into (0, 360] instead of trusting ang()'s branch.
     a0 += 360.0 * math.floor((a1 - a0) / 360.0)
-    y0 = U_C[1] - BURY
+    # Buried past the ARC'S OWN END, not past the circle's centre.  The left junction is the
+    # counter's crossing and the counter moves with PUSH, so the arc's left end climbs from
+    # y=267.5 at PUSH 1.00 to y=226.9 at PUSH 0.30 while a foot pinned at U_C[1]-BURY stays at
+    # 249 -- and above about PUSH 0.45 the stem stops reaching the bowl at all.  The U then
+    # renders as two separate pieces: four of the eleven named instances shipped a detached
+    # left stem, with a 15-unit gap at Regular Flat and 47 at Black Flat.
+    #
+    # The right stem never did this because _light_junction SOLVES its foot height.  This is
+    # the same rule for the left: bury BURY units past where the round actually ends.  The
+    # foot moves 1.5 units at Regular, 8.0 at Black, 42 at Regular Flat and 97 at Black Flat
+    # -- it only travels where the arc's end had already travelled without it.  The foot is
+    # buried either way, so nothing moves in the silhouette except the join that was open.
+    y_hand = U_C[1] + U_R * math.sin(math.radians(a0))
+    y0 = y_hand - BURY
     left  = stem(xl, y0,  CAP, bottom=None, top='right')
     right = stem(xr, y0r, CAP, bottom=None, top='left')
     arc   = round_arc(U_C, U_R, a0, a1)
@@ -877,7 +890,8 @@ def build_U():
               f"left stem's outer edge stands {xl - w_stem(U_C[1])/2:.1f} units inside the round's left "
               f"extreme, which is why the round shows on the left a little higher than on the right -- R1's "
               f"displacement, made visible.",
-        stem_feet=f"the left stem's foot is flat and buried {BURY:g} units past the junction at y={y0:.0f}, "
+        stem_feet=f"the left stem's foot is flat and buried {BURY:g} units past the round's own left end "
+                  f"(y={y_hand:.1f}), at y={y0:.0f}, "
                   f"inside the round's own band: its outer edge stands at x={xl - w_stem(y0)/2:.1f} there "
                   f"against the circle's own {_circ_x(U_C, U_R, y0, -1):.1f}, well inside the silhouette.  The "
                   f"right stem's foot stops at y={y0r:.1f}, the tangency with the circle {GRAZE:g} units "
