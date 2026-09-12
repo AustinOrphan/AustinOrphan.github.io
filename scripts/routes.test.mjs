@@ -69,6 +69,19 @@ test('the merged logo page has exactly one <main> and an h1 matching its title',
   assert.match(doc, /<h1>The AO mark<\/h1>/);
 });
 
+// BaseLayout owns the robots directive. A page that adds its own tag leaves two
+// conflicting directives in one document, which is how a deliberately-private
+// page ends up advertising index,follow. Caught one of these by hand; now it is
+// enforced for every route the site builds.
+for (const route of ['design/ao', 'design/ao/logo', 'design/ao/typeface', 'lab']) {
+  test(`/${route}/ emits exactly one robots tag, and it is noindex`, async () => {
+    const doc = await html(route);
+    const tags = doc.match(/<meta name="robots"[^>]*>/g) ?? [];
+    assert.equal(tags.length, 1, `expected one robots tag, found ${tags.length}: ${tags.join(' | ')}`);
+    assert.equal(robotsOf(doc), 'noindex, nofollow');
+  });
+}
+
 test('/design/ao/ lists every entry and is itself noindex', async () => {
   const doc = await html('design/ao');
   assert.equal(robotsOf(doc), 'noindex, nofollow');
