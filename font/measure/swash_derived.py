@@ -110,6 +110,22 @@ DEEPEN_SPLIT = float(os.environ.get('ORPHAN_SWASH_SPLIT', 0.20))
 # the swash leaves the foot parallel on BOTH sides.  0 leaves it wherever the ribbon puts
 # it, which is 70 degrees off -- worse than the artwork's own 57.
 PARALLEL = float(os.environ.get('ORPHAN_SWASH_PARALLEL', 0.04))
+# The same at the other end: how much of the trail the TAIL is bent over so the swash meets
+# the hoop running along it.  Each edge is taken onto its own hoop edge -- the hoop's two
+# edges are 5.90 deg apart, it is a tapering band, so there is no single direction that
+# suits both -- and the centre-line then follows from the pair.
+TAIL_PAR = float(os.environ.get('ORPHAN_SWASH_TAIL', 0.12))
+# A light push of the PATH just after the foot, outward, in mark units.  The drawn
+# correction asks the outer edge further out as it leaves the leg; widening the head with
+# the flare would also reach it, but it pays in weight and in the inner edge's radius,
+# because a flare moves one edge and not the other.  Moving the midline moves both, so the
+# stroke arrives where it is wanted at the width it already had.
+HEAD_OUT = float(os.environ.get('ORPHAN_SWASH_HEAD_OUT', 0.0))
+HEAD_OUT_AT = float(os.environ.get('ORPHAN_SWASH_HEAD_AT', 0.07))
+# How far the push is spread AFTER its peak.  Tying the span to the peak position makes a
+# narrow bump, and a narrow displacement is a knuckle however gently it is eased: at a peak
+# of 0.02 the tightest radius fell from 6.42 to 2.32 mark units.
+HEAD_OUT_SPAN = float(os.environ.get('ORPHAN_SWASH_HEAD_SPAN', 0.0))
 # A light smoothing of each finished edge before it is refitted.  The transforms leave
 # shallow dents -- stretches where the outer edge is locally CONCAVE, radius about 1.2 mark
 # units on a band 7.5 wide -- which are high-frequency against a curve whose own radius is
@@ -527,6 +543,13 @@ def derived_swash_items(a_verts=None, hoop_items=None):
     opened = open_hook(mid_raw, OPEN, OPEN_TO)
     bump = deepen_bump(opened, DEEPEN_SPAN) if DEEPEN else np.zeros(len(opened))
     mid_ref = opened + DEEPEN * (1.0 - DEEPEN_SPLIT) * bump * outward(opened)
+    if HEAD_OUT:
+        uo = _arcfrac(opened)
+        at = HEAD_OUT_AT
+        span = HEAD_OUT_SPAN or 2.0 * at
+        hb = _ease(np.where(uo < at, np.clip(uo / max(at, 1e-6), 0, 1),
+                            np.clip(1.0 - (uo - at) / max(span, 1e-6), 0, 1)))
+        mid_ref = mid_ref + HEAD_OUT * hb * outward(opened)
     disp_ref = straighten(mid_ref, HOLD[0], HOLD[1]) - mid_raw
     u_ref = _arcfrac(mid_ref)
 
@@ -585,6 +608,33 @@ def derived_swash_items(a_verts=None, hoop_items=None):
         inner = _polish_edge(inner, ui, POLISH)
         inner = inner + (nV4 - inner[0]) * _ease(1.0 - np.minimum(1.0, ui / END_BLEND)) \
                       + (nf0 - inner[-1]) * _ease(1.0 - np.minimum(1.0, (1 - ui) / END_BLEND))
+    if TAIL_PAR > 0:
+        hin = _C(hoop_items[6][-1]) - _C(hoop_items[6][-2])
+        hout = _C(hoop_items[8][2]) - _C(hoop_items[8][1])
+        for name, want in (('outer', hout), ('inner', hin)):
+            edge = outer if name == 'outer' else inner
+            u = _arcfrac(edge)
+            t = np.gradient(_smooth(edge.real, 0.01) + 1j * _smooth(edge.imag, 0.01))
+            here = t[-1] / abs(t[-1])
+            aim = want / abs(want)
+            if (aim.real * here.real + aim.imag * here.imag) < 0:
+                aim = -aim                       # travelling the way the swash travels
+            rot = cmath.phase(aim / here)
+            w = _ease(1.0 - np.minimum(1.0, (1 - u) / TAIL_PAR))
+            ds = np.r_[np.abs(np.diff(edge)), 0.0]
+            step = (t / np.abs(t)) * np.exp(1j * rot * w)
+            bent = edge[-1] - np.cumsum((step * ds)[::-1])[::-1]
+            v = _ease(np.minimum(1.0, (1 - u) / TAIL_PAR))
+            edge = edge * v + bent * (1 - v)
+            edge = _polish_edge(edge, u, POLISH)
+            head_a = nV3 if name == 'outer' else nV4
+            tail_a = nf1 if name == 'outer' else nf0
+            edge = edge + (head_a - edge[0]) * _ease(1.0 - np.minimum(1.0, u / END_BLEND)) \
+                        + (tail_a - edge[-1]) * _ease(1.0 - np.minimum(1.0, (1 - u) / END_BLEND))
+            if name == 'outer':
+                outer = edge
+            else:
+                inner = edge
     residual = max(r0, r1, r2, r3)
 
     # Leaving the foot, the two edges disagree about what they are doing: the outer runs
