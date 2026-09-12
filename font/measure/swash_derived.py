@@ -106,6 +106,10 @@ DEEPEN_SPAN = float(os.environ.get('ORPHAN_SWASH_DEEPEN_SPAN', 0.58))
 # artwork's 6.1.  Putting two thirds of it into width instead holds the inner edge still
 # and drops only the outer, which is what the depth is actually for.
 DEEPEN_SPLIT = float(os.environ.get('ORPHAN_SWASH_SPLIT', 0.5))
+# Over how much of the trail the inner edge's head is bent onto the leg's right edge, so
+# the swash leaves the foot parallel on BOTH sides.  0 leaves it wherever the ribbon puts
+# it, which is 70 degrees off -- worse than the artwork's own 57.
+PARALLEL = float(os.environ.get('ORPHAN_SWASH_PARALLEL', 0.06))
 GAIN = float(os.environ.get('ORPHAN_SWASH_GAIN', 0.0)) or rules.RING_GAIN
 
 
@@ -527,6 +531,18 @@ def derived_swash_items(a_verts=None, hoop_items=None):
 
     outer, r0, r1 = place(outer, h_out, nV3, nf1)
     inner, r2, r3 = place(inner, h_in, nV4, nf0)
+
+    # Bend the inner edge's head onto the leg's right edge, as a rotation about the anchor
+    # that decays away.  This moves the POLYLINE, so the refit follows it naturally -- the
+    # thing that does not work is constraining the fit's departure tangent while leaving the
+    # polyline at 70 degrees off, which collapses the first piece's handle to a cusp.
+    if PARALLEL > 0:
+        want = (aV[4] - aV[5]) / abs(aV[4] - aV[5])
+        t0 = inner[4] - inner[0]
+        rot = cmath.phase(want / (t0 / abs(t0)))
+        u = _arcfrac(inner)
+        w = _ease(1.0 - np.minimum(1.0, u / PARALLEL))
+        inner = nV4 + (inner - nV4) * np.exp(1j * rot * w)
     residual = max(r0, r1, r2, r3)
 
     # Leaving the foot, the two edges disagree about what they are doing: the outer runs
