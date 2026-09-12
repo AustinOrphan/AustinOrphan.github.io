@@ -105,11 +105,11 @@ DEEPEN_SPAN = float(os.environ.get('ORPHAN_SWASH_DEEPEN_SPAN', 0.58))
 # the upper edge of the hook comes to a radius of about 1.2 mark units against the
 # artwork's 6.1.  Putting two thirds of it into width instead holds the inner edge still
 # and drops only the outer, which is what the depth is actually for.
-DEEPEN_SPLIT = float(os.environ.get('ORPHAN_SWASH_SPLIT', 0.5))
+DEEPEN_SPLIT = float(os.environ.get('ORPHAN_SWASH_SPLIT', 0.20))
 # Over how much of the trail the inner edge's head is bent onto the leg's right edge, so
 # the swash leaves the foot parallel on BOTH sides.  0 leaves it wherever the ribbon puts
 # it, which is 70 degrees off -- worse than the artwork's own 57.
-PARALLEL = float(os.environ.get('ORPHAN_SWASH_PARALLEL', 0.06))
+PARALLEL = float(os.environ.get('ORPHAN_SWASH_PARALLEL', 0.04))
 # A light smoothing of each finished edge before it is refitted.  The transforms leave
 # shallow dents -- stretches where the outer edge is locally CONCAVE, radius about 1.2 mark
 # units on a band 7.5 wide -- which are high-frequency against a curve whose own radius is
@@ -540,7 +540,13 @@ def derived_swash_items(a_verts=None, hoop_items=None):
         # V in the inner edge just past the foot cut, radius 0.05 mark units where the
         # artwork has 6.09.
         mid = edge + h
-        at = _pair(mid, mid_ref)
+        # Indexed against the UNDISPLACED midline.  mid_ref has already been moved -- by up
+        # to 4 mark units at the bottom of the hook -- so asking which of its points is
+        # nearest to an edge's own, still-undisplaced midline lands systematically off, and
+        # by a different amount on each of the two edges.  The ribbon then spreads: a
+        # displacement that only moves the midline, and must therefore leave the width
+        # alone, was widening the stroke from x1.22 to x1.42.
+        at = _pair(mid, mid_raw)
         if DEEPEN and DEEPEN_SPLIT:
             grow = DEEPEN * DEEPEN_SPLIT * bump[at] / 2.0
             h = h * (1.0 + grow / np.maximum(np.abs(h), 1e-9))
