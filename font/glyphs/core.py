@@ -95,6 +95,12 @@ def _slide_hooks(bar_f, poly):
         hooks[side] = hk.map(lambda p: add(rot(sub(p, c_bot), phi), c_bot))
         moved[side] = dict(rotated_deg=phi, along_arc=abs(math.radians(phi)) * r_bot)
     # rebuild: top arc TR' -> TL' with radius r_top, bottom arc BL' -> BR' with radius r_bot
+    # Fixed pieces, for the reason pen.arc_segments gives: the default ceil(span / 90) rule
+    # made the bar's lower edge four cubics in some masters and three in others -- the span
+    # sits either side of 270 degrees across the axis box -- and varLib drops a glyph whose
+    # masters disagree about point counts.  Four is the most that rule asks of these arcs.
+    BAR_SEGS = 4
+
     def arc_through(p, q, r, near):
         # centre of the circle of radius r through p and q, nearest to `near`
         m = mul(add(p, q), 0.5); dpq = norm(sub(q, p)); h = math.sqrt(max(0.0, r*r - (dpq/2)**2)); nn = perp(unit(sub(q, p)))
@@ -107,13 +113,13 @@ def _slide_hooks(bar_f, poly):
     # top edge runs right-to-left over the top of its circle: counter-clockwise, the short way
     a0, a1 = ang(sub(TR, ct)), ang(sub(TL, ct))
     if a1 < a0: a1 += 360
-    _, segs_t = arc_segments(ct, r_top, a0, a1)
+    _, segs_t = arc_segments(ct, r_top, a0, a1, BAR_SEGS)
     for sg in segs_t: out.curve_to(sg[1], sg[2], sg[3])
     for sg in hL.segs: out.segs.append(sg)
     # bottom edge runs left-to-right: clockwise, the short way
     a0, a1 = ang(sub(BL, cb)), ang(sub(BR, cb))
     if a1 > a0: a1 -= 360
-    _, segs_b = arc_segments(cb, r_bot, a0, a1)
+    _, segs_b = arc_segments(cb, r_bot, a0, a1, BAR_SEGS)
     for sg in segs_b: out.curve_to(sg[1], sg[2], sg[3])
     for sg in hR.segs: out.segs.append(sg)
     # the new outline keeps the source's segment indices for the hooks shifted by the arc segment counts;

@@ -108,7 +108,9 @@ def _lens(l, c, r, side):
         mid = add(c, mul(from_ang((a1 + end) / 2), r))          # which way round is the piece wanted
         if (perp(v)[0]*(mid[0]-p[0]) + perp(v)[1]*(mid[1]-p[1])) * side > 0:
             k = Contour(P0); k.line_to(P1)                      # the chord, then the circle itself
-            for sg in arc_segments(c, r, a1, end)[1]: k.curve_to(sg[1], sg[2], sg[3])
+            # Two pieces whatever it spans: 10.84 to 119.89 degrees across the axis box, which
+            # the default rule splits as one or two, changing partway across.  See pen.arc_segments.
+            for sg in arc_segments(c, r, a1, end, 2)[1]: k.curve_to(sg[1], sg[2], sg[3])
             return k.ccw()
     raise ValueError('no side')
 
