@@ -683,7 +683,6 @@ def _curl_counter_r(c2, r2, th):
     what makes the two counters meet exactly instead of the curl biting into the J's."""
     d = r2 - _band_depth(J_C, J_R, J_R - RING_W, th)
     return norm(sub(mul(from_ang(th), d), RING_OFF))
-BURY = 20.0                                # how far a stem's flat end runs on past the junction, buried
 OVERLAP = 1.0                              # how far a fill reaches into the stem it abuts, so the union
                                            # never has to resolve two contours that only touch along a line
 
@@ -763,7 +762,26 @@ def _heavy_junction(c, r, side):
     x_counter = _stem_tangent_x(ci, ri - GRAZE, -side, side)     # inner edge tangent to the counter
     x_outer   = _stem_tangent_x(c,  r  - GRAZE,  side, side)     # outer edge tangent to the silhouette
     x = max(x_counter, x_outer) if side < 0 else min(x_counter, x_outer)
-    q = line_circle(_stem_edge(x, -side), ci, ri, pick='min')   # the lower of the two crossings
+    past = (x_outer > x_counter) if side < 0 else (x_outer < x_counter)
+    if past:
+        # Past the crossover the arc ends on the SILHOUETTE, as the paragraph above says.  Held
+        # to the counter's crossing it ran on down to y=227 at PUSH 0.30 while the stem's outer
+        # edge left the round's circle at y=266, so no foot height both reached the arc and
+        # stayed inside the bowl: the U was built with the stem poking 8.9 units out of its own
+        # silhouette at Regular Flat and 33.8 at Black Flat.  On the silhouette's crossing the
+        # two agree and the counter takes the corner instead, as the light side already does.
+        #
+        # The UPPER of the two crossings -- _light_junction's rule, for the same reason: both
+        # stems come DOWN from the cap, so each meets the circle at the top first and that is
+        # where the silhouette changes hands.  At the lower crossing the arc's end would be the
+        # only height the foot could sit at without leaving the circle, and a flat foot there
+        # sits ABOVE the arc's radial end cut everywhere but the one point the two share, which
+        # opens a 1.8-unit crack across the junction at Black Flat.  The upper crossing leaves
+        # 23.6 units between the two, room enough to bury the foot under the cut (it needs 9.8)
+        # and still stay inside the round.
+        q = line_circle(_stem_edge(x, side), c, r, pick='max')
+    else:
+        q = line_circle(_stem_edge(x, -side), ci, ri, pick='min')  # the lower of the two crossings
     return x, ang(sub(q, c))
 
 def _touch_deg(x_c, edge, c, r, at):
@@ -848,20 +866,31 @@ def build_U():
     # half times and the U came apart -- at every WEIGHT above about 1.05, which is most of the
     # variable font's range.  Normalise the sweep into (0, 360] instead of trusting ang()'s branch.
     a0 += 360.0 * math.floor((a1 - a0) / 360.0)
-    # Buried past the ARC'S OWN END, not past the circle's centre.  The left junction is the
-    # counter's crossing and the counter moves with PUSH, so the arc's left end climbs from
-    # y=267.5 at PUSH 1.00 to y=226.9 at PUSH 0.30 while a foot pinned at U_C[1]-BURY stays at
-    # 249 -- and above about PUSH 0.45 the stem stops reaching the bowl at all.  The U then
-    # renders as two separate pieces: four of the eleven named instances shipped a detached
-    # left stem, with a 15-unit gap at Regular Flat and 47 at Black Flat.
+    # WHERE THE LEFT STEM'S FOOT STOPS.  The foot is a flat cut and the arc's end is a RADIAL
+    # one, so the two agree at exactly one point and part company either side of it.  Sitting
+    # the foot at the arc's end height therefore closes the junction only at that point: across
+    # the rest of the stem's width the cap has fallen away beneath it and the counter runs out
+    # through the gap as a hairline -- 1.8 units at Black Flat, 0.1 at Light, a crack in the ink
+    # either way.  So the foot goes UNDER the cap, by OVERLAP past the cap's inner end, which
+    # puts its whole width inside the arc's ink (R6: overlap and union).
     #
-    # The right stem never did this because _light_junction SOLVES its foot height.  This is
-    # the same rule for the left: bury BURY units past where the round actually ends.  The
-    # foot moves 1.5 units at Regular, 8.0 at Black, 42 at Regular Flat and 97 at Black Flat
-    # -- it only travels where the arc's end had already travelled without it.  The foot is
-    # buried either way, so nothing moves in the silhouette except the join that was open.
+    # Two things bound it.  It never sits above the arc's own end, the only height at which it
+    # reaches the round at all: pinned 20 units under the round's centre while the arc's left
+    # end climbed with PUSH, four of the eleven named instances shipped a DETACHED left stem --
+    # a 15-unit gap at Regular Flat, 47 at Black Flat.  And it prefers to stay inside the
+    # round's circle: below y_low the stem's outer edge has left the circle and the flat foot
+    # shows through the silhouette as a step -- 8.9 units at Regular Flat while the arc was
+    # ended on the counter's crossing past the crossover, 19.0 at Bold Flat, 33.8 at Black
+    # Flat, every one of them landing on x=40, the bowl's own left extreme.
+    #
+    # At Light Flat alone the two cannot both hold: the cap's inner end is 3.3 units BELOW the
+    # height at which the outer edge leaves the circle.  Closure wins there, because the poke
+    # it costs is 0.3 units and the crack it avoids is 3.3.
     y_hand = U_C[1] + U_R * math.sin(math.radians(a0))
-    y0 = y_hand - BURY
+    y_cap = line_circle(line(U_C, from_ang(a0)), add(U_C, RING_OFF), U_R - RING_W,
+                        pick='max')[1] - OVERLAP               # under the arc's radial end cap
+    y_low = line_circle(_stem_edge(xl, -1), U_C, U_R, pick='min')[1]   # outer edge leaves the circle
+    y0 = max(min(y_hand, y_cap), min(y_low, y_cap))
     left  = stem(xl, y0,  CAP, bottom=None, top='right')
     right = stem(xr, y0r, CAP, bottom=None, top='left')
     arc   = round_arc(U_C, U_R, a0, a1)
@@ -890,10 +919,12 @@ def build_U():
               f"left stem's outer edge stands {xl - w_stem(U_C[1])/2:.1f} units inside the round's left "
               f"extreme, which is why the round shows on the left a little higher than on the right -- R1's "
               f"displacement, made visible.",
-        stem_feet=f"the left stem's foot is flat and buried {BURY:g} units past the round's own left end "
-                  f"(y={y_hand:.1f}), at y={y0:.0f}, "
-                  f"inside the round's own band: its outer edge stands at x={xl - w_stem(y0)/2:.1f} there "
-                  f"against the circle's own {_circ_x(U_C, U_R, y0, -1):.1f}, well inside the silhouette.  The "
+        stem_feet=f"the left stem's foot is flat and stops at y={y0:.1f}, {y_cap + OVERLAP - y0:.1f} units "
+                  f"under the inner end of the arc's radial end cut (y={y_cap + OVERLAP:.1f}) so that its whole "
+                  f"width is inside the arc's ink rather than meeting it at the single point a flat cut and a "
+                  f"radial one share; the arc's own end is at y={y_hand:.1f} and the height below which the "
+                  f"stem's outer edge leaves the round's circle is y={y_low:.1f}.  Its outer edge stands at "
+                  f"x={xl - w_stem(y0)/2:.1f} there against the circle's own {_circ_x(U_C, U_R, y0, -1):.1f}.  The "
                   f"right stem's foot stops at y={y0r:.1f}, the tangency with the circle {GRAZE:g} units "
                   f"inside the round's, which is the last height at which the whole foot is still inside the "
                   f"silhouette; carried down to the round's centre as it was, its outer corner stood 0.9 "
