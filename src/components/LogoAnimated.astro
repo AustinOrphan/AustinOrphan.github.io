@@ -26,6 +26,11 @@
 // (y-up, tenths) inside the same translate/scale group Logo uses.
 import { LOGO_MARK_D, nextLogoAnimId } from './logo-mark';
 import { TRAIL_CENTRE_D, TRAIL_MARKS, TRAIL_MASK, TRAIL_MASK_D, TRAIL_OUTLINE_D } from './logo-trail';
+import {
+  AFTER, BEATS, RING_ANNULUS_D, RING_CIRCLE_D, RING_CIRCLE_WIDTH,
+  RING_COIL_CENTRE_D, RING_COIL_D, RING_COIL_WIDTH,
+  TRAIL_HEAD_STOPS, TRAIL_TAIL_STOPS,
+} from './logo-choreography';
 
 interface Props {
   variant?: 'hero' | 'plain' | 'flat';
@@ -76,6 +81,15 @@ const vars = [speed !== 1 && `--la-speed:${speed}`, ink && `--logo-ink:${ink}`,
              .filter(Boolean).join(';');
 const uid = id ?? nextLogoAnimId();
 
+// The timeline, as unitless seconds plus easings. The CSS multiplies by 1s and divides by
+// --la-speed, so nothing below restates a number that emit_choreography.py derived.
+const timing = [
+  ...Object.entries(BEATS).flatMap(([k, b]) =>
+    [`--la-n-${k}-t:${b.t}`, `--la-n-${k}-d:${b.d}`, `--la-e-${k}:${b.ease}`]),
+  `--la-n-pieces:${AFTER.pieces}`, `--la-n-treat-t:${AFTER.treatT}`,
+  `--la-n-treat-d:${AFTER.treatD}`, `--la-n-done:${AFTER.done}`,
+].join(';');
+
 // Leg centre-lines, each in the direction the pen draws it: the left leg from
 // the foot cut midpoint UP to the apex, the right leg from the apex DOWN to
 // the foot cut midpoint (where the trail then starts). The leg pieces are the
@@ -111,19 +125,14 @@ const BAR_CENTRE =
 // never has to cut across an end face); TRAIL_CENTRE_D itself is the uniform-stroke
 // alternative (`trail="stroke"`), which is what the clip draws.
 
-// The head's easing. The pen moves at a constant speed in the clip, but the swash spreads
-// its arc length differently along the gesture, so the head is timed by the two landmarks
-// both drawings share: TRAIL_MARKS, measured on the swash, against the frames where the
-// clip reaches them. The clip closes the loop over the right leg at f19 = 0.634 s and
-// reaches the left leg at f23 = 0.767 s, i.e. 48.1 % and 89.7 % of the trail's
-// 0.48 -> 0.80 s window. Reading the landmarks from logo-trail.ts rather than writing them
-// out here means re-deriving the trail retimes the head instead of silently leaving it
-// pointing at landmarks that have moved.
-const HEAD_STOPS: [number, number][] = [
-  [TRAIL_MARKS.crossesRightLeg[1], 48.1],
-  [TRAIL_MARKS.crossesLeftLeg[0], 89.7],
-];
-const TAIL_STOPS: [number, number][] = [[TRAIL_MARKS.crossesRightLeg[1], 48]];
+// The head's easing. The pen's speed is not a taste: it follows the stroke it is laying,
+// v proportional to width, one law for the whole gesture (design/logo-animation/
+// emit_choreography.py). These stops are that law sampled along the trail, in TRAIL
+// fractions -- the dash() mapping below turns them into the mask's own dash space, which is
+// where the lead-in and lead-out live. The tail carries the same curve, so the trail
+// retracts the way it was laid down.
+const HEAD_STOPS: [number, number][] = TRAIL_HEAD_STOPS;
+const TAIL_STOPS: [number, number][] = TRAIL_TAIL_STOPS;
 // Both are authored in TRAIL fractions and mapped to what the dash actually is, so that
 // the VISIBLE head, not the dash position, lands on each landmark:
 //   swash   the mask sweeps TRAIL_MASK_D, whose lead-in and lead-out shift and squeeze the
@@ -147,7 +156,7 @@ const easeTail = `linear(${dash(0)}, ${at(TAIL_STOPS)}, 1)`;
 // inner edge, so the counter jumped and the 157-to-623 modulation appeared at the cross-fade.
 ---
 <svg
-  style={`--la-ease-head-l:${easeHead};--la-ease-tail-l:${easeTail}${vars ? ';' + vars : ''}`}
+  style={`${timing};--la-ease-head-l:${easeHead};--la-ease-tail-l:${easeTail}${vars ? ';' + vars : ''}`}
   class={`site-logo site-logo-${variant} site-logo-anim site-logo-anim-${variant} site-logo-anim-trail-${trail} ${autoplay ? 'la-play' : ''} ${className}`.trim()}
   viewBox="-70 -70 1246 1246"
   width={px}
@@ -160,9 +169,11 @@ const easeTail = `linear(${dash(0)}, ${at(TAIL_STOPS)}, 1)`;
     <!-- The O. Two circles in a MASK, not two filled siblings: fill-rule subtracts within one
          path, not across a group, so as siblings they simply both filled and the ring came out
          a solid disc. White grows the outer edge, black cuts the counter. -->
-    <mask id={`${uid}-o`} maskUnits="userSpaceOnUse" x="1000" y="900" width="9100" height="9100">
-      <circle class="la-ring-out" cx="5523.1" cy="5424.9" r="0" fill="#fff" />
-      <circle class="la-ring-in" cx="5523.1" cy="5424.9" r="0" fill="#000" />
+    <mask id={`${uid}-o`} maskUnits="userSpaceOnUse" x="-600" y="-600" width="13000" height="13000">
+      <path class="la-mask la-ring-m" d={RING_CIRCLE_D} pathLength="1" stroke-width={RING_CIRCLE_WIDTH} />
+    </mask>
+    <mask id={`${uid}-c`} maskUnits="userSpaceOnUse" x="-600" y="-600" width="13000" height="13000">
+      <path class="la-mask la-coil-m" d={RING_COIL_CENTRE_D} pathLength="1" stroke-width={RING_COIL_WIDTH} />
     </mask>
     <mask id={`${uid}-l`} maskUnits="userSpaceOnUse" x="-600" y="-600" width="13000" height="13000">
       <path class="la-mask la-leg-l" d={LEG_L} pathLength="1" stroke-width={LEG_L_W} />
@@ -191,7 +202,8 @@ const easeTail = `linear(${dash(0)}, ${at(TAIL_STOPS)}, 1)`;
   </g>
 
   <g class="la-pieces" transform="translate(0,1084) scale(0.1,-0.1)">
-    <rect class="la-ring" x="1000" y="900" width="9100" height="9100" mask={`url(#${uid}-o)`} />
+    <path class="la-coil" d={RING_COIL_D} mask={`url(#${uid}-c)`} />
+    <path class="la-ring" d={RING_ANNULUS_D} fill-rule="evenodd" mask={`url(#${uid}-o)`} />
     <path class="la-leg" d={LEG_L_QUAD} mask={`url(#${uid}-l)`} />
     <path class="la-leg" d={LEG_R_QUAD} mask={`url(#${uid}-r)`} />
     <path class="la-bar" d={BAR} mask={`url(#${uid}-b)`} />
@@ -239,7 +251,8 @@ const easeTail = `linear(${dash(0)}, ${at(TAIL_STOPS)}, 1)`;
   }
   /* The ring is a filled rect seen through its own mask, not a stroked circle: a stroke's
      counter is concentric, and this one is displaced. */
-  .site-logo-anim .la-ring { fill: currentColor; }
+  .site-logo-anim .la-ring,
+  .site-logo-anim .la-coil { fill: currentColor; }
 
   .site-logo-anim .la-mask {
     fill: none;
@@ -259,7 +272,9 @@ const easeTail = `linear(${dash(0)}, ${at(TAIL_STOPS)}, 1)`;
      the trail (logo-trail.ts), so the sweep never has to cut across an end face,
      and the ink boundary is then exactly where the dash is. The other masks keep
      round caps — their paths stop inside the shape they reveal. */
-  .site-logo-anim .la-trail-m { stroke-linecap: butt; }
+  .site-logo-anim .la-trail-m,
+  .site-logo-anim .la-ring-m,
+  .site-logo-anim .la-coil-m { stroke-linecap: butt; }
 
   /* Initial state of every piece; the animations run from here. A dash of
      "1 2" offset by 1 hides a pathLength="1" stroke entirely (round caps
@@ -277,44 +292,33 @@ const easeTail = `linear(${dash(0)}, ${at(TAIL_STOPS)}, 1)`;
     stroke-dashoffset: 0;
   }
 
-  /* THE TIMELINE. Seconds from the start of play; every animation below takes
-     its delay and duration from here and nowhere else. Read off the clip frame
-     by frame, see design/logo-animation/choreography.md. */
+  /* THE TIMELINE. Every delay and duration comes from logo-choreography.ts, which derives
+     them from one rule -- the pen goes faster where the stroke it is laying is thicker --
+     so a piece's window is its own arc length divided by that speed. Nothing here is a
+     number chosen against the clip any more; the custom properties arrive as unitless
+     seconds on the root and this only gives them a unit and the speed scale. */
   .site-logo-anim {
     --la-speed: 1;                                 /* time scale; 2 = twice as fast */
-    --la-t-leg-l: calc(0.24s / var(--la-speed));    --la-d-leg-l: calc(0.13s / var(--la-speed));   /* left leg, foot up to apex */
-    --la-t-leg-r: calc(0.36s / var(--la-speed));    --la-d-leg-r: calc(0.135s / var(--la-speed));  /* right leg, apex down to foot */
-    --la-t-trail: calc(0.48s / var(--la-speed));    --la-d-trail: calc(0.32s / var(--la-speed));   /* trail head, foot to hook tip */
-    --la-t-circle: calc(0.535s / var(--la-speed));  --la-d-circle: calc(0.565s / var(--la-speed)); /* thin circle grows */
-    /* the circle's thicken beat is baked into la-ring-in's stops (34.5%-96.5% of the
-       circle's own window), so it no longer needs its own delay and duration */
-    --la-t-bar: calc(0.80s / var(--la-speed));      --la-d-bar: calc(0.23s / var(--la-speed));     /* bar inks in, hook to hook */
-    --la-t-tail: calc(0.80s / var(--la-speed));     --la-d-tail: calc(0.21s / var(--la-speed));    /* trail retracts, foot to hook tip */
-    --la-t-final: calc(1.02s / var(--la-speed));    --la-d-final: calc(0.08s / var(--la-speed));   /* final layer fades in */
-    --la-t-pieces: calc(1.10s / var(--la-speed));                          /* the drawn pieces switch off */
-    --la-t-treat: calc(1.04s / var(--la-speed));    --la-d-treat: calc(0.26s / var(--la-speed));   /* hero only: the red outline grows out
-                                                      from under the mark and the blue shadow
-                                                      slides to its offset -- the treatment
-                                                      SETTLES rather than appearing with the
-                                                      cross-fade */
-    --la-t-done: calc(1.30s / var(--la-speed));                            /* everything over */
+    --la-t-leg-l: calc(var(--la-n-legL-t) * 1s / var(--la-speed));   --la-d-leg-l: calc(var(--la-n-legL-d) * 1s / var(--la-speed));
+    --la-t-leg-r: calc(var(--la-n-legR-t) * 1s / var(--la-speed));   --la-d-leg-r: calc(var(--la-n-legR-d) * 1s / var(--la-speed));
+    --la-t-trail: calc(var(--la-n-trail-t) * 1s / var(--la-speed));  --la-d-trail: calc(var(--la-n-trail-d) * 1s / var(--la-speed));
+    --la-t-coil: calc(var(--la-n-coil-t) * 1s / var(--la-speed));    --la-d-coil: calc(var(--la-n-coil-d) * 1s / var(--la-speed));
+    --la-t-coilout: calc(var(--la-n-coilOut-t) * 1s / var(--la-speed)); --la-d-coilout: calc(var(--la-n-coilOut-d) * 1s / var(--la-speed));
+    --la-t-ring: calc(var(--la-n-ring-t) * 1s / var(--la-speed));    --la-d-ring: calc(var(--la-n-ring-d) * 1s / var(--la-speed));
+    --la-t-bar: calc(var(--la-n-bar-t) * 1s / var(--la-speed));      --la-d-bar: calc(var(--la-n-bar-d) * 1s / var(--la-speed));
+    --la-t-tail: calc(var(--la-n-tail-t) * 1s / var(--la-speed));    --la-d-tail: calc(var(--la-n-tail-d) * 1s / var(--la-speed));
+    --la-t-final: calc(var(--la-n-final-t) * 1s / var(--la-speed));  --la-d-final: calc(var(--la-n-final-d) * 1s / var(--la-speed));
+    --la-t-pieces: calc(var(--la-n-pieces) * 1s / var(--la-speed));  /* the drawn pieces switch off */
+    --la-t-treat: calc(var(--la-n-treat-t) * 1s / var(--la-speed));  --la-d-treat: calc(var(--la-n-treat-d) * 1s / var(--la-speed));
+    --la-t-done: calc(var(--la-n-done) * 1s / var(--la-speed));      /* everything over */
     --la-trail-weight: 460;                        /* trail="stroke" only: 0.6 of the bar's run */
   }
 
-  /* Easing. The head and the tail come from the component's frontmatter, which
-     builds them out of the swash's own landmarks (logo-trail.ts's TRAIL_MARKS)
-     and the frames where the clip reaches them: the head is at the crossing that
-     closes the loop 48.1 % into its run (the clip's f19) and at the left leg at
-     89.7 % (f23), and the tail retracts at one speed to that same crossing,
-     reached at 0.90 s, then faster along the remnant under the bar. Their stops
-     are DASH positions, which is not the same number as the landmark: the swash
-     mode maps the trail onto the mask's longer path, the stroke mode subtracts
-     its round cap. Do that mapping in the frontmatter, not here.
-     The bar's hook goes down quickly, then its head runs at an even pace; the
-     circle grows at a steady rate then eases into its final radius. linear()
-     reproduces all four; the beziers are the fallback (the head's fits the same
-     two landmarks, and both trail fallbacks start from 0, so on those browsers
-     the trail lags by the mask's lead-in for the first ~13 ms). */
+  /* Easing. Every piece now carries the speed law -- v proportional to the width of the
+     stroke it is laying -- as a linear() timing function derived in
+     design/logo-animation/emit_choreography.py and handed in on the root. The head and the
+     tail are still built in the frontmatter, because their curve has to be mapped through
+     the mask's own lead-in and lead-out before it means anything. */
   .site-logo-anim {
     --la-ease-grow: cubic-bezier(0.2, 0.5, 0.45, 1);
     --la-ease-bar: cubic-bezier(0.3, 0.45, 0.6, 1);
@@ -344,8 +348,8 @@ const easeTail = `linear(${dash(0)}, ${at(TAIL_STOPS)}, 1)`;
       opacity: 0;
       animation: la-show var(--la-d-final) linear var(--la-t-final) forwards;
     }
-    .la-play .la-leg-l { animation: la-draw var(--la-d-leg-l) linear var(--la-t-leg-l) forwards; }
-    .la-play .la-leg-r { animation: la-draw var(--la-d-leg-r) linear var(--la-t-leg-r) forwards; }
+    .la-play .la-leg-l { animation: la-draw var(--la-d-leg-l) var(--la-e-legL) var(--la-t-leg-l) forwards; }
+    .la-play .la-leg-r { animation: la-draw var(--la-d-leg-r) var(--la-e-legR) var(--la-t-leg-r) forwards; }
     .la-play .la-trail-m,
     .la-play .la-trail-line {
       animation:
@@ -360,11 +364,17 @@ const easeTail = `linear(${dash(0)}, ${at(TAIL_STOPS)}, 1)`;
     .site-logo-anim-hero.la-play .la-final-mark {
       animation: la-outline var(--la-d-treat) var(--la-ease-grow) var(--la-t-treat) forwards;
     }
-    .la-play .la-bar-m { animation: la-draw var(--la-d-bar) var(--la-ease-bar) var(--la-t-bar) forwards; }
+    .la-play .la-bar-m { animation: la-draw var(--la-d-bar) var(--la-e-bar) var(--la-t-bar) forwards; }
     /* Linear timing on purpose: ease-grow's stops are baked into the keyframe values so the
        two circles share one progress. See the keyframes. */
-    .la-play .la-ring-out { animation: la-ring-out var(--la-d-circle) linear var(--la-t-circle) forwards; }
-    .la-play .la-ring-in  { animation: la-ring-in  var(--la-d-circle) linear var(--la-t-circle) forwards; }
+    /* The coil opens out of the middle, then retracts behind the ring as the ring draws
+       itself closed. Two elements, each masked along its OWN path. */
+    .la-play .la-coil-m {
+      animation:
+        la-draw var(--la-d-coil) var(--la-e-coil) var(--la-t-coil) forwards,
+        la-trail-tail var(--la-d-coilout) var(--la-e-coilOut) var(--la-t-coilout) forwards;
+    }
+    .la-play .la-ring-m { animation: la-draw var(--la-d-ring) var(--la-e-ring) var(--la-t-ring) forwards; }
   }
 
   @keyframes la-draw { to { stroke-dashoffset: 0; } }
@@ -381,49 +391,6 @@ const easeTail = `linear(${dash(0)}, ${at(TAIL_STOPS)}, 1)`;
      390 and nothing else.
      Linear timing with ease-grow's stops baked into the values: a shared easing is applied
      per-interval, and these two need different stop counts, so they would drift. */
-  @keyframes la-ring-out {
-    0% { cx: 5523.1px; cy: 5424.9px; r: 0.0px; }
-    17.5% { cx: 5523.1px; cy: 5424.9px; r: 889.0px; }
-    23% { cx: 5523.1px; cy: 5424.9px; r: 1227.7px; }
-    29% { cx: 5523.1px; cy: 5424.9px; r: 1566.4px; }
-    34.513% { cx: 5523.1px; cy: 5424.9px; r: 1838.7px; }
-    35% { cx: 5523.1px; cy: 5424.9px; r: 1862.7px; }
-    41% { cx: 5523.1px; cy: 5424.9px; r: 2286.1px; }
-    47% { cx: 5523.1px; cy: 5424.9px; r: 2540.1px; }
-    53% { cx: 5523.1px; cy: 5424.9px; r: 2857.6px; }
-    59% { cx: 5523.1px; cy: 5424.9px; r: 3090.5px; }
-    65% { cx: 5523.1px; cy: 5424.9px; r: 3386.8px; }
-    71% { cx: 5523.1px; cy: 5424.9px; r: 3598.5px; }
-    77% { cx: 5523.1px; cy: 5424.9px; r: 3810.2px; }
-    82% { cx: 5523.1px; cy: 5424.9px; r: 3979.5px; }
-    88% { cx: 5523.1px; cy: 5424.9px; r: 4106.5px; }
-    94% { cx: 5523.1px; cy: 5424.9px; r: 4191.2px; }
-    96.46% { cx: 5523.1px; cy: 5424.9px; r: 4208.5px; }
-    100% { cx: 5523.1px; cy: 5424.9px; r: 4233.5px; }
-  }
-  @keyframes la-ring-in {
-    0% { cx: 5523.1px; cy: 5424.9px; r: -60.0px; }
-    17.5% { cx: 5523.1px; cy: 5424.9px; r: 829.0px; }
-    23% { cx: 5523.1px; cy: 5424.9px; r: 1167.7px; }
-    29% { cx: 5523.1px; cy: 5424.9px; r: 1506.4px; }
-    34.513% { cx: 5523.1px; cy: 5424.9px; r: 1778.7px; }
-    35% { cx: 5524.7px; cy: 5426.5px; r: 1799.5px; }
-    41% { cx: 5544.3px; cy: 5446.2px; r: 2182.3px; }
-    47% { cx: 5563.8px; cy: 5465.7px; r: 2395.7px; }
-    53% { cx: 5583.4px; cy: 5485.4px; r: 2672.8px; }
-    59% { cx: 5602.9px; cy: 5504.9px; r: 2865.0px; }
-    65% { cx: 5622.5px; cy: 5524.6px; r: 3120.9px; }
-    71% { cx: 5642.0px; cy: 5544.1px; r: 3292.1px; }
-    77% { cx: 5661.6px; cy: 5563.8px; r: 3463.1px; }
-    82% { cx: 5677.9px; cy: 5580.1px; r: 3598.7px; }
-    88% { cx: 5697.4px; cy: 5599.7px; r: 3685.2px; }
-    94% { cx: 5717.1px; cy: 5619.3px; r: 3729.3px; }
-    96.46% { cx: 5725.0px; cy: 5627.3px; r: 3730.2px; }
-    100% { cx: 5725.0px; cy: 5627.3px; r: 3755.0px; }
-  }
-  /* The offsets Logo.astro sets as attributes; the keyframes must LAND on them exactly, or
-     the resting render stops matching Logo's. translate is origin-independent, so no
-     transform-box/transform-origin is needed on the SVG group. */
   @keyframes la-shadow { from { transform: translate(0px, 0px); } to { transform: translate(22px, 22px); } }
   @keyframes la-outline { from { stroke-width: 0px; } to { stroke-width: 300px; } }
   /* Visible trail = [tail, head]: dasharray "(head - tail) 2", offset -tail. */
