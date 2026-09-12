@@ -99,7 +99,7 @@ OPEN_TO = float(os.environ.get('ORPHAN_SWASH_OPEN_TO', 0.30))
 # x=117 against the artwork's 94.5, well outside the mark -- so the depth is put in
 # locally instead, as a bump on the midline centred on the hook's lowest point.
 DEEPEN = float(os.environ.get('ORPHAN_SWASH_DEEPEN', 4.0))
-DEEPEN_SPAN = float(os.environ.get('ORPHAN_SWASH_DEEPEN_SPAN', 0.22))
+DEEPEN_SPAN = float(os.environ.get('ORPHAN_SWASH_DEEPEN_SPAN', 0.58))
 # How much of the deepening goes into WIDTH rather than into moving the midline.  Dropping
 # the midline drops both edges, and the inner one is on the concave side, so it tightens:
 # the upper edge of the hook comes to a radius of about 1.2 mark units against the
@@ -465,6 +465,20 @@ def derived_swash_items(a_verts=None, hoop_items=None):
         P = P - (P[-1] - m[-1]) * _ease((t - upto) / (1.0 - upto))
         return np.interp(d / d[-1], t, P.real) + 1j * np.interp(d / d[-1], t, P.imag)
 
+    def outward(mid):
+        """Unit normal pointing AWAY from the hook's interior.
+
+        The deepening used to displace straight down, which deepens the bottom of the curl
+        but cannot push its flanks out -- and the drawn correction asks for both: it runs
+        1.9 units below the bottom and then 2.6 units outside the right flank as it climbs.
+        Down is only the outward direction at the very bottom; a normal is the outward
+        direction everywhere.
+        """
+        t = np.gradient(_smooth(mid.real, 0.01) + 1j * _smooth(mid.imag, 0.01))
+        n = 1j * t / np.abs(t)
+        lo = int(np.argmin(mid.imag))
+        return n if n[lo].imag < 0 else -n
+
     def deepen_bump(mid, span):
         """A raised-cosine hump over the bottom of the hook, zero at both ends of the trail."""
         u = _arcfrac(mid)
@@ -487,7 +501,7 @@ def derived_swash_items(a_verts=None, hoop_items=None):
     mid_raw = _smooth((outer + h_out).real, 0.01) + 1j * _smooth((outer + h_out).imag, 0.01)
     opened = open_hook(mid_raw, OPEN, OPEN_TO)
     bump = deepen_bump(opened, DEEPEN_SPAN) if DEEPEN else np.zeros(len(opened))
-    mid_ref = opened - 1j * DEEPEN * (1.0 - DEEPEN_SPLIT) * bump
+    mid_ref = opened + DEEPEN * (1.0 - DEEPEN_SPLIT) * bump * outward(opened)
     disp_ref = straighten(mid_ref, HOLD[0], HOLD[1]) - mid_raw
     u_ref = _arcfrac(mid_ref)
 
