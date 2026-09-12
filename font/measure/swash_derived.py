@@ -82,14 +82,23 @@ HOLD = tuple(float(v) for v in os.environ.get('ORPHAN_SWASH_HOLD', '0.025,0.08')
 # opens.  The stroke thickened inside an envelope that did not grow, which closes a counter
 # the way it does in any bold weight; the artwork keeps a gap of 0.49 times the stroke
 # width between the two arms of the curl.
-OPEN = float(os.environ.get('ORPHAN_SWASH_OPEN', 0.86))
+# OFF.  Scaling the hook's curvature does reopen its counter, but it is the wrong
+# mechanism and it was the single largest source of fault in this outline.  Opening by 14%
+# throws the far end 37.2 mark units off the hoop -- a quarter of the trail's own length --
+# and the correction needed to drag it back IS the deformation: it left the outer edge with
+# a knuckle of radius 0.069 mark units on a 7.3-unit band, straight flanks either side of
+# it, and the swash reaching x=103.0 where the artwork reaches 94.5, outside the mark.  At
+# 1.0 the transform round-trips to 0.065 units, so the machinery is sound and the setting
+# is not; the counter is opened by DEEPEN instead, which is local and needs no such
+# correction.  Kept, off, because the measurement is worth not repeating.
+OPEN = float(os.environ.get('ORPHAN_SWASH_OPEN', 1.0))
 OPEN_TO = float(os.environ.get('ORPHAN_SWASH_OPEN_TO', 0.30))
 # How much deeper the bottom of the hook sits, in mark units, and over how much of the
 # trail either side of it that is spread.  Opening the curvature deepens too, but it
 # deepens by inflating the whole curl -- to reach 1.8 units it throws the swash out to
 # x=117 against the artwork's 94.5, well outside the mark -- so the depth is put in
 # locally instead, as a bump on the midline centred on the hook's lowest point.
-DEEPEN = float(os.environ.get('ORPHAN_SWASH_DEEPEN', 3.2))
+DEEPEN = float(os.environ.get('ORPHAN_SWASH_DEEPEN', 4.0))
 DEEPEN_SPAN = float(os.environ.get('ORPHAN_SWASH_DEEPEN_SPAN', 0.22))
 # How much of the deepening goes into WIDTH rather than into moving the midline.  Dropping
 # the midline drops both edges, and the inner one is on the concave side, so it tightens:
@@ -150,6 +159,21 @@ def _smooth(z, frac):
     """A light box filter, reflected at the ends so they do not drift."""
     w = max(3, int(frac * len(z)) | 1)
     return np.convolve(np.pad(z, w // 2, mode='reflect'), np.ones(w) / w, 'valid')
+
+
+def _ease(x):
+    """A C2 ease: zero first AND second derivative at both ends.
+
+    Every blend in this file moves POSITION, and a position blend that is only C1 puts a
+    step in the curvature at each of its boundaries -- which is a crease in the outline,
+    however smooth the tangents look.  Both the obvious easings are C1 only: the raised
+    cosine has second derivative pi^2/2 at its ends, and smoothstep 3x^2-2x^3 has 6.  They
+    are why the hook grew a knuckle of radius 0.159 mark units where the band is 7.27 wide,
+    and why the flanks either side of it went straight.  The quintic is the cheapest curve
+    that lands flat to second order at both ends.
+    """
+    x = np.clip(x, 0.0, 1.0)
+    return x * x * x * (10.0 + x * (6.0 * x - 15.0))
 
 
 def _arcfrac(P):
@@ -271,6 +295,30 @@ def _departure_error(items, verts):
             for (i, a, h, _), w in zip(DEPARTURES, want)]
 
 
+def _curvature(items, walk, n=400):
+    """Tightest radius on an edge, and the worst curvature jump across a knot.
+
+    Tangent continuity is not enough and checking only it is how a knuckle got into the
+    hook unnoticed: the joins were G1 to 0.000 deg while the curvature stepped 2049:1
+    across one of them, which is a crease a pen could not make.  Radii are in mark units,
+    so they are read against the local band width -- an outer edge whose radius is a
+    fraction of the stroke's own width is a corner however smooth its tangents are.
+    """
+    tight, jump, ends = 1e18, 1.0, []
+    for k, rev in walk:
+        P = [_C(q) for q in items[k][1:]]
+        t = np.linspace(0, 1, n)
+        d1 = 3 * ((1-t)**2 * (P[1]-P[0]) + 2*(1-t)*t * (P[2]-P[1]) + t*t * (P[3]-P[2]))
+        d2 = 6 * ((1-t) * (P[2]-2*P[1]+P[0]) + t * (P[3]-2*P[2]+P[1]))
+        kap = np.abs(d1.real*d2.imag - d1.imag*d2.real) / np.maximum(np.abs(d1)**3, 1e-12)
+        r = 1.0 / np.maximum(kap, 1e-12)
+        tight = min(tight, float(r.min()))
+        ends.append((float(r[-1]), float(r[0])) if not rev else (float(r[0]), float(r[-1])))
+    for (_, a), (b, _) in zip(ends, ends[1:]):
+        jump = max(jump, max(a, b) / max(min(a, b), 1e-12))
+    return tight, jump
+
+
 def _width_ratio(before, after):
     """How much wider the ribbon actually got, along the body, as (p10, p50, p90).
 
@@ -381,8 +429,7 @@ def derived_swash_items(a_verts=None, hoop_items=None):
             return mid
         u = _arcfrac(mid)
         d = np.r_[0.0, np.cumsum(np.abs(np.diff(mid)))]
-        w = np.clip((release - u) / (release - hold), 0.0, 1.0)
-        w = 0.5 * (1 - np.cos(np.pi * w))
+        w = _ease(np.clip((release - u) / (release - hold), 0.0, 1.0))
         return mid + w * (mid[0] + axis * d - mid)
 
     e1, e2 = aV[3] - aV[2], aV[4] - aV[5]
@@ -415,8 +462,7 @@ def derived_swash_items(a_verts=None, hoop_items=None):
         # 21 mark units off the hook's face.  That closing error is taken out smoothly over
         # everything past the hook rather than left for the end blend, which would otherwise
         # have to cram 21 units into the last 6% of the trail.
-        v = np.clip((t - upto) / (1.0 - upto), 0.0, 1.0)
-        P = P - (P[-1] - m[-1]) * (v * v * (3 - 2 * v))
+        P = P - (P[-1] - m[-1]) * _ease((t - upto) / (1.0 - upto))
         return np.interp(d / d[-1], t, P.real) + 1j * np.interp(d / d[-1], t, P.imag)
 
     def deepen_bump(mid, span):
@@ -430,17 +476,24 @@ def derived_swash_items(a_verts=None, hoop_items=None):
         # tapers over however much room there actually is.
         left = np.clip(1.0 - (u0 - u) / max(u0, 1e-6), 0.0, 1.0)
         right = np.clip(1.0 - (u - u0) / span, 0.0, 1.0)
-        return 0.5 * (1 - np.cos(np.pi * np.where(u < u0, left, right)))
+        return _ease(np.where(u < u0, left, right))
 
-    opened = open_hook(outer + h_out, OPEN, OPEN_TO)
+    # The midline is smoothed before anything differentiates it.  It is built from the
+    # pairing, and the pairing stalls -- consecutive midpoints repeat where the ribbon
+    # turns -- so the raw midline carries sample-scale noise.  Measured on the ARTWORK's
+    # own midline that noise reads as a radius of 0.000 mark units; open_hook takes two
+    # derivatives of it to get curvature, so the noise comes back as real creases in both
+    # edges.  The half-width vector is smoothed for the same reason a few lines up.
+    mid_raw = _smooth((outer + h_out).real, 0.01) + 1j * _smooth((outer + h_out).imag, 0.01)
+    opened = open_hook(mid_raw, OPEN, OPEN_TO)
     bump = deepen_bump(opened, DEEPEN_SPAN) if DEEPEN else np.zeros(len(opened))
     mid_ref = opened - 1j * DEEPEN * (1.0 - DEEPEN_SPLIT) * bump
-    disp_ref = straighten(mid_ref, HOLD[0], HOLD[1]) - (outer + h_out)
+    disp_ref = straighten(mid_ref, HOLD[0], HOLD[1]) - mid_raw
     u_ref = _arcfrac(mid_ref)
 
     def place(edge, h, head, tail):
         u = _arcfrac(edge)
-        g = GAIN + (k_head - GAIN) * 0.5 * (1 + np.cos(np.pi * np.minimum(1.0, u / reach)))
+        g = GAIN + (k_head - GAIN) * _ease(1.0 - np.minimum(1.0, u / reach))
         # The displacement is looked up by POSITION along the shared midline, not by arc
         # fraction.  The two edges are parameterised quite differently near the head -- the
         # inner one is much the shorter -- so the same fraction is a different place on the
@@ -454,8 +507,8 @@ def derived_swash_items(a_verts=None, hoop_items=None):
             h = h * (1.0 + grow / np.maximum(np.abs(h), 1e-9))
         mid = mid + disp_ref[at]
         p = mid - g * h + d_head * (1 - u) + d_tail * u
-        a = 0.5 * (1 + np.cos(np.pi * np.minimum(1.0, u / END_BLEND)))
-        b = 0.5 * (1 + np.cos(np.pi * np.minimum(1.0, (1 - u) / END_BLEND)))
+        a = _ease(1.0 - np.minimum(1.0, u / END_BLEND))
+        b = _ease(1.0 - np.minimum(1.0, (1 - u) / END_BLEND))
         return p + (head - p[0]) * a + (tail - p[-1]) * b, abs(head - p[0]), abs(tail - p[-1])
 
     outer, r0, r1 = place(outer, h_out, nV3, nf1)
@@ -487,9 +540,10 @@ def derived_swash_items(a_verts=None, hoop_items=None):
             for i in range(len(items))
             if abs(_C(items[i][-1]) - _C(items[(i + 1) % len(items)][1])) > 1e-9]
     r = _width_ratio(before, items)
+    curv = (_curvature(items, EDGE_OUTER), _curvature(items, EDGE_INNER))
     report = dict(head_cut=(abs(oV4 - oV3), abs(nV4 - nV3)),
                   tail_face=(abs(of1 - of0), abs(nf1 - nf0)),
-                  gain=GAIN, k_head=k_head, reach=reach, residual=residual, fit_err=(eo, ei), ratio=r,
+                  gain=GAIN, k_head=k_head, reach=reach, residual=residual, curv=curv, fit_err=(eo, ei), ratio=r,
                   departures_rotated_deg=rotated, gaps=gaps)
     return items, report
 
@@ -510,4 +564,7 @@ if __name__ == '__main__':
     print('  refit worst %.4f (outer) / %.4f (inner) mark units' % r['fit_err'])
     print('  edges leave the foot off parallel with the leg by %s deg'
           % ', '.join('%.2f' % v for v in r['departures_rotated_deg']))
+    (ro, jo), (ri, ji) = r['curv']
+    print('  tightest radius %.3f (outer) / %.3f (inner) mark units; worst curvature jump'
+          ' across a knot %.0f:1 / %.0f:1' % (ro, ri, jo, ji))
     print('  %d items, %d continuity gaps' % (len(it), len(r['gaps'])))
