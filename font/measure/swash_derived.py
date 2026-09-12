@@ -69,14 +69,21 @@ DEPARTURES = ((3, 4, 3, (2, 3)), (6, 1, 2, (4, 5)))
 
 NS = 1500                                                     # samples along the spine
 END_BLEND = float(os.environ.get('ORPHAN_SWASH_END', 0.06))   # residual anchoring span
-HEAD_REACH = float(os.environ.get('ORPHAN_SWASH_REACH', 0.0))   # 0 = one cut-length of travel
+HEAD_REACH = float(os.environ.get('ORPHAN_SWASH_REACH', 0.12))  # 0 = one cut-length of travel
 PATH_REACH = float(os.environ.get('ORPHAN_SWASH_PATH', 0.0))    # 0 = one cut-length, as above
 # How long the stroke runs STRAIGHT out of the leg before it turns, and where it is back on
 # the artwork's path, as fractions of arc length.  Set where the counter-turn the run forces
 # stays at a tenth of the curvature the stroke itself carries: at 4% of the trail it is
 # 8.5%, at 5% it is 10.1%, at 6% 15.3%, and at one cut-length 86% -- by which point the S is
 # plainly visible and the inner edge has stopped being fittable.  See `straighten`.
-HOLD = tuple(float(v) for v in os.environ.get('ORPHAN_SWASH_HOLD', '0.025,0.08').split(','))
+# OFF.  A straight run IS a flat spot -- that is what straightness is -- and it showed as
+# one on the bottom of the hook: outer-edge curvature dropping to 0.019 there, a radius of
+# 52 mark units, where the artwork never turns slower than 0.076 (radius 13) through the
+# same stretch.  It was added to make the stroke leave the leg parallel, and it turns out
+# not to be what does that: the departure measures the same -0.39 deg with the run off as
+# with it on, because the head bend is what delivers it.  So it was buying a visible flat
+# and nothing else.
+HOLD = tuple(float(v) for v in os.environ.get('ORPHAN_SWASH_HOLD', '0,0').split(','))
 # How much of the hook's curvature to keep, and how far the hook runs.  Below 1 the turn
 # takes a bigger radius, so the bottom of the hook sits lower and rounder and its counter
 # opens.  The stroke thickened inside an envelope that did not grow, which closes a counter
@@ -130,7 +137,7 @@ HEAD_OUT_SPAN = float(os.environ.get('ORPHAN_SWASH_HEAD_SPAN', 0.0))
 # shallow dents -- stretches where the outer edge is locally CONCAVE, radius about 1.2 mark
 # units on a band 7.5 wide -- which are high-frequency against a curve whose own radius is
 # nearer 8, so a small window takes them out without moving the curve.
-POLISH = float(os.environ.get('ORPHAN_SWASH_POLISH', 0.05))
+POLISH = float(os.environ.get('ORPHAN_SWASH_POLISH', 0.07))
 GAIN = float(os.environ.get('ORPHAN_SWASH_GAIN', 0.0)) or rules.RING_GAIN
 
 
