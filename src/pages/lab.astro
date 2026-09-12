@@ -1,0 +1,45 @@
+---
+// A view, not a location. Nothing lives under /lab/; this lists entries whose
+// status is `wip`, each linked at its own permanent URL. An entry leaves this
+// page by becoming `ready` in src/data/design-index.ts, which never moves it.
+//
+// Not a design-index entry itself, so it carries no WIP banner.
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { wipEntries } from '../data/design-index';
+
+const entries = wipEntries();
+---
+<BaseLayout title="Lab — Austin Orphan" description="Work in progress: unfinished and unlisted pages."
+            bodyClass="lab-index" robots="noindex, nofollow">
+  <main class="lx">
+    <h1>Lab</h1>
+    <p class="lx-lede">
+      Unfinished work, each at the URL it will keep when it is done. Things
+      here may change or break without warning.
+    </p>
+    {entries.length === 0 ? (
+      <p class="lx-empty">Nothing in progress right now.</p>
+    ) : (
+      <ul class="lx-list">
+        {entries.map((e) => (
+          <li class="lx-item">
+            <a href={`/design/ao/${e.slug}/`}>{e.title}</a>
+            <p class="lx-blurb">{e.blurb}</p>
+          </li>
+        ))}
+      </ul>
+    )}
+  </main>
+</BaseLayout>
+
+<style is:global>
+  .lab-index { background: var(--color-background); color: var(--color-primary); }
+  .lx { max-width: 1180px; margin: 0 auto; padding: 84px 24px 96px; }
+  .lx > h1 { margin: 0 0 8px; font-size: 1.5rem; letter-spacing: 0.02em; }
+  .lx-lede { margin: 0 0 40px; max-width: 56ch; color: rgba(var(--color-primary-rgb), 0.6); }
+  .lx-empty { color: rgba(var(--color-primary-rgb), 0.5); }
+  .lx-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 26px; }
+  .lx-item a { color: var(--color-primary); font-size: 1.05rem; text-decoration: none; }
+  .lx-item a:hover { color: var(--color-accent); }
+  .lx-blurb { margin: 6px 0 0; color: rgba(var(--color-primary-rgb), 0.6); font-size: 0.88rem; }
+</style>

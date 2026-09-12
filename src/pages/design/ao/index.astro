@@ -1,0 +1,46 @@
+---
+// The AO identity system: everything derived from the mark.
+//
+// Not a design-index entry itself. Index pages are infrastructure, so this one
+// never lists itself and carries no WIP banner. It stays noindex and unlinked
+// until the first entry reaches `ready`.
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import { DESIGN_ENTRIES } from '../../../data/design-index';
+---
+<BaseLayout title="AO — Austin Orphan" description="The AO identity system: the mark, the typeface, and the work behind them."
+            bodyClass="design-index" robots="noindex, nofollow">
+  <main class="dx">
+    <h1>AO</h1>
+    <p class="dx-lede">The mark, the typeface, and the work behind them.</p>
+    <ul class="dx-list">
+      {DESIGN_ENTRIES.map((e) => (
+        <li class="dx-item">
+          <a href={`/design/ao/${e.slug}/`}>{e.title}</a>
+          {e.status === 'wip' && <span class="dx-tag">in progress</span>}
+          <p class="dx-blurb">{e.blurb}</p>
+        </li>
+      ))}
+    </ul>
+  </main>
+</BaseLayout>
+
+<style is:global>
+  .design-index { background: var(--color-background); color: var(--color-primary); }
+  .dx { max-width: 1180px; margin: 0 auto; padding: 84px 24px 96px; }
+  .dx > h1 { margin: 0 0 8px; font-size: 1.5rem; letter-spacing: 0.02em; }
+  .dx-lede { margin: 0 0 40px; color: rgba(var(--color-primary-rgb), 0.6); }
+  .dx-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 26px; }
+  .dx-item a { color: var(--color-primary); font-size: 1.05rem; text-decoration: none; }
+  .dx-item a:hover { color: var(--color-accent); }
+  .dx-tag {
+    margin-left: 10px;
+    padding: 2px 8px;
+    border: 1px solid rgba(var(--color-primary-rgb), 0.28);
+    border-radius: 999px;
+    color: rgba(var(--color-primary-rgb), 0.55);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .dx-blurb { margin: 6px 0 0; color: rgba(var(--color-primary-rgb), 0.6); font-size: 0.88rem; }
+</style>

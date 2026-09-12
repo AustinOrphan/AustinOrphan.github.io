@@ -62,3 +62,47 @@ test('the lab size presets no longer collide with the download buttons', async (
   const bare = [...doc.matchAll(/data-size="(\d+)"/g)].map((m) => m[1]).sort();
   assert.deepEqual(bare, ['1024', '512']);
 });
+
+test('the merged logo page has exactly one <main> and an h1 matching its title', async () => {
+  const doc = await html('design/ao/logo');
+  assert.equal((doc.match(/<main[\s>]/g) ?? []).length, 1, 'merging left two <main> elements');
+  assert.match(doc, /<h1>The AO mark<\/h1>/);
+});
+
+test('/design/ao/ lists every entry and is itself noindex', async () => {
+  const doc = await html('design/ao');
+  assert.equal(robotsOf(doc), 'noindex, nofollow');
+  assert.match(doc, /href="\/design\/ao\/logo\/"/);
+  assert.match(doc, /href="\/design\/ao\/typeface\/"/);
+});
+
+test('/design/ao/ does not list itself and carries no WIP banner', async () => {
+  const doc = await html('design/ao');
+  assert.doesNotMatch(doc, /href="\/design\/ao\/"/);
+  assert.doesNotMatch(doc, /Work in progress\./);
+});
+
+test('/lab/ lists only wip entries, at their permanent URLs', async () => {
+  const doc = await html('lab');
+  assert.equal(robotsOf(doc), 'noindex, nofollow');
+  assert.match(doc, /href="\/design\/ao\/logo\/"/);
+  assert.match(doc, /href="\/design\/ao\/typeface\/"/);
+});
+
+test('/lab/ is not a URL prefix: no page is built beneath it', async () => {
+  const { existsSync } = await import('node:fs');
+  assert.ok(!existsSync(pagePath('lab/typeface')));
+  assert.ok(!existsSync(pagePath('lab/logo')));
+});
+
+for (const [from, to] of [
+  ['orphan-display', '/design/ao/typeface/'],
+  ['logo-animation', '/design/ao/logo/'],
+  ['logo-lab', '/design/ao/logo/'],
+]) {
+  test(`/${from}/ redirects to ${to}`, async () => {
+    const doc = await html(from);
+    assert.match(doc, /http-equiv="refresh"/i, 'no meta refresh emitted');
+    assert.ok(doc.includes(to), `stub does not point at ${to}`);
+  });
+}
