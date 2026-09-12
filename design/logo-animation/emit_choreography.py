@@ -222,8 +222,11 @@ coil_open_c = coil_c[OPEN]
 coil_open_o, coil_open_i = coil_o[OPEN], coil_i[OPEN]
 coil_open_w = coil_w[OPEN]
 
-# the ring's own centre circle, and the annulus as one even-odd path
-ring_th = TH0 + np.linspace(0, -2 * math.pi, 900)
+# The ring's own centre circle -- swept the SAME way the coil was, which is the whole point
+# of the coil.  Run the other way it reverses the pen through 175.7 degrees at the apex: the
+# coil arrives travelling left and the ring sets off travelling right, and the one gesture
+# the ending is built on becomes two.
+ring_th = TH0 + np.linspace(0, 2 * math.pi, 900)
 ring_rc = np.array([(ray(CO, RO['r'], t) + ray(CI, RI['r'], t)) / 2 for t in ring_th])
 ring_c = CC + ring_rc * np.exp(1j * ring_th)
 ring_band = np.array([abs(ray(CO, RO['r'], t) - ray(CI, RI['r'], t)) for t in ring_th])
@@ -246,7 +249,10 @@ _p = ring_only_dt / ring_only_dt[-1]
 ring_close_fr = 1.0 - (1.0 - _p) ** 2
 
 def path_d(pts, step=8):
-    return 'M' + ' L'.join('%d %d' % (round(z.real), round(z.imag)) for z in pts[::step])
+    P_ = list(pts[::step])
+    if abs(P_[-1] - pts[-1]) > 1e-9:
+        P_.append(pts[-1])          # the last sample is the junction; never drop it
+    return 'M' + ' L'.join('%d %d' % (round(z.real), round(z.imag)) for z in P_)
 
 
 def band_d(o, i, step=6):
