@@ -110,6 +110,11 @@ DEEPEN_SPLIT = float(os.environ.get('ORPHAN_SWASH_SPLIT', 0.5))
 # the swash leaves the foot parallel on BOTH sides.  0 leaves it wherever the ribbon puts
 # it, which is 70 degrees off -- worse than the artwork's own 57.
 PARALLEL = float(os.environ.get('ORPHAN_SWASH_PARALLEL', 0.06))
+# A light smoothing of each finished edge before it is refitted.  The transforms leave
+# shallow dents -- stretches where the outer edge is locally CONCAVE, radius about 1.2 mark
+# units on a band 7.5 wide -- which are high-frequency against a curve whose own radius is
+# nearer 8, so a small window takes them out without moving the curve.
+POLISH = float(os.environ.get('ORPHAN_SWASH_POLISH', 0.05))
 GAIN = float(os.environ.get('ORPHAN_SWASH_GAIN', 0.0)) or rules.RING_GAIN
 
 
@@ -525,6 +530,17 @@ def derived_swash_items(a_verts=None, hoop_items=None):
             h = h * (1.0 + grow / np.maximum(np.abs(h), 1e-9))
         mid = mid + disp_ref[at]
         p = mid - g * h + d_head * (1 - u) + d_tail * u
+        if POLISH > 0:
+            # Smooth the body, but hand the ends back untouched and taper the correction in
+            # over the same span the blend below uses.  A reflected box filter still moves
+            # its own endpoints, and letting it do so here costs 0.84 mark units of anchor
+            # forcing where everything else in this file needs 0.001 -- which the end blend
+            # then has to take out inside 6% of the trail, putting a deformation exactly on
+            # the foot it was trying to land cleanly on.
+            q = _smooth(p.real, POLISH) + 1j * _smooth(p.imag, POLISH)
+            keep_ends = np.maximum(_ease(1.0 - np.minimum(1.0, u / END_BLEND)),
+                                   _ease(1.0 - np.minimum(1.0, (1 - u) / END_BLEND)))
+            p = p * keep_ends + q * (1.0 - keep_ends)
         a = _ease(1.0 - np.minimum(1.0, u / END_BLEND))
         b = _ease(1.0 - np.minimum(1.0, (1 - u) / END_BLEND))
         return p + (head - p[0]) * a + (tail - p[-1]) * b, abs(head - p[0]), abs(tail - p[-1])
