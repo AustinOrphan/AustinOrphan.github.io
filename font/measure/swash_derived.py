@@ -367,6 +367,92 @@ def _curvature(items, walk, n=400):
     return tight, jump
 
 
+def _cast(c, n, edge, j0, win=260):
+    """How far from `c` along `n` the edge is, searching only the stretch near index j0.
+
+    Unwindowed this reads the wrong branch: the head sits a couple of stroke widths from
+    the hook's outer edge, so a normal cast there finds the other side of the gesture
+    before it finds its own.
+    """
+    a, b = max(0, int(j0) - win), min(len(edge) - 1, int(j0) + win)
+    P, Q = edge[a:b], edge[a + 1:b + 1]
+    d = Q - P
+    den = d.real * n.imag - d.imag * n.real
+    ok = np.abs(den) > 1e-12
+    w = P - c
+    t = (w.real * n.imag - w.imag * n.real) / np.where(ok, den, 1)
+    s = (w.real * d.imag - w.imag * d.real) / np.where(ok, den, 1)
+    good = ok & (t >= 0) & (t <= 1) & (s > 1e-9)
+    return float(np.min(s[good])) if good.any() else np.nan
+
+
+def _radius(P, frac=0.02):
+    """Local radius of curvature along a polyline, smoothed, in mark units."""
+    q = _smooth(P.real, frac) + 1j * _smooth(P.imag, frac)
+    d1, d2 = np.gradient(q), np.gradient(np.gradient(q))
+    kap = np.abs(d1.real * d2.imag - d1.imag * d2.real) / np.maximum(np.abs(d1) ** 3, 1e-12)
+    return 1.0 / np.maximum(kap, 1e-12)
+
+
+def _section(o, i, step=2):
+    """The ribbon's TRUE width, as perpendicular sections, from its two edge polylines.
+
+    Not the same thing as the paired distance |outer - inner| the construction works in,
+    and the difference is not small: where the ribbon turns, or where one edge is much the
+    longer, the pairing bridges the ribbon obliquely and reads up to 40% wide.  Measured
+    against a raster of the same ribbon -- twice the distance transform, which shares no
+    code with this -- the sections agree and the paired distance does not.  So this is what
+    the width has to be judged on, and what the solver below drives.
+
+    Returns (sample indices, widths, arc fractions).  Taking polylines rather than items is
+    the point: sample k of a rebuilt edge came from sample k of the artwork's, so on
+    polylines the index IS the correspondence -- but only before the refit, which re-knots
+    the chain and moves sample k by as much as a quarter of the trail.
+    """
+    t = np.clip(np.maximum.accumulate(_smooth(_arcfrac(i)[_pair(o, i)], 0.02)), 0, 1)
+    mid = (o + _at(i, t)) / 2
+    # The tangent comes off a SMOOTHED copy.  The pairing stalls -- consecutive midpoints
+    # repeat where the ribbon turns -- so the raw midline has zero-length steps and a normal
+    # taken there is 0/0.  The section is still cast from the raw point.
+    d = np.gradient(_smooth(mid.real, 0.01) + 1j * _smooth(mid.imag, 0.01))
+    k = np.arange(0, len(mid), step)
+    c, nrm = mid[k], 1j * d[k] / np.abs(d[k])
+    ji = np.interp(t[k], _arcfrac(i), np.arange(len(i)))
+    w = np.array([_cast(c[j], nrm[j], o, k[j]) + _cast(c[j], -nrm[j], i, ji[j])
+                  for j in range(len(k))])
+
+    # A section is a local measurement and it fails locally: a normal cast where the ribbon
+    # doubles back can miss its own edge and find the far side of the hook, 25 mark units
+    # away on a stroke 6 across.  Left in, one such reading spreads through the solver's
+    # smoothing and puts a real dent in the outer edge.  So each width is checked against
+    # the median of its neighbours and replaced when it disagrees by more than a third.
+    m = len(w)
+    pad = np.pad(w, 5, mode='edge')
+    med = np.array([np.nanmedian(pad[j:j + 11]) for j in range(m)])
+    bad = ~np.isfinite(w) | (np.abs(w - med) > 0.35 * med)
+    return k, np.where(bad, med, w), _arcfrac(mid)[k]
+
+
+def _section_items(items, step=2):
+    return _section(_walk(items, EDGE_OUTER), _walk(items, EDGE_INNER), step)
+
+
+def _true_ratio(before, after):
+    """Section width after / before at matched ARC FRACTION, as (p10, p50, p90).
+
+    Arc fraction, not sample index, because the refit re-knots both chains independently.
+    The BODY only: over the head the pairing bridges the oblique cut instead of crossing
+    the ribbon, so the spine it gives is not between the edges and a section cast from it
+    can run the length of the hook -- 24.7 mark units where the stroke is 6.  That stretch
+    is also the one place the width is deliberately not the body's, so there is nothing
+    lost in leaving it out.
+    """
+    (_, wb, ub), (_, wa, ua) = _section_items(before), _section_items(after)
+    g = np.linspace(HEAD_REACH, 1 - END_BLEND, 400)
+    r = np.interp(g, ua, wa) / np.interp(g, ub, wb)
+    return tuple(float(v) for v in np.nanpercentile(r, (10, 50, 90)))
+
+
 def _width_ratio(before, after):
     """How much wider the ribbon actually got, along the body, as (p10, p50, p90).
 
@@ -383,6 +469,41 @@ def _width_ratio(before, after):
     g = np.linspace(END_BLEND, 1 - END_BLEND, 400)
     r = np.interp(g, *w[1]) / np.interp(g, *w[0])
     return tuple(float(v) for v in np.percentile(r, (10, 50, 90)))
+
+
+# Set by solve_width(): how far, in mark units, each edge is to move along its OWN outward
+# normal, per sample of the shared midline.  A normal offset rather than a scaling of the
+# half-width vector, because that vector is not perpendicular -- near the hook it is most of
+# the way tangential, so scaling it slides samples ALONG the edge instead of across it, and
+# bunching samples on a turn that is already the tightest in the mark makes a cusp: the
+# inner edge's radius went 1.80 -> 0.55 and its refit error 0.23 -> 0.47 doing it that way.
+_CORR = None
+
+WIDTH_PROFILE_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                                  'source', 'swash_width_profile.json')
+
+
+def _width_profile():
+    """The drawn width profile, as (sample fractions, width in mark units).
+
+    Indexed by SAMPLE FRACTION along the edge walk, not by arc fraction.  Sample j of the
+    rebuilt ribbon is built from sample j of the artwork's, so the index is the material
+    correspondence; arc fraction is not, because the rebuilt midline runs 4.6% longer than
+    the artwork's and is reshaped besides.  Indexing it by arc fraction instead lands the
+    profile 0.35 mark units off its target rather than 0.07.
+
+    Absolute widths, in mark units, not a gain on the artwork's.  A gain would rescale with
+    the rules, which is what deriving the mark is for -- but the two parameterisations do
+    not divide: the artwork's sample j and the rebuilt one's sit at quite different places
+    along their own lengths, so a quotient of the two is not a gain of anything, and asking
+    the solver to chase it produces demands of x2.4 and a stroke 2.6 times the artwork's.
+    So the profile is stated in mark units and has to be re-derived if the weight rules
+    move; the width rule this pins down is the shape of the curve, not its height.
+    """
+    if not os.path.exists(WIDTH_PROFILE_PATH):
+        return None
+    d = json.load(open(WIDTH_PROFILE_PATH))
+    return np.array(d['u'], float), np.array(d['width'], float)
 
 
 def derived_swash_items(a_verts=None, hoop_items=None):
@@ -560,7 +681,7 @@ def derived_swash_items(a_verts=None, hoop_items=None):
     disp_ref = straighten(mid_ref, HOLD[0], HOLD[1]) - mid_raw
     u_ref = _arcfrac(mid_ref)
 
-    def place(edge, h, head, tail):
+    def place(edge, h, head, tail, side=0):
         u = _arcfrac(edge)
         g = GAIN + (k_head - GAIN) * _ease(1.0 - np.minimum(1.0, u / reach))
         # The displacement is looked up by POSITION along the shared midline, not by arc
@@ -582,13 +703,18 @@ def derived_swash_items(a_verts=None, hoop_items=None):
             h = h * (1.0 + grow / np.maximum(np.abs(h), 1e-9))
         mid = mid + disp_ref[at]
         p = mid - g * h + d_head * (1 - u) + d_tail * u
+        if _CORR is not None:
+            t = np.gradient(_smooth(p.real, 0.01) + 1j * _smooth(p.imag, 0.01))
+            nb = np.where(np.abs(t) > 1e-12, 1j * t / np.maximum(np.abs(t), 1e-12), 0.0)
+            inward = np.sign((nb * np.conj(mid - p)).real)
+            p = p - nb * np.where(inward == 0, -1.0, inward) * _CORR[side][at]
         p = _polish_edge(p, u, POLISH)
         a = _ease(1.0 - np.minimum(1.0, u / END_BLEND))
         b = _ease(1.0 - np.minimum(1.0, (1 - u) / END_BLEND))
         return p + (head - p[0]) * a + (tail - p[-1]) * b, abs(head - p[0]), abs(tail - p[-1])
 
-    outer, r0, r1 = place(outer, h_out, nV3, nf1)
-    inner, r2, r3 = place(inner, h_in, nV4, nf0)
+    outer, r0, r1 = place(outer, h_out, nV3, nf1, 0)
+    inner, r2, r3 = place(inner, h_in, nV4, nf0, 1)
 
     # Bend the inner edge's head onto the leg's right edge, as a rotation about the anchor
     # that decays away.  This moves the POLYLINE, so the refit follows it naturally -- the
@@ -670,10 +796,117 @@ def derived_swash_items(a_verts=None, hoop_items=None):
             if abs(_C(items[i][-1]) - _C(items[(i + 1) % len(items)][1])) > 1e-9]
     r = _width_ratio(before, items)
     curv = (_curvature(items, EDGE_OUTER), _curvature(items, EDGE_INNER))
-    report = dict(head_cut=(abs(oV4 - oV3), abs(nV4 - nV3)),
+    report = dict(edges=(outer, inner),
+                  head_cut=(abs(oV4 - oV3), abs(nV4 - nV3)),
                   tail_face=(abs(of1 - of0), abs(nf1 - nf0)),
                   gain=GAIN, k_head=k_head, reach=reach, residual=residual, curv=curv, fit_err=(eo, ei), ratio=r,
                   departures_rotated_deg=rotated, gaps=gaps)
+    return items, report
+
+
+def solve_width(a_verts=None, hoop_items=None, k=None, iters=2, target=None):
+    """Rebuild the swash with its SECTION width driven onto a single gain.
+
+    A constant GAIN is a constant multiplier on the paired half-width vector, and that is
+    not a constant multiplier on the width: the pairing crosses the ribbon obliquely
+    wherever it turns, and the rebuilt midline is 4.6% longer than the artwork's, which
+    thins it further.  Left alone the stroke comes out x1.47 through the bowl and x1.03
+    through the run -- a pen that gains half again as much in its curves as in its
+    straights, which is not a pen.
+
+    So the gain is SOLVED rather than assumed.  Each pass measures the true sections,
+    divides them into the target, smooths that correction and folds it into the half-width;
+    three or four passes take the spread from 0.43 down to a few hundredths.  The target is
+    `k` through the body, easing to the cut's own growth over the head exactly as the
+    unsolved gain does -- so the head, where the A's foot got 60% wider, is untouched.
+
+    With no `target` the drawn profile in font/source/swash_width_profile.json is used when it
+    is there, and a flat gain of `k` when it is not.
+
+    TWO passes.  A second measures a ribbon whose edges have already been refit, so what it
+    reads is as much the fitter's 0.2 mark units of error as the width's, and it spends the
+    correction chasing that: the spread stops improving after the first pass and the outer
+    edge's worst knot jump walks from 11:1 to 23:1.
+
+    `target`, if given, is (arc fractions, widths in mark units) and replaces `k` entirely:
+    the profile is driven onto that curve instead of onto a multiple of the artwork's.  The
+    swash does not have to be the artwork's profile scaled -- it has to be a profile a pen
+    could have made -- so a drawn one is as legitimate a target as a derived one, and it is
+    the only way to ask for something the artwork does not contain.  A third pass buys 0.004
+    mark units of accuracy and costs 0.01 of refit, so it stops at two.
+
+    `k` defaults to GAIN, the gain the rounds took.  Pass a different one to hold the ink
+    where it is instead; the shape of the profile is the same either way, only its height
+    moves.
+    """
+    global _CORR
+    if a_verts is None or hoop_items is None:
+        from mark_derived import parts
+        from hoop_derived import derived_hoop_items
+        if a_verts is None:
+            a_poly = parts()[0]
+            a_verts = [list(a_poly.start)] + [list(s[-1]) for s in a_poly.segs]
+            if len(a_verts) == 7 and a_verts[0] == a_verts[-1]:
+                a_verts = a_verts[:6]
+        if hoop_items is None:
+            hoop_items = derived_hoop_items()[0]
+    k = GAIN if k is None else k
+    drawn = None if target is not None else _width_profile()
+
+    src = {o['role']: o for o in json.load(open(SRC_PATH))['AO'][0]['objects']}
+    art = [list(it) for it in src['white']['items']]
+    a_out, a_in = _walk(art, EDGE_OUTER), _walk(art, EDGE_INNER)
+    ks, wa, u_mid = _section(a_out, a_in)
+    good = np.isfinite(wa) & (wa > 0)
+
+    _CORR = (np.zeros(len(a_out)), np.zeros(len(a_out)))
+    try:
+        for _ in range(iters):
+            items, report = derived_swash_items(a_verts, hoop_items)
+            eo, ei = report['edges']
+            _, w, _u = _section(eo, ei)
+            if target is not None:
+                want = np.interp(_u, target[0], target[1])
+            elif drawn is not None:
+                # Outside the drawn range the gain is whatever the construction produced, so
+                # the correction there is zero by construction and the ends stay pinned.
+                want = np.interp(ks / float(len(_CORR[0]) - 1), drawn[0], drawn[1],
+                                 left=np.nan, right=np.nan)
+                want = np.where(np.isfinite(want), want, w)
+            else:
+                gain = k + (report['k_head'] - k) * _ease(
+                    1.0 - np.minimum(1.0, u_mid / report['reach']))
+                want = wa * gain
+            err = np.where(good & np.isfinite(w) & (w > 0),
+                           np.clip(want - np.where(w > 0, w, 1), -3.0, 3.0), 0.0)
+            err = _smooth(err, 0.06)
+            # Handed back to nothing at both ends.  There the half-width vector is the
+            # HALF-CUT and the gain is the cut's own growth, which lands the edges on the
+            # new cut exactly; moving them puts a crease in the inner edge instead.
+            ends = np.maximum(_ease(1.0 - np.minimum(1.0, u_mid / HEAD_REACH)),
+                              _ease(1.0 - np.minimum(1.0, (1 - u_mid) / END_BLEND)))
+            err = err * (1.0 - ends)
+
+            # Shared out between the two edges, and NOT evenly.  An even split is what a
+            # width correction wants to be and it is wrong here: the inner edge at the
+            # bottom of the hook already turns in 1.80 mark units, the tightest radius in
+            # the mark, because that is where the hook was deepened onto the drawn line.
+            # Moving it a few tenths either way takes it to 0.77 and its refit error from
+            # 0.23 to 0.45 -- the five cubics it gets cannot carry a width correction on top
+            # of the departure bend and the hook.  The outer edge over the same stretch
+            # turns in 8.15 and does not notice.  So the inner edge only takes a share where
+            # it has room: nothing below a radius of 8, up to half above 20.
+            ri = _radius(ei)[np.round(np.interp(u_mid, _arcfrac(ei),
+                                                np.arange(len(ei)))).astype(int)]
+            si = _smooth(0.5 * np.clip((ri - 8.0) / 12.0, 0.0, 1.0), 0.05)
+            so = 1.0 - si
+            _CORR = (_CORR[0] + np.interp(np.arange(len(a_out)), ks, err * so),
+                     _CORR[1] + np.interp(np.arange(len(a_out)), ks, err * si))
+        items, report = derived_swash_items(a_verts, hoop_items)
+    finally:
+        corr, _CORR = _CORR, None
+    report['solved'] = (k, corr)
+    report['true_ratio'] = _true_ratio(art, items)
     return items, report
 
 

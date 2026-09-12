@@ -32,7 +32,7 @@ sys.path.insert(0, os.path.join(HERE, 'measure'))
 import rules
 from mark_derived import parts
 from hoop_derived import derived_hoop_items
-from swash_derived import derived_swash_items
+from swash_derived import derived_swash_items, solve_width
 
 SRC_PATH = os.path.join(HERE, 'source', 'ai_objects.json')
 OUT = os.path.join(os.path.dirname(HERE), 'design', 'logo-animation', 'ai_objects_derived.json')
@@ -66,7 +66,12 @@ def main():
     verts = [list(a_poly.start)] + [list(s[-1]) for s in a_poly.segs]
     if len(verts) == 7 and verts[0] == verts[-1]:
         verts = verts[:6]
-    swash_items, swash_rep = derived_swash_items(a_verts=verts, hoop_items=hoop_items)
+    # solve_width, not derived_swash_items: the construction's constant gain is a constant
+    # multiplier on the PAIRED half-width vector, which is not a constant multiplier on the
+    # width -- left alone the stroke comes out x1.47 through the outside of the curl and
+    # x1.03 through the run.  The solver measures the real sections and drives them onto the
+    # drawn profile in font/source/swash_width_profile.json.
+    swash_items, swash_rep = solve_width(a_verts=verts, hoop_items=hoop_items)
     assert not swash_rep['gaps'], swash_rep['gaps']
 
     for o in page['objects']:
