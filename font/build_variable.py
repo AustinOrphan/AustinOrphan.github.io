@@ -443,11 +443,17 @@ def to_ttf_all(srcs, dsts):
             # varLib freeze it, but say so rather than leaving it to a warning in the noise.
             incompatible.append(name)
             for gs, g in zip(sets, glyfs):
-                pen = TTGlyphPen(None)
+                pen = TTGlyphPen(None, outputImpliedClosingLine=True)
                 gs[name].draw(Cu2QuPen(pen, MAX_ERR))
                 g[name] = pen.glyph()
             continue
-        pens = [TTGlyphPen(None) for _ in fonts]
+            # outputImpliedClosingLine: the pen drops a contour's closing line when the last
+            # point lands exactly on the first, because it is then redundant.  Whether it
+            # lands exactly there is ROUNDING, so the point count stops being structural --
+            # eight and six came out 182 points at most weights and 181 at three of them, and
+            # varLib dropped them for it.  Emitting it always costs one point and makes the
+            # count depend on the outline rather than on where the decimals fell.
+        pens = [TTGlyphPen(None, outputImpliedClosingLine=True) for _ in fonts]
         multi = Cu2QuMultiPen(pens, MAX_ERR)
         for ops in zip(*recs):
             op = ops[0][0]
@@ -546,7 +552,8 @@ def main():
 
     out = os.path.join(BUILD, 'OrphanDisplay-VF.ttf')
     vf.save(out)
-    _freeze_unverified(out, made)
+    if not os.environ.get('ORPHAN_NO_FREEZE'):
+        _freeze_unverified(out, made)
     print(f'  wrote {os.path.relpath(out, HERE)}  ({os.path.getsize(out)//1024} KB)')
 
 
