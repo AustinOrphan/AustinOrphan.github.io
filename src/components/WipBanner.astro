@@ -1,0 +1,24 @@
+---
+// Shown on every `wip` page, so that a page found by typing its URL explains
+// itself rather than looking broken or abandoned.
+---
+<p class="wip-banner">
+  <strong>Work in progress.</strong> This page is unfinished and unlisted. It may
+  change or break without warning. <a href="/lab/">See everything in progress</a>.
+</p>
+
+<style is:global>
+  .wip-banner {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 10px 16px;
+    border: 1px solid rgba(var(--color-primary-rgb), 0.28);
+    border-radius: 8px;
+    background: rgba(var(--color-primary-rgb), 0.05);
+    color: rgba(var(--color-primary-rgb), 0.75);
+    font-size: 0.84rem;
+  }
+  .wip-banner a {
+    color: var(--color-accent);
+  }
+</style>
