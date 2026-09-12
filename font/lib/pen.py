@@ -158,12 +158,20 @@ def ring(c, r_out, r_in, off=(0.0, 0.0)):
     Returns [outer (ccw), inner (cw)] as cubic contours."""
     return [circle_contour(c, r_out, ccw=True), circle_contour(add(c, off), r_in, ccw=False)]
 
+# Both of the band's arcs are split into this many pieces whatever they span.  Measured across
+# the axis box the spans run 39.67 to 333.59 degrees, which the ceil(span / 90) rule turns into
+# one to four pieces -- and eight of these arcs sit on a boundary and change count partway
+# across the box, which is what froze B, D, H, J, P, R and U out of the variable font.  Four is
+# the most that rule ever asks for, so nothing is coarser than it was and most arcs are finer.
+BAND_SEGS = 4
+
+
 def arc_band(c, r_out, r_in, off, a0, a1):
     """The part of ring() between polar angles a0 -> a1 (degrees, measured at the OUTER
     centre, counter-clockwise), both ends cut along the rays from that centre.
     Used for C, G, S, U and the bowls of B, D, P, R.  Returns one ccw Contour."""
     ci = add(c, off)
-    start, outer = arc_segments(c, r_out, a0, a1)
+    start, outer = arc_segments(c, r_out, a0, a1, BAND_SEGS)
     i1 = line_circle(line_ang(c, a1), ci, r_in, pick='max')     # inner end on the a1 ray
     i0 = line_circle(line_ang(c, a0), ci, r_in, pick='max')
     # atan2 wraps to (-180, 180], so an inner end can come back 360 away from the outer ray
@@ -172,7 +180,7 @@ def arc_band(c, r_out, r_in, off, a0, a1):
     def _near(b, a): return a + ((b - a + 180) % 360) - 180
     b1 = _near(ang(sub(i1, ci)), a1)
     b0 = _near(ang(sub(i0, ci)), a0)
-    _, inner = arc_segments(ci, r_in, b1, b0)
+    _, inner = arc_segments(ci, r_in, b1, b0, BAND_SEGS)
     k = Contour(start)
     for sg in outer: k.curve_to(sg[1], sg[2], sg[3])
     k.line_to(i1)
@@ -256,10 +264,22 @@ def circle_contour(c, r, ccw=True):
     out.curve_to((x + k, y - r), (x + r, y - k), (x + r, y))
     return out if ccw else out.reversed()
 
-def arc_segments(c, r, a0, a1):
+def arc_segments(c, r, a0, a1, n=None):
     """Cubic segments approximating the arc a0 -> a1 (degrees), split into <= 90-degree pieces.
-    Returns (start_point, [('c', c1, c2, p), ...])."""
-    n = max(1, int(math.ceil(abs(a1 - a0) / 90.0 - 1e-9)))
+    Returns (start_point, [('c', c1, c2, p), ...]).
+
+    `n` asks for a FIXED number of pieces instead, and every arc that has to interpolate across
+    the variable font's masters needs it, for the same reason fit_cubics grew `nseg`: the
+    default rule is ceil(span / 90), the span moves with WEIGHT and PUSH, and an arc that is
+    89 degrees in one master and 91 in another comes out as one piece in the first and two in
+    the second.  varLib cannot interpolate outlines whose point counts differ, so it drops the
+    glyph.  Ten arcs across the set cross a 90-degree boundary somewhere in the axis box.
+
+    Fixing the count only ever makes the approximation finer -- the pieces are equal fractions
+    of the span either way -- so there is no quality argument against the maximum the adaptive
+    rule would itself have asked for.
+    """
+    n = n or max(1, int(math.ceil(abs(a1 - a0) / 90.0 - 1e-9)))
     segs = []; start = add(c, mul(from_ang(a0), r))
     for i in range(n):
         b0 = math.radians(a0 + (a1-a0)*i/n); b1 = math.radians(a0 + (a1-a0)*(i+1)/n)
