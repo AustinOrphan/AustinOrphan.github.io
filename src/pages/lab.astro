@@ -35,11 +35,23 @@ const entries = wipEntries();
 <style is:global>
   .lab-index { background: var(--color-background); color: var(--color-primary); }
   .lx { max-width: 1180px; margin: 0 auto; padding: 84px 24px 96px; }
-  .lx > h1 { margin: 0 0 8px; font-size: 1.5rem; letter-spacing: 0.02em; }
-  .lx-lede { margin: 0 0 40px; max-width: 56ch; color: rgba(var(--color-primary-rgb), 0.6); }
-  .lx-empty { color: rgba(var(--color-primary-rgb), 0.5); }
+  /* global.css gives h1 the hero treatment (a secondary-colour stroke and an accent
+     offset copy) and gives p the accent colour at 4vw/1.5vw. Neither belongs on an
+     index page, and at 1400px the stroke is 2.8px on 24px text, which fills the
+     letterforms in. The typeface page fends both off the same way, in .od-head. */
+  .lx > h1 {
+    margin: 0 0 8px; font-size: 1.5rem; letter-spacing: 0.02em;
+    -webkit-text-stroke: 0; text-shadow: none;
+  }
+  .lx-lede { margin: 0 0 40px; max-width: 56ch; font-size: 0.95rem; color: rgba(var(--color-primary-rgb), 0.6); }
+  .lx-empty { font-size: 0.95rem; color: rgba(var(--color-primary-rgb), 0.5); }
   .lx-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 26px; }
-  .lx-item a { color: var(--color-primary); font-size: 1.05rem; text-decoration: none; }
+  /* The global `a` reset is display:flex, width/height:100%, which centred each title
+     over its own full-width row and detached it from its blurb. */
+  .lx-item a {
+    display: inline; width: auto; height: auto;
+    color: var(--color-primary); font-size: 1.05rem; text-decoration: none;
+  }
   .lx-item a:hover { color: var(--color-accent); }
   .lx-blurb { margin: 6px 0 0; color: rgba(var(--color-primary-rgb), 0.6); font-size: 0.88rem; }
 </style>

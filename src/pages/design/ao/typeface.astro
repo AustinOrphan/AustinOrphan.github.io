@@ -27,7 +27,7 @@ const SIZES = [88, 46, 27, 17];
 ---
 <BaseLayout title={entry.title} description={entry.blurb}
             bodyClass="od-page" robots={robotsFor(entry.status)}>
-  <WipBanner />
+  {entry.status === 'wip' && <WipBanner />}
   <main class="od">
     <header class="od-head">
       <h1>Orphan Display</h1>

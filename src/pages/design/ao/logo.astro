@@ -26,8 +26,9 @@ const TRAILS = ['swash', 'stroke'] as const;
 
 <BaseLayout title={entry.title} description={entry.blurb}
             bodyClass="logo-lab logo-anim-demo" robots={robotsFor(entry.status)}>
-  <WipBanner />
-  <section class="la-demo">
+  {entry.status === 'wip' && <WipBanner />}
+  <h1 class="la-title">{entry.title}</h1>
+  <section class="la-demo" aria-label="The mark, live">
     <div class="la-demo-row">
       <figure class="la-demo-cell">
         <LogoAnimated variant="hero" size="min(480px, 42vw)" id="la-demo" class="la-demo-main" />
@@ -148,8 +149,6 @@ const TRAILS = ['swash', 'stroke'] as const;
     </section>
   </section>
   <main class="lab">
-    <h1>The AO mark</h1>
-
     <section class="lab-stage-wrap">
       <div class="lab-stage" data-stage data-bg="site">
         {VARIANTS.map((v) => TRAILS.map((t) => (
@@ -178,7 +177,7 @@ const TRAILS = ['swash', 'stroke'] as const;
         <fieldset>
           <legend>size</legend>
           <label class="lab-range">
-            <input type="range" name="size" min="16" max="520" step="1" value="280" />
+            <input type="range" name="size" aria-label="size" min="16" max="520" step="1" value="280" />
             <output data-out="size">280px</output>
           </label>
           <div class="lab-presets">
@@ -192,7 +191,7 @@ const TRAILS = ['swash', 'stroke'] as const;
         <fieldset>
           <legend>speed</legend>
           <label class="lab-range">
-            <input type="range" name="speed" min="0.25" max="4" step="0.05" value="1" />
+            <input type="range" name="speed" aria-label="speed" min="0.25" max="4" step="0.05" value="1" />
             <output data-out="speed">1.00× · 1.30s</output>
           </label>
           <div class="lab-presets">
@@ -233,7 +232,7 @@ const TRAILS = ['swash', 'stroke'] as const;
           </div>
           <label><input type="checkbox" data-loop /> loop</label>
           <label class="lab-range">
-            <input type="range" name="scrub" min="0" max="1300" step="1" value="1300" />
+            <input type="range" name="scrub" aria-label="scrub" min="0" max="1300" step="1" value="1300" />
             <output data-out="scrub">1.300s</output>
           </label>
           <p class="lab-hint">Scrubbing pauses. Replay resumes from the top.</p>
@@ -294,10 +293,17 @@ const TRAILS = ['swash', 'stroke'] as const;
 <style is:global>
   .logo-lab { background: var(--color-background); color: var(--color-primary); }
   .lab { max-width: 1180px; margin: 0 auto; padding: 84px 24px 96px; }
-  /* Direct children only: the in-situ panel renders the real hero, whose own h1 is
-     styled by the bare `h1` rule in global.css. A descendant selector here outranks
-     it and shrank the wordmark to 24px. */
-  .lab > h1 { font-size: 1.5rem; margin: 0 0 24px; letter-spacing: 0.02em; }
+  /* The page title sits above the demo rather than inside .lab, so that the document's
+     first heading is this h1 and not the demo's "Download" h2. Styled by its own class,
+     never by a descendant selector: the in-situ panel renders the real hero, whose own
+     h1 must keep the bare `h1` rule in global.css. A `.lab h1` here outranked it and
+     shrank the wordmark to 24px. The stroke and shadow resets are that same global rule
+     in the other direction -- at 1400px it puts a 2.8px stroke on 24px text. */
+  .la-title {
+    max-width: 1180px; margin: 0 auto; padding: 84px 24px 0;
+    font-size: 1.5rem; letter-spacing: 0.02em;
+    -webkit-text-stroke: 0; text-shadow: none;
+  }
   .lab > section > h2, .lab > h2 { font-size: 1.1rem; margin: 56px 0 8px; }
   .lab-hint { color: rgba(var(--color-primary-rgb), 0.55); font-size: 0.82rem; margin: 6px 0 0; }
 
@@ -692,8 +698,14 @@ const TRAILS = ['swash', 'stroke'] as const;
 <script>
   import { downloadSvg, downloadPng, downloadVideo, videoMimeType } from '../../../components/logo-download';
   // Replay by re-applying the class that carries the animations. Every
-  // LogoAnimated on the page restarts together.
-  const marks = Array.from(document.querySelectorAll<SVGSVGElement>('.site-logo-anim'));
+  // LogoAnimated in the DEMO restarts together.
+  //
+  // Scoped to .la-demo, not document-wide. Before the merge this page was the whole
+  // document, so a bare '.site-logo-anim' meant "the demo's marks". It now also matches
+  // the lab's six stage slots and three in-situ marks, which ship autoplay={false} on
+  // purpose, so Replay animated panels nobody clicked and restarted the lab's mark out
+  // from under its own scrub slider. Same class of leak the data-lab-size rename fixed.
+  const marks = Array.from(document.querySelectorAll<SVGSVGElement>('.la-demo .site-logo-anim'));
   const animationsOf = (el: Element) =>
     document.getAnimations().filter((a) => {
       const target = (a.effect as KeyframeEffect | null)?.target;

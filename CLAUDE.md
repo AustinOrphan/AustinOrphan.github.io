@@ -18,7 +18,9 @@ components with inline `<script>` blocks.
 section components from `src/components/` (`About`, `Projects`, `Contact`,
 `Footer`, `ParticleSystem`, `KonamiEgg`). Blog routes live under
 `src/pages/blog/` — an index, `[id].astro` for posts, and `tags/[tag].astro`
-for tag pages — plus `src/pages/rss.xml.ts` for the feed.
+for tag pages — plus `src/pages/rss.xml.ts` for the feed. Design pages live
+under `src/pages/design/ao/`, with `src/pages/lab.astro` listing the
+unfinished ones; see Design Pages and /lab/ below.
 
 **Layouts:** `src/layouts/BaseLayout.astro` provides the shared shell (head,
 fonts, analytics, Phosphor icons). `BlogPost.astro` wraps individual posts.
@@ -50,6 +52,12 @@ npm run dev
 npm run check
 npm run build
 npm run preview
+
+# Build, then assert on the built dist/ (routing, robots, the merged logo page)
+npm test
+
+# Same assertions without rebuilding first — only valid if dist/ is current
+npm run test:routes
 ```
 
 ## Blog Publishing
@@ -120,6 +128,148 @@ nowhere else.
 Local builds default to the `test-vault/` fixtures; set `VAULT_PATH` to build
 from real content.
 
+## Design Pages and /lab/
+
+Pages documenting the design work, currently the AO mark and the typeface
+derived from it. The organising idea is that **location and readiness are
+separate concerns**:
+
+- `/design/ao/<slug>/` is where a page permanently lives. Slugs name the
+  *role* (`logo`, `typeface`), not the current state of the work, so renaming
+  or rewriting a page never moves its URL.
+- `/lab/` is a **view**, not a URL prefix. It lists the entries that are still
+  unfinished, each linked at its own permanent URL. Nothing is ever served
+  beneath `/lab/`, and a test asserts that.
+
+Finishing a page therefore changes a status field, never a URL.
+
+### The registry
+
+`src/data/design-index.ts` is the single source of truth: one `DESIGN_ENTRIES`
+record per page with `slug`, `title`, `blurb`, and `status` (`'wip' | 'ready'`).
+It is a hand-maintained registry rather than something derived from the pages
+because Astro treats only `getStaticPaths` and `prerender` as special exports
+from `.astro` frontmatter — a top-level `const status` in a page is not
+readable via `import.meta.glob`, so `/lab/` could not enumerate pages that way.
+
+Three helpers consume it: `entryFor(slug)` (throws on an unknown slug, so a
+typo fails the build loudly), `robotsFor(status)` (`wip` → `noindex, nofollow`),
+and `wipEntries()` (what `/lab/` lists).
+
+### Adding a page
+
+1. Add its entry to `DESIGN_ENTRIES` with `status: 'wip'`.
+2. Create `src/pages/design/ao/<slug>.astro`. In the frontmatter, look the
+   entry up and pass its robots directive through to the layout:
+   ```astro
+   import WipBanner from '../../../components/WipBanner.astro';
+   import { entryFor, robotsFor } from '../../../data/design-index';
+
+   const entry = entryFor('<slug>');
+   ---
+   <BaseLayout title={entry.title} description={entry.blurb}
+               robots={robotsFor(entry.status)}>
+     {entry.status === 'wip' && <WipBanner />}
+   ```
+3. Add a case to `scripts/routes.test.mjs` so the route, its robots tag, and
+   its banner are covered.
+
+Both index pages (`design/ao/index.astro`, `lab.astro`) are infrastructure, not
+entries: they never list themselves and carry no banner.
+
+`src/components/WipBanner.astro` is the "unfinished and unlisted" notice, so
+that a page reached by typing its URL explains itself instead of looking
+broken. Its `<style is:global>` ships on every page that imports it.
+
+### Graduating a page
+
+Flip its `status` to `'ready'` in the registry. That alone makes it
+`index,follow`, drops it off `/lab/`, drops its "in progress" tag on
+`/design/ao/`, and drops its WIP banner. The URL is unchanged and no link
+breaks.
+
+The one thing the flag does not reach is `/design/ao/` itself, whose own
+`noindex` is hardcoded because it has no status to derive one from. Flip that
+by hand when the first entry graduates.
+
+Today **every entry is `'wip'`** — all of these pages are `noindex` and
+deliberately unlinked from the site nav, and the site has no sitemap, so a URL
+typed by hand is the only way in.
+
+### Redirects
+
+The three former bench paths redirect via the `redirects` map in
+`astro.config.mjs`; static output emits a meta-refresh stub per entry.
+
+| Old | New |
+| --- | --- |
+| `/orphan-display` | `/design/ao/typeface/` |
+| `/logo-animation` | `/design/ao/logo/` |
+| `/logo-lab` | `/design/ao/logo/` |
+
+All three were `noindex` and unlinked, so these exist for bookmarks and
+history rather than for search engines.
+
+### Load-bearing details on /design/ao/logo/
+
+That page is a merge of the two former bench pages, and several of its oddities
+are deliberate. Changing them reintroduces a bug that was already fixed once:
+
+- **`<body>` carries both original body classes**
+  (`bodyClass="logo-lab logo-anim-demo"`) so that both inherited
+  `<style is:global>` blocks apply. Do not rewrite those selectors to a single
+  scope.
+- **The demo `<section class="la-demo">` is a sibling of `<main class="lab">`,
+  not nested inside it**, because `.lab > section > h2` would otherwise capture
+  the demo's "Download" heading. Since that leaves it outside the `main`
+  landmark, it carries an `aria-label` so it is still a findable region.
+- **The `<h1>` sits above the demo, styled by `.la-title`, not inside `.lab`.**
+  The demo owns a "Download" `h2` and comes first in the document, so an `h1`
+  inside `.lab` made the page open on a level-2 heading. Style it by its own
+  class and never with a descendant selector: the in-situ panel renders the real
+  `Hero`, whose own `h1` must keep the global hero treatment, and a `.lab h1`
+  rule outranked it and shrank the wordmark to 24px.
+- **The demo's replay queries `.la-demo .site-logo-anim`, not the bare class.**
+  Document-wide it also caught the lab's six stage slots and three in-situ
+  marks, which ship `autoplay={false}` deliberately, so Replay animated panels
+  nobody clicked and restarted the lab's mark out from under its scrub slider.
+- **The lab's size presets use `data-lab-size`, not `data-size`.** The lab wires
+  them with a document-wide `querySelectorAll('[data-size]')`, and the demo's
+  PNG download buttons carry `data-size="512"` / `"1024"`. Before the rename,
+  clicking a download button also resized the lab stage.
+
+### The global element rules bite every new page
+
+`global.css` styles bare elements for the single-page portfolio, and those rules
+reach any page that does not override them. A new page or component **must**
+neutralise the ones it inherits, or it renders broken:
+
+| Rule in `global.css` | What it does to an unsuspecting page |
+| --- | --- |
+| `a { display: flex; width: 100%; height: 100%; justify-content: center }` | Every link becomes a full-width centred block, shattering sentences and detaching list titles from their text |
+| `h1 { font-size: 14vw; text-shadow: … }` plus `-webkit-text-stroke: .2vw` above 600px | A 24px heading gets a 2.8px stroke at 1400px and fills in solid |
+| `p { color: var(--color-accent); font-size: 4vw }`, `1.5vw` above 600px | Body copy turns accent-coloured and swings from 15px to 10px to 21px with the viewport |
+
+The established overrides are `display: inline; width: auto; height: auto` for
+links (see `.post-card-title a`, `.tag-strip-more`), `-webkit-text-stroke: 0;
+text-shadow: none` for headings, and an explicit `font-size` on any `<p>`. The
+typeface page's `.od-head` block is the worked example.
+
+### Robots directives
+
+`BaseLayout.astro` owns the robots directive through its `robots` prop and emits
+exactly **one** `<meta name="robots">`. A page that adds its own tag leaves two
+conflicting directives in the head, which is how a deliberately private page
+ends up advertising `index,follow`. That happened once; `scripts/routes.test.mjs`
+now asserts one tag per route. Note that its `robotsOf()` helper reads only the
+first match by design, which is exactly why the separate count assertion exists.
+
+### Tests
+
+`npm test` builds and then runs `scripts/routes.test.mjs`, which asserts on the
+built `dist/` output rather than on module internals. It uses `node:test` and
+`node:assert` only: no test framework is installed and none should be added.
+
 ## Design System
 
 **Color variables** (defined in `:root` in `src/styles/global.css`):
@@ -162,6 +312,9 @@ live in the "11. Special Modes" section of `global.css`.
   `src/components/`
 - **Blog posts:** authored in the Obsidian vault, not here — see Blog
   Publishing above
+- **Design pages:** edit the page under `src/pages/design/ao/`; its title,
+  blurb and readiness come from `src/data/design-index.ts` — see Design Pages
+  and /lab/ above
 
 ## Known Issues
 

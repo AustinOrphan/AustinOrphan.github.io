@@ -18,7 +18,19 @@
     color: rgba(var(--color-primary-rgb), 0.75);
     font-size: 0.84rem;
   }
+  /* global.css gives every anchor `display: flex; width: 100%; height: 100%;
+     justify-content: center`, which broke this sentence onto three lines and left
+     the full stop stranded on its own. Same reset as .post-card-title a and
+     .tag-strip-more. The accent is 3.75:1 against the banner's washed background,
+     under AA, so the link is named by an underline instead of by colour alone. */
   .wip-banner a {
+    display: inline;
+    width: auto;
+    height: auto;
+    color: rgba(var(--color-primary-rgb), 0.9);
+    text-decoration: underline;
+  }
+  .wip-banner a:hover {
     color: var(--color-accent);
   }
 </style>
