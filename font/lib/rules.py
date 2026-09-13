@@ -32,6 +32,10 @@ _sO = (CAP + 2*OVER_ROUND) / (2*_ring['outer'][2])
 # negative and the build fails loudly.
 WEIGHT = float(os.environ.get('ORPHAN_WEIGHT', 1.0))
 PUSH   = float(os.environ.get('ORPHAN_PUSH', 1.0))
+# The top of the shipped weight axis; build_variable.WEIGHTS ends here and asserts it.  A glyph
+# that has to stay inside a vertical metric ACROSS the axis has to know where the axis stops,
+# because the binding case is always the heaviest cut.  set_punct's comma is the one that does.
+WEIGHT_TOP = 2.00
 
 # ---- R1 rounds: the O's construction in absolute units, so every round in the face
 #      carries the O's stroke and the O's displacement whatever its size.
@@ -85,6 +89,7 @@ ROUND_THICK, ROUND_THIN = RING_W + norm(RING_OFF), RING_W - norm(RING_OFF)      
 # every other round stays bit for bit what it was.
 RING_W_1   = _RING_MARK * RING_GAIN + _RING_ADD
 RING_OFF_1 = (_OFF0[0] * _OFF_MUL * RING_GAIN, _OFF0[1] * _OFF_MUL * RING_GAIN)
+ROUND_THICK_1 = RING_W_1 + norm(RING_OFF_1)                                       # 64.97
 
 def round_ring(c, r_out):
     """A complete round: outer radius r_out, counter per R1. -> [outer, inner] contours."""
