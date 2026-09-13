@@ -38,10 +38,10 @@ const PREPARE = `(() => {
 
 const { cdp, close } = await connect(PORT);
 await setViewport(cdp, 1400, 1100);
-await cdp.send('Page.navigate', { url: BASE + '/logo-animation/' });
+await cdp.send('Page.navigate', { url: BASE + '/design/ao/logo/' });
 await sleep(1800);
 const prep = await evaluate(cdp, PREPARE);
-if (prep?.error) throw new Error(prep.error + ' at ' + BASE + '/logo-animation/');
+if (prep?.error) throw new Error(prep.error + ' at ' + BASE + '/design/ao/logo/');
 console.log(`  ${prep.count} animations: ${prep.names.join(', ')}`);
 
 const rows = [];

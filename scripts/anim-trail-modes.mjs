@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // The two pen-trail treatments side by side, at three times through the sweep.
 //
-// Loads the demo page (/logo-animation/) in a Chrome already listening on
+// Loads the demo page (/design/ao/logo/) in a Chrome already listening on
 // CDP_PORT, pauses the animations inside the two marks the page renders with
 // `trail="swash"` and `trail="stroke"`, seeks both to each time, and lays the
 // captures out as one labelled sheet: a row per treatment, a column per time.
@@ -85,10 +85,10 @@ const COMPOSE = (shots) => `(async () => {
 const { cdp, close } = await connect(PORT);
 try {
   await setViewport(cdp, 1400, 1400);
-  await cdp.send('Page.navigate', { url: BASE + '/logo-animation/' });
+  await cdp.send('Page.navigate', { url: BASE + '/design/ao/logo/' });
   await sleep(1500);
   const prep = await evaluate(cdp, PREPARE);
-  if (prep?.error) throw new Error(prep.error + ' at ' + BASE + '/logo-animation/');
+  if (prep?.error) throw new Error(prep.error + ' at ' + BASE + '/design/ao/logo/');
   console.log(`  ${prep.count} animations paused across ${MODES.length} marks`);
 
   const shots = MODES.map(() => []);

@@ -36,7 +36,7 @@ mkdirSync(DIR, { recursive: true });
 
 const { cdp, close } = await connect(PORT);
 await setViewport(cdp, 1200, 900);
-await cdp.send('Page.navigate', { url: BASE + '/logo-animation/' });
+await cdp.send('Page.navigate', { url: BASE + '/design/ao/logo/' });
 await sleep(1800);
 const prep = await evaluate(cdp, PREPARE);
 if (prep?.error) throw new Error(prep.error);

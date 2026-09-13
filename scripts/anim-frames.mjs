@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Compare the LogoAnimated write-on against the reference clip, frame by frame.
 //
-// Loads the demo page (/logo-animation/) in a Chrome that is already listening
+// Loads the demo page (/design/ao/logo/) in a Chrome that is already listening
 // on CDP_PORT, pauses every animation inside the animated mark, seeks them all
 // to each video frame time for f4..f36, screenshots the mark, and lays the
 // captures next to the matching video frames on one labelled sheet.
@@ -108,10 +108,10 @@ const PREPARE = `(() => {
 
 async function captureFrames(cdp, frames) {
   await setViewport(cdp, 1400, 1100);
-  await cdp.send('Page.navigate', { url: BASE + '/logo-animation/' });
+  await cdp.send('Page.navigate', { url: BASE + '/design/ao/logo/' });
   await sleep(1500);
   const prep = await evaluate(cdp, PREPARE);
-  if (prep?.error) throw new Error(prep.error + ' at ' + BASE + '/logo-animation/');
+  if (prep?.error) throw new Error(prep.error + ' at ' + BASE + '/design/ao/logo/');
   console.log(`  ${prep.count} animations paused: ${prep.names.join(', ')}`);
   const out = [];
   for (const f of frames) {
