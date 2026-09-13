@@ -232,7 +232,7 @@ const easeTail = `linear(${dash(0)}, ${at(TAIL_STOPS)}, 1)`;
        through its own viewport and anti-alias a few edge pixels differently). -->
   <g class="la-final">
     {variant === 'hero' && (
-      <g class="la-final-shadow" transform="translate(22,22)">
+      <g class="la-final-shadow" transform="translate(30,30)">
         <g transform="translate(0.000000,1084.000000) scale(0.100000,-0.100000)" class="site-logo-shadow"><path d={LOGO_MARK_D} /></g>
       </g>
     )}
@@ -377,7 +377,7 @@ const easeTail = `linear(${dash(0)}, ${at(TAIL_STOPS)}, 1)`;
     /* Hero only: flat has neither a shadow nor a stroke, and animating stroke-width there
        would give it a red outline it is not supposed to have. */
     /* `both`, not `forwards`, and that is load-bearing: the shadow group carries
-       transform="translate(22,22)" and the mark carries stroke-width="300" as MARKUP
+       transform="translate(30,30)" and the mark carries stroke-width="300" as MARKUP
        attributes, so under `forwards` each paints its finished treatment during the
        animation's delay -- a grey shadow at full offset and a red outline at full width,
        for the frames between the final layer fading in and the treatment starting.
@@ -415,7 +415,7 @@ const easeTail = `linear(${dash(0)}, ${at(TAIL_STOPS)}, 1)`;
      390 and nothing else.
      Linear timing with ease-grow's stops baked into the values: a shared easing is applied
      per-interval, and these two need different stop counts, so they would drift. */
-  @keyframes la-shadow { from { transform: translate(0px, 0px); } to { transform: translate(22px, 22px); } }
+  @keyframes la-shadow { from { transform: translate(0px, 0px); } to { transform: translate(30px, 30px); } }
   @keyframes la-outline { from { stroke-width: 0px; } to { stroke-width: 300px; } }
   /* Visible trail = [tail, head]: dasharray "(head - tail) 2", offset -tail. */
   @keyframes la-trail-head {
