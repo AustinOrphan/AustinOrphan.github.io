@@ -54,7 +54,7 @@ import math, os, sys
 HERE = os.path.dirname(os.path.abspath(__file__)); FONT = os.path.dirname(HERE)
 sys.path.insert(0, os.path.join(FONT, 'lib'))
 from pen import (Contour, add, sub, mul, norm, unit, perp, from_ang, ang, line, line_2pt, arc_band,
-                 line_circle, line_x_at_y, arc_segments, from_poly, ccw, fit_cubics)
+                 line_circle, line_x_at_y, arc_segments, from_poly, ccw, fit_cubics, fit_ranges)
 import ring
 import rules
 from metrics import CAP, OVER_ROUND, SB_STRAIGHT, SB_ROUND
@@ -525,34 +525,43 @@ S_BOT   = -160.0
 S_WAIST = 150.0            # the connector's handle length: how diagonally the waist runs
 S_TOL   = 0.15             # units; the fit's tolerance, a seventh of the compiler's rounding
 S_SEGS  = 19               # fixed pieces per S edge, so the S interpolates (pen.fit_cubics);
-                           # adaptively at S_TOL it ran 16 to 19 across the masters
+                           # adaptively at S_TOL it ran 16 to 19 across the masters.  The COUNT
+                           # alone is not enough -- where the pieces are cut has to be fixed too,
+                           # or the masters agree on how many points there are and disagree on
+                           # what each one means.  See _s_ranges.
 S_N     = 160              # samples per section
 
-def _band_at(theta):
-    """R1's band width for a point whose outward normal points at page angle theta."""
-    return RING_W - norm(RING_OFF) * math.cos(math.radians(theta) - math.radians(ang(RING_OFF)))
+def _band_at(theta, ring_w=None, ring_off=None):
+    """R1's band width for a point whose outward normal points at page angle theta.
+
+    The band defaults to this instance's; _s_ranges passes the axis origin's instead, to rebuild
+    the shape the S's knots were chosen on."""
+    ring_w = RING_W if ring_w is None else ring_w
+    ring_off = RING_OFF if ring_off is None else ring_off
+    return ring_w - norm(ring_off) * math.cos(math.radians(theta) - math.radians(ang(ring_off)))
 
 def _ell_nrm(A, B, t):
     """Page angle of the ellipse's true OUTWARD normal at parameter t; the radius when A == B."""
     r = math.radians(t)
     return ang((math.cos(r) / A, math.sin(r) / B))
 
-def _s_spine():
+def _s_spine(ring_w=None, ring_off=None):
     """(point, unit tangent, width) sampled from the top terminal to the bottom one."""
     A = S_BODY / 2.0
-    wt, wl, wb, wr = _band_at(90.0), _band_at(180.0), _band_at(270.0), _band_at(0.0)
+    band = lambda th: _band_at(th, ring_w, ring_off)
+    wt, wl, wb, wr = band(90.0), band(180.0), band(270.0), band(0.0)
     Cu = (wl/2 + A, TOP - wt/2 - S_B)            # top a half-band below TOP, left extreme
     Cl = (S_BODY - wr/2 - A, BOT + wb/2 + S_B)   # a half-band inside x = 0; lower mirrored
     out = []
     for i in range(S_N + 1):                     # upper quarter, travelled with increasing t
         t = S_TOP + (180.0 - S_TOP) * i / S_N; r = math.radians(t)
         out.append(((Cu[0] + A*math.cos(r), Cu[1] + S_B*math.sin(r)),
-                    unit((-A*math.sin(r), S_B*math.cos(r))), _band_at(_ell_nrm(A, S_B, t))))
+                    unit((-A*math.sin(r), S_B*math.cos(r))), band(_ell_nrm(A, S_B, t))))
     low = []
     for i in range(S_N + 1):                     # lower quarter, travelled with DECREASING t
         t = S_BOT * i / S_N; r = math.radians(t)
         low.append(((Cl[0] + A*math.cos(r), Cl[1] + S_B*math.sin(r)),
-                    unit((A*math.sin(r), -S_B*math.cos(r))), _band_at(_ell_nrm(A, S_B, t))))
+                    unit((A*math.sin(r), -S_B*math.cos(r))), band(_ell_nrm(A, S_B, t))))
     P0, P3 = out[-1][0], low[0][0]               # the connector, tangent straight down at both ends
     P1, P2 = (P0[0], P0[1] - S_WAIST), (P3[0], P3[1] + S_WAIST)
     w0, w3 = out[-1][2], low[0][2]
@@ -576,11 +585,43 @@ def _edges(pts):
         return T
     return (L, tans(L)), (R, tans(R))
 
+_S_RANGES = []
+def _s_ranges():
+    """Where the S's cubics start and end, as sample indices along the spine: the fixed-count
+    fit's own choice, taken ONCE at the axis origin and held at every instance.
+
+    The knots have to sit at a fixed construction PARAMETER, not at a fixed fit quality.  At a
+    fixed sample index this construction is exactly affine in both knobs -- the two quarters are
+    the same ellipse quarter translated (S_BODY and S_B do not move with WEIGHT), the connector's
+    four control points are linear in the band widths, and _band_at is linear in RING_W and in
+    RING_OFF -- so sample i is the same place on the letter in every master, and varLib's straight
+    line between two masters IS the construction's own straight line.
+
+    Let the fit choose per master instead and it re-cuts the curve wherever two pieces' residuals
+    cross.  Between WEIGHT 1.1650 and 1.1700 the count is 19 both times and the first knot moves
+    327 units along the outline; control point i then describes a different place in each master,
+    and the line varLib draws between them runs nowhere near the letter.  Measured as the gap
+    between the construction's own midpoint shape and the blend of its two neighbours, that was
+    42.4 units on the S and 47 on the 8, in glyphs that are correct at every master.
+
+    The origin is the right place to take them: it is where the mark's own measurements sit, it
+    leaves the S at (1, 1) bit for bit what it was, and of the freeze points tried it gives the
+    lowest worst-case fit error over the 18 masters (0.1233, against 0.1469 at 2.00/1.00, 0.1964
+    at 1.20/0.65 and 0.2441 at 0.85/1.00).  More masters is the other answer and it does not work:
+    the error is a STEP at a residual crossing, not a bend, so two masters 0.001 apart still blend
+    37.4 units wrong, and there are 73 crossings along WEIGHT alone."""
+    if not _S_RANGES:
+        (L, TL), (R, TR) = _edges(_s_spine(rules.RING_W_1, rules.RING_OFF_1))
+        _S_RANGES.append(fit_ranges(L, TL, S_SEGS))
+        _S_RANGES.append(fit_ranges(R[::-1], [mul(t, -1) for t in TR[::-1]], S_SEGS))
+    return _S_RANGES
+
 def build_S():
     pts = _s_spine()
     (L, TL), (R, TR) = _edges(pts)
-    segL, eL = fit_cubics(L, TL, nseg=S_SEGS)                       # fixed pieces: see
-    segR, eR = fit_cubics(R[::-1], [mul(t, -1) for t in TR[::-1]], nseg=S_SEGS)   # pen.fit_cubics
+    rgL, rgR = _s_ranges()                                          # fixed pieces AND fixed
+    segL, eL = fit_cubics(L, TL, ranges=rgL)                        # knots: see _s_ranges
+    segR, eR = fit_cubics(R[::-1], [mul(t, -1) for t in TR[::-1]], ranges=rgR)
     k = Contour(L[0])
     for p1, p2, p3 in segL: k.curve_to(p1, p2, p3)
     k.line_to(R[-1])                                   # the end terminal, square to the spine
@@ -609,7 +650,10 @@ def build_S():
                    f"is a deviation, argued above: it is set by the circular-bowl construction this glyph "
                    f"no longer uses.",
         fit=f"edges fitted by pen.fit_cubics to {S_TOL:g} units; worst deviation {max(eL, eR):.4f} "
-            f"({len(segL)} + {len(segR)} segments), against the compiler's 1-unit rounding.",
+            f"({len(segL)} + {len(segR)} segments), against the compiler's 1-unit rounding.  The "
+            f"{S_SEGS:g} knots per edge are the fit's own choice at the axis origin, held at every "
+            f"instance so that control point i means the same place on the letter in every master "
+            f"and the outline interpolates (pen.fit_ranges, _s_ranges).",
         deviations=f"R8's width class only; the body is {S_BODY:g}, not {BODY_NARROW:g}."))
 
 def build_Q():

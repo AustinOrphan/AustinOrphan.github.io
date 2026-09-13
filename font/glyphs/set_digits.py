@@ -43,11 +43,12 @@ import math, os, sys
 HERE = os.path.dirname(os.path.abspath(__file__)); FONT = os.path.dirname(HERE)
 sys.path.insert(0, os.path.join(FONT, 'lib')); sys.path.insert(0, FONT)
 from pen import (Contour, add, sub, mul, dot, unit, perp, norm, ang, arc_segments,
-                 line_2pt, line_ang, isect, from_poly, ccw, fit_cubics)
+                 line_2pt, line_ang, isect, from_poly, ccw, fit_cubics, fit_ranges)
 from metrics import CAP, OVER_ROUND, SB_STRAIGHT, SB_ROUND
 from rules import (glyph, stem, diagonal, horizontal, arm,
                    RING_W, RING_OFF, ROUND_THICK, ROUND_THIN, CUT_DEG, HORIZ_MID, HORIZ_TAPER,
                    HORIZ_FREE, w_stem, w_slash, w_backslash, w_horizontal)
+import rules
 import ring
 
 BODY = 558                      # R8 medium: the A's foot spread, the digits' body
@@ -724,6 +725,7 @@ def build_five():
 # weight, and the upper round's height follows.  At the mark's own weight that lands on 289.2,
 # which is where the constant 290 had been set by eye.
 A8_UP, A8_LO, B8_LO = 185.0, 279.0, 232.0
+EIGHT_SEGS = 37                 # fixed pieces on the 8's silhouette, so it interpolates
 B8_UP = (TOP - BOT + RING_W - 2*B8_LO) / 2      # 144.6 at WEIGHT 1: a one-stroke waist
 
 WAIST8 = ROUND_THIN      # the radius the 8's waist join is rounded by -- see _eight_outer
@@ -743,49 +745,144 @@ def _eight_cross(up, lo):
     tl = math.atan2((y-lo['c'][1])/lo['b'], (x-lo['c'][0])/lo['a'])
     return (x, y), tu, tl
 
+def _ell_out(e, t):
+    """Outward unit normal of the ellipse `e` at parametric angle t (degrees)."""
+    r = math.radians(t)
+    return unit((math.cos(r) / e['a'], math.sin(r) / e['b']))
+
+def _ell_foot(e, p, n=180, it=50):
+    """(parameter, point) of the nearest point of the ellipse `e` to p."""
+    f = lambda t: math.dist(p, _ell(e['c'], e['a'], e['b'], t))
+    t = min((360.0*i/n for i in range(n)), key=f); step = 360.0/n
+    for _ in range(it):
+        t = min((t-step, t, t+step), key=f); step /= 2
+    return t, _ell(e['c'], e['a'], e['b'], t)
+
+def _ell_dist(e, p):
+    """Signed distance from p to the ellipse `e`, positive outside it."""
+    t, q = _ell_foot(e, p)
+    inside = ((p[0]-e['c'][0])/e['a'])**2 + ((p[1]-e['c'][1])/e['b'])**2 < 1.0
+    return math.dist(p, q) * (-1 if inside else 1)
+
+def _waist_fillet(up, lo, rho, t_from):
+    """The circle of radius rho lying in the waist notch and tangent to BOTH outer ellipses.
+    Returns (centre, t on the upper, t on the lower).
+
+    This is what "the corner is rounded by ROUND_THIN" has always meant, and what the shape
+    did not have.  The old bridge walked out an INTEGER number of samples until the chord
+    across the corner exceeded 1.4*rho and then laid an arc of radius rho through those two
+    samples -- an arc that meets neither ellipse tangentially.  Measured on the built outline
+    it broke the tangent by up to 35.05 degrees at its own ends, so a join whose whole purpose
+    was to remove one 42-degree corner installed two corners of up to 35 instead.  The number
+    of samples it consumed also jumped 3, 7, 9, 11, 15, 19 across the masters, which moved the
+    waist's sample indices with the axes and was most of what the 8 could not interpolate.
+
+    Solved rather than stepped: walk the upper ellipse's parameter away from the crossing, put
+    the centre rho along that point's outward normal, and bisect for the place where the centre
+    is also exactly rho outside the lower ellipse.  Both tangencies then hold by construction.
+    """
+    C = lambda t: add(_ell(up['c'], up['a'], up['b'], t), mul(_ell_out(up, t), rho))
+    f = lambda t: _ell_dist(lo, C(t)) - rho
+    t0 = t_from
+    t1 = t_from + 1.0
+    while f(t1) < 0 and t1 - t_from < 90.0: t1 += 1.0
+    for _ in range(80):
+        m = (t0 + t1) / 2
+        if f(m) < 0: t0 = m
+        else: t1 = m
+    t_up = (t0 + t1) / 2
+    c = C(t_up)
+    return c, t_up, _ell_foot(lo, c)[0]
+
+def _arc_pts(c, r, a0, a1, n):
+    """n points along the circle (c, r) from angle a0 to a1 (radians), the short way."""
+    while a1 - a0 >  math.pi: a1 -= 2*math.pi
+    while a1 - a0 < -math.pi: a1 += 2*math.pi
+    return [(c[0] + r*math.cos(a0 + (a1-a0)*j/(n-1)), c[1] + r*math.sin(a0 + (a1-a0)*j/(n-1)))
+            for j in range(n)]
+
+def _eight_samples(up, lo, rho, N=260, M=40):
+    """The 8's outer silhouette as a dense sample ring, with a unit tangent at each sample:
+    the upper round over the top, a waist fillet, the lower round under the bottom, the other
+    fillet, closed exactly.
+
+    Every section has a FIXED number of samples, so the ring is always 2*(N+M) points long and
+    sample i is the same place on the figure at every point of the design space.  That is what
+    lets _eight_ranges hold the fit's knots still across the masters."""
+    X = _eight_corner(up, lo, rho)
+    (cR, tuR, tlR), (cL, tuL, tlL) = X['right'], X['left']
+    pts  = [_ell(up['c'], up['a'], up['b'], tuR + (tuL - tuR)*i/N) for i in range(N+1)]
+    pts += _arc_pts(cL, rho, math.atan2(pts[-1][1]-cL[1], pts[-1][0]-cL[0]),
+                    math.atan2(_ell(lo['c'], lo['a'], lo['b'], tlL)[1]-cL[1],
+                               _ell(lo['c'], lo['a'], lo['b'], tlL)[0]-cL[0]), M+1)[1:]
+    pts += [_ell(lo['c'], lo['a'], lo['b'], tlL + (360.0 + tlR - tlL)*i/N) for i in range(1, N+1)]
+    pts += _arc_pts(cR, rho, math.atan2(pts[-1][1]-cR[1], pts[-1][0]-cR[0]),
+                    math.atan2(pts[0][1]-cR[1], pts[0][0]-cR[0]), M+1)[1:-1]
+    tg = [unit(sub(pts[(i+1) % len(pts)], pts[(i-1) % len(pts)])) for i in range(len(pts))]
+    return pts, tg, X['cross']
+
+def _eight_corner(up, lo, rho):
+    """Both waist fillets, and the raw crossing the glyph's notes report."""
+    cross, tu, tl = _eight_cross(up, lo)
+    cR, tuR, tlR = _waist_fillet(up, lo, rho, math.degrees(tu))
+    # The figure is symmetric about x = BODY/2, so the left waist is the right one mirrored;
+    # solving it again would only invite the two to disagree in the last bits.
+    mirror_u = 180.0 - tuR
+    mirror_l = 180.0 - tlR
+    cL = (BODY - cR[0], cR[1])
+    return dict(cross=cross, right=(cR, tuR, tlR), left=(cL, mirror_u, mirror_l))
+
+
+_EIGHT_RANGES = []
+def _eight_ranges():
+    """Where the 8's 37 cubics start and end, as sample indices on the silhouette: the
+    fixed-count fit's own choice, taken ONCE at the axis origin and held at every instance.
+
+    Same rule as the S's, for the same reason, and see set_round._s_ranges for the argument.
+    The fixed COUNT makes the masters agree on how many control points there are; it does not
+    make them agree on what each one means, because the fit re-cuts the curve wherever two
+    pieces' residuals cross.  Blending two masters' points index by index then draws a line
+    between points describing different parts of the letter, and the 8 came out of round
+    between every pair of masters -- up to 47 units, worst around the lower bowl.
+
+    The sample ring is always 2*N+2 points long and the silhouette moves with the knobs only
+    through B8_UP and WAIST8, both linear in them, so a sample index is the same place on the
+    figure in every master and the origin's knots are valid at all of them.
+
+    This only works because the waist is a solved fillet with a fixed sample budget.  While it
+    was a bridge stepped out in whole samples, the waist's own indices moved with the axes and
+    freezing the knots still left 3.3 units of fit error there; see _waist_fillet."""
+    if not _EIGHT_RANGES:
+        b_up = (TOP - BOT + rules.RING_W_1 - 2*B8_LO) / 2
+        up = dict(c=(BODY/2, TOP - b_up), a=A8_UP, b=b_up)
+        lo = dict(c=(BODY/2, BOT + B8_LO), a=A8_LO, b=B8_LO)
+        rho = rules.RING_W_1 - norm(rules.RING_OFF_1)
+        pts, tg, _ = _eight_samples(up, lo, rho)
+        _EIGHT_RANGES.extend(fit_ranges(pts, tg, EIGHT_SEGS))
+    return _EIGHT_RANGES
+
+
 def _eight_outer(up, lo, rho, N=260):
     """The 8's outer silhouette as ONE contour: the upper round over the top, the lower round
-    under the bottom, and the corner where they cross bridged by an arc of radius `rho`.
+    under the bottom, and the corner where they cross filleted by an arc of radius `rho`.
 
     Built as two closed rounds unioned, the silhouette has a corner at each waist -- 42 degrees
     at the drawn proportions -- and that corner is what makes the figure read as two circles
-    stacked rather than as one letter.  The bridge is rounded by ROUND_THIN, the O's own thin
-    side: the narrowest stroke the face draws anywhere, so the join introduces no new number
-    and follows both knobs for free.  At the top of the push axis ROUND_THIN goes to zero and
-    the join relaxes back to the plain corner, which is the same place the round itself closes
-    into a C.
+    stacked rather than as one letter.  The fillet is ROUND_THIN, the O's own thin side: the
+    narrowest stroke the face draws anywhere, so the join introduces no new number and follows
+    both knobs for free.
+
+    It is SOLVED tangent to both rounds (_waist_fillet), not stepped out along the samples.  The
+    arc that used to be laid through two samples either side of the corner met neither ellipse:
+    it broke the tangent by up to 35 degrees at its own ends, so a join whose whole purpose was
+    to remove one 42-degree corner installed two corners of up to 35 instead, and it left the
+    contour 1.7 to 3.3 units short of closing.
     """
-    X, tu, tl = _eight_cross(up, lo)
-    pts  = [_ell(up['c'], up['a'], up['b'], math.degrees(tu + (math.pi - 2*tu)*i/N)) for i in range(N+1)]
-    tlL  = math.pi - tl
-    pts += [_ell(lo['c'], lo['a'], lo['b'], math.degrees(tlL + (2*math.pi + tl - tlL)*i/N)) for i in range(N+1)]
-    if rho > 1e-9:
-        for i in (N, 0):                       # the two corners, right then left
-            pts = _bridge(pts, rho, i) or pts
-    tg = [unit(sub(pts[(i+1) % len(pts)], pts[(i-1) % len(pts)])) for i in range(len(pts))]
-    segs, _err = fit_cubics(pts, tg, nseg=37)   # fixed pieces: see pen.fit_cubics
-    k = Contour(pts[0])
+    pts, tg, X = _eight_samples(up, lo, rho, N)
+    segs, _err = fit_cubics(pts, tg, ranges=_eight_ranges())  # fixed pieces AND fixed knots:
+    k = Contour(pts[0])                                       # see _eight_ranges
     for sg in segs: k.curve_to(*sg)
     return k.ccw(), X
-
-def _bridge(pts, rho, i):
-    """Replace the corner at index i with an arc of radius rho spanning it."""
-    n = len(pts); k = 3
-    while k < n//6 and norm(sub(pts[(i-k) % n], pts[(i+k) % n])) < 1.4*rho: k += 1
-    A, B = pts[(i-k) % n], pts[(i+k) % n]
-    d = sub(B, A); L = norm(d)
-    if L > 2*rho or L < 1e-9: return None
-    M = mul(add(A, B), 0.5); h = math.sqrt(rho*rho - (L/2)**2); nr = unit((-d[1], d[0]))
-    c1, c2 = add(M, mul(nr, h)), sub(M, mul(nr, h))
-    C = c1 if norm(sub(c1, pts[i])) > norm(sub(c2, pts[i])) else c2
-    a0 = math.atan2(A[1]-C[1], A[0]-C[0]); a1 = math.atan2(B[1]-C[1], B[0]-C[0])
-    while a1-a0 >  math.pi: a1 -= 2*math.pi
-    while a1-a0 < -math.pi: a1 += 2*math.pi
-    out = list(pts); m = 2*k+1
-    for j in range(m):
-        t = a0 + (a1-a0)*j/(m-1)
-        out[(i-k+j) % n] = (C[0] + rho*math.cos(t), C[1] + rho*math.sin(t))
-    return out
 
 def build_eight():
     up = dict(c=(BODY/2, TOP - B8_UP), a=A8_UP, b=B8_UP)
@@ -804,10 +901,13 @@ def build_eight():
                       f"inset of the silhouette."),
         waist_join=(f"Unioned, the silhouette corners at each waist -- {42.0:.0f} degrees at these proportions -- "
                     f"and that corner is what makes the figure read as two circles stacked rather than as one "
-                    f"letter.  The bridge is rounded by ROUND_THIN, the O's own thin side: the narrowest stroke "
+                    f"letter.  The fillet is ROUND_THIN, the O's own thin side: the narrowest stroke "
                     f"the face draws anywhere, so no new number enters and the join follows both knobs.  Larger "
                     f"radii were drawn and rejected -- by r 50 the arc stops softening the corner and starts "
-                    f"packing the notch, taking the silhouette across the waist from {200} units to {276}."),
+                    f"packing the notch, taking the silhouette across the waist from {200} units to {276}.  "
+                    f"The circle is solved tangent to BOTH rounds (_waist_fillet) rather than laid through two "
+                    f"samples either side of the corner: stepped, it met neither, breaking the tangent by up to "
+                    f"35 degrees at its own ends and leaving the contour 1.7 to 3.3 units short of closing."),
         waist=(f"The two ellipses are {over:g} units taller together than the {TOP - BOT} they span, so they "
                f"cross and the union is one shape.  The ink between the two counters at the waist is "
                f"{ROUND_THICK + ROUND_THIN - over:.1f} units -- the upper round's thick bottom ({ROUND_THICK:.1f}) less the lower "

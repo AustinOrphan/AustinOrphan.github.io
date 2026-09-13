@@ -388,7 +388,33 @@ def _fit_one(P, T):
     return p1, p2, err, split
 
 
-def fit_cubics(P, T, tol=0.05, depth=0, nseg=None):
+def fit_ranges(P, T, nseg):
+    """The nseg pieces the fixed-count fit would cut this sampled curve into: a list of (i, j)
+    index ranges into P, contiguous, covering 0 .. len(P)-1.
+
+    Which piece is split next is an argmax over the pieces' fit residuals, and the split lands
+    on an integer sample.  Both are DISCRETE choices over quantities that move continuously with
+    the axes, so the partition is a step function of WEIGHT and PUSH -- see fit_cubics for what
+    that costs a variable font, and pass the result back to it as `ranges` to hold the knots
+    still across the masters.
+    """
+    n = len(P)
+    cache, ranges = {}, [(0, n - 1)]
+    def info(r):
+        if r not in cache: cache[r] = _fit_one(P[r[0]:r[1]+1], T[r[0]:r[1]+1])
+        return cache[r]
+    while len(ranges) < nseg:
+        cand = [i for i, r in enumerate(ranges) if r[1] - r[0] >= 2]
+        if not cand: break
+        i = max(cand, key=lambda i: (info(ranges[i])[2], ranges[i][1] - ranges[i][0], -i))
+        a, b = ranges[i]
+        s = a + info((a, b))[3]
+        if not (a < s < b): s = (a + b) // 2
+        ranges[i:i+1] = [(a, s), (s, b)]
+    return ranges
+
+
+def fit_cubics(P, T, tol=0.05, depth=0, nseg=None, ranges=None):
     """Schneider's fit: a chain of cubic Beziers through the sampled curve P, tangent to the
     unit tangents T at the two ends of every piece.
 
@@ -415,6 +441,20 @@ def fit_cubics(P, T, tol=0.05, depth=0, nseg=None):
     instead does not work on these curves: several have a corner in them, the adaptive rule lands
     a boundary on the corner and an even division straddles it, and the 8's fit came out 40 times
     worse at the same piece count.
+
+    A FIXED COUNT IS ONLY HALF OF WHAT INTERPOLATION NEEDS.  `nseg` makes the masters agree on
+    how many control points there are; it does not make them agree on what those points MEAN.
+    The split is an argmax over the pieces' residuals, landing on an integer sample, so the
+    partition is a step function of the axes: two neighbouring masters keep the same count and
+    still cut the curve in different places.  Between WEIGHT 1.1650 and 1.1700 the S's count is
+    19 both times and its first knot moves 327 units along the outline.  varLib pairs control
+    point i with control point i and draws a straight line between them, so it blends one
+    master's segment against a different stretch of the other's: 42 units of error on the S, 47
+    on the 8, in shapes that are correct at every master.
+
+    So an outline that has to interpolate chooses its knots ONCE and passes them back in as
+    `ranges`.  fit_ranges() is that choice, split out so a glyph can take it from its own shape
+    at the axis origin and hold it at every instance.
     """
     n = len(P)
     if n < 2: return [], 0.0
@@ -422,22 +462,11 @@ def fit_cubics(P, T, tol=0.05, depth=0, nseg=None):
         p1, p2, err, _ = _fit_one(P, T)
         return [(p1, p2, P[-1])], err
 
-    if nseg is not None:
-        cache, ranges = {}, [(0, n - 1)]
-        def info(r):
-            if r not in cache: cache[r] = _fit_one(P[r[0]:r[1]+1], T[r[0]:r[1]+1])
-            return cache[r]
-        while len(ranges) < nseg:
-            cand = [i for i, r in enumerate(ranges) if r[1] - r[0] >= 2]
-            if not cand: break
-            i = max(cand, key=lambda i: (info(ranges[i])[2], ranges[i][1] - ranges[i][0], -i))
-            a, b = ranges[i]
-            s = a + info((a, b))[3]
-            if not (a < s < b): s = (a + b) // 2
-            ranges[i:i+1] = [(a, s), (s, b)]
+    if ranges is not None or nseg is not None:
+        rg = ranges if ranges is not None else fit_ranges(P, T, nseg)
         segs, err = [], 0.0
-        for r in ranges:
-            p1, p2, e, _ = info(r)
+        for r in rg:
+            p1, p2, e, _ = _fit_one(P[r[0]:r[1]+1], T[r[0]:r[1]+1])
             segs.append((p1, p2, P[r[1]])); err = max(err, e)
         return segs, err
 
