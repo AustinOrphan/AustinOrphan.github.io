@@ -24,7 +24,7 @@
 // Geometry: design/logo-animation/geometry.json (derive_geometry.py for the
 // mark, derive_trail.py for the trail). Coordinates below are site path units
 // (y-up, tenths) inside the same translate/scale group Logo uses.
-import { LOGO_MARK_D, nextLogoAnimId } from './logo-mark';
+import { LOGO_A_D, LOGO_MARK_D, nextLogoAnimId } from './logo-mark';
 import { TRAIL_CENTRE_D, TRAIL_MARKS, TRAIL_MASK, TRAIL_MASK_D, TRAIL_OUTLINE_D } from './logo-trail';
 import {
   AFTER, BEATS, RING_ANNULUS_D, RING_CIRCLE_D, RING_CIRCLE_WIDTH,
@@ -222,8 +222,13 @@ const easeTail = `linear(${dash(0)}, ${at(TAIL_STOPS)}, 1)`;
   <g class="la-pieces" transform="translate(0,1084) scale(0.1,-0.1)">
     <path class="la-coil" d={RING_COIL_D} mask={`url(#${uid}-c)`} />
     <path class="la-ring" d={RING_ANNULUS_D} fill-rule="evenodd" mask={`url(#${uid}-o)`} />
-    <g clip-path={`url(#${uid}-cl)`}><path class="la-leg" d={LOGO_MARK_D} mask={`url(#${uid}-l)`} /></g>
-    <g clip-path={`url(#${uid}-cr)`}><path class="la-leg" d={LOGO_MARK_D} mask={`url(#${uid}-r)`} /></g>
+    <!-- The A alone, not the union. A leg region contains whatever crosses that leg, so
+         clipping LOGO_MARK_D here also drew slivers of the ring and the hoop, ending dead
+         at the counter's corner: a step bitten out of the leg's inner edge, on screen from
+         roughly 500ms until the ring and bar covered it. LOGO_A_D has no crossings, and its
+         foot is bit-identical to the union's, so the R5 cut and the hand-off are unchanged. -->
+    <g clip-path={`url(#${uid}-cl)`}><path class="la-leg" d={LOGO_A_D} mask={`url(#${uid}-l)`} /></g>
+    <g clip-path={`url(#${uid}-cr)`}><path class="la-leg" d={LOGO_A_D} mask={`url(#${uid}-r)`} /></g>
     <path class="la-bar" d={BAR} mask={`url(#${uid}-b)`} />
   </g>
 
