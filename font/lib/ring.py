@@ -33,7 +33,7 @@ reading reproduces the A and they diverge only on wider letters.
 """
 import math
 
-from pen import (Contour, add, sub, mul, unit, perp, norm, ang, from_ang, fit_cubics,
+from pen import (Contour, add, sub, mul, unit, perp, norm, ang, from_ang, fit_cubics, fit_ranges,
                  clip_half, cut_for)
 from metrics import CAP
 from rules import w_horizontal, w_stem, HORIZ_FREE, HORIZ_JOIN, HORIZ_TAPER, CUT_DEG
@@ -147,8 +147,25 @@ def ring_chord(x0, x1, y_mid=MID_LINE, mid=HORIZ_JOIN, end0=None, end1=None, sig
     # A FIXED number of pieces, so a chord has the same points in every master (pen.fit_cubics).
     # Adaptively these ran 2 to 5 across the grid, and a glyph whose point count moves with the
     # knobs is dropped from the variable font's gvar.
-    st, et = fit_cubics(top, tangents(top), nseg=CHORD_SEGS)
-    sb, eb = fit_cubics(bot[::-1], tangents(bot[::-1]), nseg=CHORD_SEGS)
+    #
+    # And a fixed number is only half of it.  The fit also chooses WHERE to cut, by splitting
+    # whichever piece currently fits worst, and that is a discrete choice over a quantity that
+    # moves with the knobs: two masters keep the same five pieces and still cut the arc in
+    # different places, so varLib pairs control point i with a point describing somewhere else
+    # on the letter and the straight line it draws between them misses.  That is what put the S
+    # 42 units out between its masters and the 8 47.
+    #
+    # Here the knots are EVENLY SPACED rather than chosen, which is stable by construction:
+    # index j is j/NSAMP along this edge's own clipped span in every master, and an even split
+    # of a fixed sample count reads neither knob.  pen.fit_cubics warns off even division in
+    # general and is right to -- it straddles corners, and on the 8 that cost a factor of 40 --
+    # but a chord has no corner in it.  It is an arc of ARC_R carrying R4's gentle taper, and
+    # measured over the sixteen chords the face draws, at eight points of the design space, an
+    # even split fits them to 0.022 units at worst against 0.017 for choosing -- a forty-fifth
+    # of the compiler's rounding either way.
+    rg = [(i * NSAMP // CHORD_SEGS, (i + 1) * NSAMP // CHORD_SEGS) for i in range(CHORD_SEGS)]
+    st, et = fit_cubics(top, tangents(top), ranges=rg)
+    sb, eb = fit_cubics(bot[::-1], tangents(bot[::-1]), ranges=rg)
     k = Contour(top[0])
     for seg in st:
         k.curve_to(*seg)
