@@ -555,6 +555,40 @@ def main():
     if not os.environ.get('ORPHAN_NO_FREEZE'):
         _freeze_unverified(out, made)
     print(f'  wrote {os.path.relpath(out, HERE)}  ({os.path.getsize(out)//1024} KB)')
+    _install(out)
+
+
+# The site loads the font from public/fonts/, and that copy used to be made by hand.
+# It was missed twice running: the weight axis was repaired in the sources while the
+# deployed file stayed the build from the day before, so /design/ao/typeface/ served a
+# font in which 37 of 89 glyphs did not move at all and the specimen's sliders looked
+# broken. Building now installs, so the shipped file cannot lag the sources it came from.
+#
+# Reports what is frozen rather than refusing it: _freeze_unverified freezing a glyph is
+# the safe outcome by design, not a build failure.
+PUBLIC = os.path.join(os.path.dirname(HERE), 'public', 'fonts')
+
+
+def _install(ttf_path):
+    from fontTools.ttLib import TTFont as _TT
+    os.makedirs(PUBLIC, exist_ok=True)
+    shutil.copyfile(ttf_path, os.path.join(PUBLIC, 'OrphanDisplay-VF.ttf'))
+    f = _TT(ttf_path)
+    f.flavor = 'woff2'
+    woff2 = os.path.join(PUBLIC, 'OrphanDisplay-VF.woff2')
+    f.save(woff2)
+
+    gvar = f['gvar'].variations
+    varies = lambda n: any(
+        'wght' in v.axes and any(d for d in v.coordinates if d and (d[0] or d[1]))
+        for v in gvar.get(n, []))
+    frozen = [n for n in f.getGlyphOrder() if n not in ('.notdef', 'space') and not varies(n)]
+    print(f'  installed into {os.path.relpath(PUBLIC, os.path.dirname(HERE))}'
+          f'  (woff2 {os.path.getsize(woff2)//1024} KB)')
+    if frozen:
+        print(f'  WARNING: {len(frozen)} glyphs ship frozen on wght: {" ".join(sorted(frozen))}')
+    else:
+        print('  every glyph varies on wght in the shipped font')
 
 
 def _freeze_unverified(vf_path, made):

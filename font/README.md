@@ -15,6 +15,7 @@ font/
   glyphs/set_*.py    every other glyph, built to the rules in SPEC §5
   build_glyphs.py    glyph modules -> build/glyphs.json
   compile_font.py    build/glyphs.json -> build/OrphanDisplay-Regular.otf
+  build_variable.py  18 masters -> build/OrphanDisplay-VF.ttf, and installs public/fonts/
   proof.py           specimen sheet and source overlay -> build/*.svg
 ```
 
@@ -36,6 +37,31 @@ node font/measure/rasterize.mjs font/build/proof.svg font/build/overlay.svg
 
 `rasterize.mjs` renders SVG through a Chrome listening on `CDP_PORT`
 (default 9222); start one with `--remote-debugging-port=9222 --headless`.
+
+## The variable font
+
+The site's specimen at `/design/ao/typeface/` loads the variable font, not the
+static one. It is built from the 18 masters on the WEIGHT x PUSH grid:
+
+```bash
+font/venv/bin/python font/build_variable.py            # ~6 min, 18 masters
+font/venv/bin/python font/build_variable.py --quick    # corners only, for a smoke test
+```
+
+This writes `build/OrphanDisplay-VF.ttf` **and installs it** over
+`public/fonts/OrphanDisplay-VF.{ttf,woff2}`, which is what the site serves. Do
+not hand-copy it: that step used to be manual and was missed twice, shipping a
+font whose weight axis moved 52 of 89 glyphs while the sources had long since
+fixed all 89.
+
+Before saving, `_freeze_unverified` instantiates the font at each master's own
+location and drops the `gvar` entry of any glyph that does not come back
+exactly. A frozen glyph is pinned at the default rather than wrong halfway along
+the axis, so freezing is the safe outcome, not a build failure — but it does
+mean that letter will not respond to the sliders. The build prints what it
+froze; `measure/vf_roundtrip.py` runs the same check standalone. If a letter
+stops responding to weight on the specimen page, that list is the first place to
+look, and a stale `public/fonts/` copy is the second.
 
 To work on one glyph module at a time, every step takes an input/output pair:
 
