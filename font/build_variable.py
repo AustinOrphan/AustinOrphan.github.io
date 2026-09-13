@@ -490,6 +490,21 @@ def _save_ttf(f, glyf, order, dst):
     for tag in ('CFF ', 'VORG'):
         if tag in f: del f[tag]
     f.sfntVersion = '\x00\x01\x00\x00'
+    # The left side bearing has to be the glyf's OWN xMin.  It came in from the master OTF,
+    # where the outline was CFF and xMin was the curve's true extreme; a glyf's xMin is the
+    # minimum over CONTROL points, and a quadratic's control point beside a vertical tangent
+    # sits outside the curve.  So the two disagreed by up to 6 units on 13 of the 90 glyphs --
+    # C, G, five, J, eight and the rest of the rounds -- and anything that positions by the
+    # advertised bearing rather than by the outline shifted those glyphs by the difference.
+    # fontTools' own glyph set does exactly that, which is what made the masters look 6.5 units
+    # away from the sources they were drawn from when they are within rounding of them.
+    glyf = f['glyf']
+    hmtx = f['hmtx']
+    for name in order:
+        gl = glyf[name]
+        if gl.numberOfContours:
+            gl.recalcBounds(glyf)
+            hmtx[name] = (hmtx[name][0], gl.xMin)
     f.save(dst)
     # recalc the limits now that the outlines are in place
     g = TTFont(dst)
@@ -589,6 +604,15 @@ def _install(ttf_path):
         print(f'  WARNING: {len(frozen)} glyphs ship frozen on wght: {" ".join(sorted(frozen))}')
     else:
         print('  every glyph varies on wght in the shipped font')
+    # The advertised bearing must be the outline's own left edge.  Nothing else in the build
+    # looks at it, so a mismatch is silent: it shifted 13 glyphs by up to 6 units in anything
+    # that positions by the bearing, and made the masters read as 6.5 units away from the
+    # sources they are actually within rounding of.
+    gl, hm = f['glyf'], f['hmtx']
+    off = [n for n in f.getGlyphOrder() if gl[n].numberOfContours and hm[n][1] != gl[n].xMin]
+    if off:
+        raise SystemExit(f'  {len(off)} glyphs ship with lsb != xMin: {" ".join(sorted(off))}')
+    print('  every glyph\'s advertised bearing matches its outline')
 
 
 def _freeze_unverified(vf_path, made):
