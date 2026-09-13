@@ -5,7 +5,7 @@
 // fifteen files behind showing the old one, which is exactly what happened.
 //
 // The hero treatment here is not an invention: it is Logo.astro's, read off the component
-// and its CSS. An accent-coloured copy offset by (22,22), then the mark filled in primary
+// and its CSS. An accent-coloured copy offset by (30,30), then the mark filled in primary
 // with a 300-unit secondary stroke under it (paint-order: stroke fill markers). Change it
 // in one place and re-run this.
 //
@@ -34,7 +34,7 @@ const INNER = 'translate(0.000000,1084.000000) scale(0.100000,-0.100000)';
 const heroSvg = (size, { pad = 0 } = {}) => {
   const vb = `${-70 - pad} ${-70 - pad} ${1246 + pad * 2} ${1246 + pad * 2}`;
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vb}" width="${size}" height="${size}">`
-    + `<g transform="translate(22,22)"><g transform="${INNER}" fill="${SHADOW}"><path d="${D}"/></g></g>`
+    + `<g transform="translate(30,30)"><g transform="${INNER}" fill="${SHADOW}"><path d="${D}"/></g></g>`
     + `<g transform="${INNER}" fill="${INK}" stroke="${OUTLINE}" stroke-width="300"`
     + ` stroke-linejoin="round" paint-order="stroke fill markers"><path d="${D}"/></g></svg>`;
 };
@@ -80,7 +80,7 @@ const SQUARE = {
   'mstile-150x150.png': 150, 'mstile-310x310.png': 310,
 };
 
-// The hero treatment is three layers -- an accent copy offset by (22,22), the ink fill, and
+// The hero treatment is three layers -- an accent copy offset by (30,30), the ink fill, and
 // the 300-unit outline under it -- and they need room to stay distinct. Rendered small they
 // collapse into each other: at 16px the mark came out a pale smudge that all but disappears
 // on a light tab strip, because the ink is #EEE5E9 and a tab strip is nearly white. Measured
