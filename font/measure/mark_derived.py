@@ -142,6 +142,29 @@ def derive():
     return fit_union(union_polygon())
 
 
+def a_polygon():
+    """The A on its own, in the same frame as the union.
+
+    The write-on draws each leg by clipping a path to that leg's region, and clipping the UNION
+    there also catches the slivers of ring and hoop that cross the leg. Those slivers stop dead
+    at the counter's corner, which reads as a step bitten out of the leg's inner edge -- visible
+    for about a third of the write-on, until the ring and the bar are drawn over it.
+
+    The A by itself has no such crossings. It still carries the real foot, cut to a point by R5,
+    which is the whole reason the legs stopped being drawn as straight-sided quads in the first
+    place; this keeps that and drops the slivers.
+    """
+    a_poly, _o_out, _o_in, _hoop = parts()
+    p = Polygon(a_poly.flatten(per=PER)).buffer(0)
+    if p.geom_type == 'MultiPolygon':
+        p = max(p.geoms, key=lambda g: g.area)
+    return p
+
+
+def derive_a():
+    return fit_union(a_polygon())
+
+
 def to_site(cs, geometry_json):
     """Mark coordinates into the site's path units, using the transform geometry.json already fits
     between the Illustrator source and the shipped path.  Going through that transform rather than
@@ -193,6 +216,13 @@ if __name__ == '__main__':
         payload['site_path'] = d
         payload['site_bbox'] = [x0, y0, x1, y1]
         print('  site units: %.0f x %.0f path units, path %d chars' % (x1 - x0, y1 - y0, len(d)))
+        # The A alone, through the same transform, for the write-on's leg pieces.
+        acs_a, a_info = derive_a()
+        a_d = path_d(to_site(acs_a, geo))
+        payload['a_info'] = a_info
+        payload['a_site_path'] = a_d
+        print('  A alone: %d contour(s), %d smooth runs, worst fit %.5f, path %d chars'
+              % (a_info['contours'], a_info['runs'], a_info['worst_fit'], len(a_d)))
         # the same transform applied to the ARTWORK, as the check that it is the right one
         acs, _ = fit_union(artwork_polygon())
         ax0, ay0, ax1, ay1 = _bb([c.flatten() for c in to_site(acs, geo)])

@@ -5,3 +5,4 @@ pymupdf
 fonttools
 scipy
 brotli
+shapely
