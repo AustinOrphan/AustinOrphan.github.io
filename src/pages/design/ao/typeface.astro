@@ -4,7 +4,11 @@
 // The font is a real variable font built from eighteen masters, so the sliders move the outlines
 // rather than picking from pre-rendered images. The named instances are the same ones baked
 // into the fvar table, so a preset here and a preset in a design tool are the same thing.
-import BaseLayout from '../layouts/BaseLayout.astro';
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import WipBanner from '../../../components/WipBanner.astro';
+import { entryFor, robotsFor } from '../../../data/design-index';
+
+const entry = entryFor('typeface');
 
 const PRESETS = [
   { name: 'Thin',         wght: 280, push: 100 },
@@ -21,8 +25,9 @@ const PRESETS = [
 ];
 const SIZES = [88, 46, 27, 17];
 ---
-<BaseLayout title="Orphan Display" description="A typeface derived from the AO mark, with its two axes live."
-            bodyClass="od-page" robots="noindex, nofollow">
+<BaseLayout title={entry.title} description={entry.blurb}
+            bodyClass="od-page" robots={robotsFor(entry.status)}>
+  {entry.status === 'wip' && <WipBanner />}
   <main class="od">
     <header class="od-head">
       <h1>Orphan Display</h1>

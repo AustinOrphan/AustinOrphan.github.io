@@ -75,6 +75,16 @@ RING_W   = (_RING_MARK * RING_GAIN + _RING_ADD) * WEIGHT                        
 _OFF0    = ((_ring['inner'][0]-_ring['outer'][0]) * _sO, (_ring['inner'][1]-_ring['outer'][1]) * _sO)   # (14.0, 14.0)
 RING_OFF = (_OFF0[0] * PUSH * _OFF_MUL * RING_GAIN, _OFF0[1] * PUSH * _OFF_MUL * RING_GAIN)
 ROUND_THICK, ROUND_THIN = RING_W + norm(RING_OFF), RING_W - norm(RING_OFF)         # 53.0 and 13.4 at (1, 1)
+#
+# The same two at the AXIS ORIGIN.  RING_W is linear in WEIGHT and RING_OFF linear in PUSH, so
+# these are the band the letter would carry at (1, 1) -- the mark's own numbers.  A glyph that
+# FITS its outline rather than drawing it takes its knots from the shape at the origin and holds
+# them at every instance, so that control point i means the same place on the letter in every
+# master; see pen.fit_ranges and set_round._s_ranges.  Written out rather than as RING_W / WEIGHT
+# so that a build at PUSH 0 cannot divide by zero, and so the lines above are left untouched and
+# every other round stays bit for bit what it was.
+RING_W_1   = _RING_MARK * RING_GAIN + _RING_ADD
+RING_OFF_1 = (_OFF0[0] * _OFF_MUL * RING_GAIN, _OFF0[1] * _OFF_MUL * RING_GAIN)
 
 def round_ring(c, r_out):
     """A complete round: outer radius r_out, counter per R1. -> [outer, inner] contours."""

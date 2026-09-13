@@ -3394,6 +3394,14 @@ body.blog {
     stroke: none;
 }
 
+/* The offset copy is hero's alone. It is normally absent from the markup for the other two,
+   but a mark can be RE-TREATED by swapping its variant class (the logo page's export panel
+   does exactly that), which leaves hero's shadow group in place with no rule to paint it --
+   and an unpainted SVG shape is black, so a hard black mark appeared behind the letter.
+   Hiding it makes the class swap safe wherever it happens. */
+.site-logo-plain .site-logo-shadow,
+.site-logo-flat .site-logo-shadow { display: none; }
+
 /* "plain" is hero's ink with neither of hero's two extra passes: no red outline,
    no blue offset copy. Same fill as hero, so the two can be swapped without the
    mark changing weight or colour. */

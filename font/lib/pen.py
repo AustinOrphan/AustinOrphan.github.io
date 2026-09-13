@@ -158,12 +158,20 @@ def ring(c, r_out, r_in, off=(0.0, 0.0)):
     Returns [outer (ccw), inner (cw)] as cubic contours."""
     return [circle_contour(c, r_out, ccw=True), circle_contour(add(c, off), r_in, ccw=False)]
 
+# Both of the band's arcs are split into this many pieces whatever they span.  Measured across
+# the axis box the spans run 39.67 to 333.59 degrees, which the ceil(span / 90) rule turns into
+# one to four pieces -- and eight of these arcs sit on a boundary and change count partway
+# across the box, which is what froze B, D, H, J, P, R and U out of the variable font.  Four is
+# the most that rule ever asks for, so nothing is coarser than it was and most arcs are finer.
+BAND_SEGS = 4
+
+
 def arc_band(c, r_out, r_in, off, a0, a1):
     """The part of ring() between polar angles a0 -> a1 (degrees, measured at the OUTER
     centre, counter-clockwise), both ends cut along the rays from that centre.
     Used for C, G, S, U and the bowls of B, D, P, R.  Returns one ccw Contour."""
     ci = add(c, off)
-    start, outer = arc_segments(c, r_out, a0, a1)
+    start, outer = arc_segments(c, r_out, a0, a1, BAND_SEGS)
     i1 = line_circle(line_ang(c, a1), ci, r_in, pick='max')     # inner end on the a1 ray
     i0 = line_circle(line_ang(c, a0), ci, r_in, pick='max')
     # atan2 wraps to (-180, 180], so an inner end can come back 360 away from the outer ray
@@ -172,7 +180,7 @@ def arc_band(c, r_out, r_in, off, a0, a1):
     def _near(b, a): return a + ((b - a + 180) % 360) - 180
     b1 = _near(ang(sub(i1, ci)), a1)
     b0 = _near(ang(sub(i0, ci)), a0)
-    _, inner = arc_segments(ci, r_in, b1, b0)
+    _, inner = arc_segments(ci, r_in, b1, b0, BAND_SEGS)
     k = Contour(start)
     for sg in outer: k.curve_to(sg[1], sg[2], sg[3])
     k.line_to(i1)
@@ -256,10 +264,22 @@ def circle_contour(c, r, ccw=True):
     out.curve_to((x + k, y - r), (x + r, y - k), (x + r, y))
     return out if ccw else out.reversed()
 
-def arc_segments(c, r, a0, a1):
+def arc_segments(c, r, a0, a1, n=None):
     """Cubic segments approximating the arc a0 -> a1 (degrees), split into <= 90-degree pieces.
-    Returns (start_point, [('c', c1, c2, p), ...])."""
-    n = max(1, int(math.ceil(abs(a1 - a0) / 90.0 - 1e-9)))
+    Returns (start_point, [('c', c1, c2, p), ...]).
+
+    `n` asks for a FIXED number of pieces instead, and every arc that has to interpolate across
+    the variable font's masters needs it, for the same reason fit_cubics grew `nseg`: the
+    default rule is ceil(span / 90), the span moves with WEIGHT and PUSH, and an arc that is
+    89 degrees in one master and 91 in another comes out as one piece in the first and two in
+    the second.  varLib cannot interpolate outlines whose point counts differ, so it drops the
+    glyph.  Ten arcs across the set cross a 90-degree boundary somewhere in the axis box.
+
+    Fixing the count only ever makes the approximation finer -- the pieces are equal fractions
+    of the span either way -- so there is no quality argument against the maximum the adaptive
+    rule would itself have asked for.
+    """
+    n = n or max(1, int(math.ceil(abs(a1 - a0) / 90.0 - 1e-9)))
     segs = []; start = add(c, mul(from_ang(a0), r))
     for i in range(n):
         b0 = math.radians(a0 + (a1-a0)*i/n); b1 = math.radians(a0 + (a1-a0)*(i+1)/n)
@@ -368,7 +388,33 @@ def _fit_one(P, T):
     return p1, p2, err, split
 
 
-def fit_cubics(P, T, tol=0.05, depth=0, nseg=None):
+def fit_ranges(P, T, nseg):
+    """The nseg pieces the fixed-count fit would cut this sampled curve into: a list of (i, j)
+    index ranges into P, contiguous, covering 0 .. len(P)-1.
+
+    Which piece is split next is an argmax over the pieces' fit residuals, and the split lands
+    on an integer sample.  Both are DISCRETE choices over quantities that move continuously with
+    the axes, so the partition is a step function of WEIGHT and PUSH -- see fit_cubics for what
+    that costs a variable font, and pass the result back to it as `ranges` to hold the knots
+    still across the masters.
+    """
+    n = len(P)
+    cache, ranges = {}, [(0, n - 1)]
+    def info(r):
+        if r not in cache: cache[r] = _fit_one(P[r[0]:r[1]+1], T[r[0]:r[1]+1])
+        return cache[r]
+    while len(ranges) < nseg:
+        cand = [i for i, r in enumerate(ranges) if r[1] - r[0] >= 2]
+        if not cand: break
+        i = max(cand, key=lambda i: (info(ranges[i])[2], ranges[i][1] - ranges[i][0], -i))
+        a, b = ranges[i]
+        s = a + info((a, b))[3]
+        if not (a < s < b): s = (a + b) // 2
+        ranges[i:i+1] = [(a, s), (s, b)]
+    return ranges
+
+
+def fit_cubics(P, T, tol=0.05, depth=0, nseg=None, ranges=None):
     """Schneider's fit: a chain of cubic Beziers through the sampled curve P, tangent to the
     unit tangents T at the two ends of every piece.
 
@@ -395,6 +441,20 @@ def fit_cubics(P, T, tol=0.05, depth=0, nseg=None):
     instead does not work on these curves: several have a corner in them, the adaptive rule lands
     a boundary on the corner and an even division straddles it, and the 8's fit came out 40 times
     worse at the same piece count.
+
+    A FIXED COUNT IS ONLY HALF OF WHAT INTERPOLATION NEEDS.  `nseg` makes the masters agree on
+    how many control points there are; it does not make them agree on what those points MEAN.
+    The split is an argmax over the pieces' residuals, landing on an integer sample, so the
+    partition is a step function of the axes: two neighbouring masters keep the same count and
+    still cut the curve in different places.  Between WEIGHT 1.1650 and 1.1700 the S's count is
+    19 both times and its first knot moves 327 units along the outline.  varLib pairs control
+    point i with control point i and draws a straight line between them, so it blends one
+    master's segment against a different stretch of the other's: 42 units of error on the S, 47
+    on the 8, in shapes that are correct at every master.
+
+    So an outline that has to interpolate chooses its knots ONCE and passes them back in as
+    `ranges`.  fit_ranges() is that choice, split out so a glyph can take it from its own shape
+    at the axis origin and hold it at every instance.
     """
     n = len(P)
     if n < 2: return [], 0.0
@@ -402,22 +462,11 @@ def fit_cubics(P, T, tol=0.05, depth=0, nseg=None):
         p1, p2, err, _ = _fit_one(P, T)
         return [(p1, p2, P[-1])], err
 
-    if nseg is not None:
-        cache, ranges = {}, [(0, n - 1)]
-        def info(r):
-            if r not in cache: cache[r] = _fit_one(P[r[0]:r[1]+1], T[r[0]:r[1]+1])
-            return cache[r]
-        while len(ranges) < nseg:
-            cand = [i for i, r in enumerate(ranges) if r[1] - r[0] >= 2]
-            if not cand: break
-            i = max(cand, key=lambda i: (info(ranges[i])[2], ranges[i][1] - ranges[i][0], -i))
-            a, b = ranges[i]
-            s = a + info((a, b))[3]
-            if not (a < s < b): s = (a + b) // 2
-            ranges[i:i+1] = [(a, s), (s, b)]
+    if ranges is not None or nseg is not None:
+        rg = ranges if ranges is not None else fit_ranges(P, T, nseg)
         segs, err = [], 0.0
-        for r in ranges:
-            p1, p2, e, _ = info(r)
+        for r in rg:
+            p1, p2, e, _ = _fit_one(P[r[0]:r[1]+1], T[r[0]:r[1]+1])
             segs.append((p1, p2, P[r[1]])); err = max(err, e)
         return segs, err
 

@@ -54,7 +54,7 @@ import math, os, sys
 HERE = os.path.dirname(os.path.abspath(__file__)); FONT = os.path.dirname(HERE)
 sys.path.insert(0, os.path.join(FONT, 'lib'))
 from pen import (Contour, add, sub, mul, norm, unit, perp, from_ang, ang, line, line_2pt, arc_band,
-                 line_circle, line_x_at_y, arc_segments, from_poly, ccw, fit_cubics)
+                 line_circle, line_x_at_y, arc_segments, from_poly, ccw, fit_cubics, fit_ranges)
 import ring
 import rules
 from metrics import CAP, OVER_ROUND, SB_STRAIGHT, SB_ROUND
@@ -108,7 +108,9 @@ def _lens(l, c, r, side):
         mid = add(c, mul(from_ang((a1 + end) / 2), r))          # which way round is the piece wanted
         if (perp(v)[0]*(mid[0]-p[0]) + perp(v)[1]*(mid[1]-p[1])) * side > 0:
             k = Contour(P0); k.line_to(P1)                      # the chord, then the circle itself
-            for sg in arc_segments(c, r, a1, end)[1]: k.curve_to(sg[1], sg[2], sg[3])
+            # Two pieces whatever it spans: 10.84 to 119.89 degrees across the axis box, which
+            # the default rule splits as one or two, changing partway across.  See pen.arc_segments.
+            for sg in arc_segments(c, r, a1, end, 2)[1]: k.curve_to(sg[1], sg[2], sg[3])
             return k.ccw()
     raise ValueError('no side')
 
@@ -523,34 +525,43 @@ S_BOT   = -160.0
 S_WAIST = 150.0            # the connector's handle length: how diagonally the waist runs
 S_TOL   = 0.15             # units; the fit's tolerance, a seventh of the compiler's rounding
 S_SEGS  = 19               # fixed pieces per S edge, so the S interpolates (pen.fit_cubics);
-                           # adaptively at S_TOL it ran 16 to 19 across the masters
+                           # adaptively at S_TOL it ran 16 to 19 across the masters.  The COUNT
+                           # alone is not enough -- where the pieces are cut has to be fixed too,
+                           # or the masters agree on how many points there are and disagree on
+                           # what each one means.  See _s_ranges.
 S_N     = 160              # samples per section
 
-def _band_at(theta):
-    """R1's band width for a point whose outward normal points at page angle theta."""
-    return RING_W - norm(RING_OFF) * math.cos(math.radians(theta) - math.radians(ang(RING_OFF)))
+def _band_at(theta, ring_w=None, ring_off=None):
+    """R1's band width for a point whose outward normal points at page angle theta.
+
+    The band defaults to this instance's; _s_ranges passes the axis origin's instead, to rebuild
+    the shape the S's knots were chosen on."""
+    ring_w = RING_W if ring_w is None else ring_w
+    ring_off = RING_OFF if ring_off is None else ring_off
+    return ring_w - norm(ring_off) * math.cos(math.radians(theta) - math.radians(ang(ring_off)))
 
 def _ell_nrm(A, B, t):
     """Page angle of the ellipse's true OUTWARD normal at parameter t; the radius when A == B."""
     r = math.radians(t)
     return ang((math.cos(r) / A, math.sin(r) / B))
 
-def _s_spine():
+def _s_spine(ring_w=None, ring_off=None):
     """(point, unit tangent, width) sampled from the top terminal to the bottom one."""
     A = S_BODY / 2.0
-    wt, wl, wb, wr = _band_at(90.0), _band_at(180.0), _band_at(270.0), _band_at(0.0)
+    band = lambda th: _band_at(th, ring_w, ring_off)
+    wt, wl, wb, wr = band(90.0), band(180.0), band(270.0), band(0.0)
     Cu = (wl/2 + A, TOP - wt/2 - S_B)            # top a half-band below TOP, left extreme
     Cl = (S_BODY - wr/2 - A, BOT + wb/2 + S_B)   # a half-band inside x = 0; lower mirrored
     out = []
     for i in range(S_N + 1):                     # upper quarter, travelled with increasing t
         t = S_TOP + (180.0 - S_TOP) * i / S_N; r = math.radians(t)
         out.append(((Cu[0] + A*math.cos(r), Cu[1] + S_B*math.sin(r)),
-                    unit((-A*math.sin(r), S_B*math.cos(r))), _band_at(_ell_nrm(A, S_B, t))))
+                    unit((-A*math.sin(r), S_B*math.cos(r))), band(_ell_nrm(A, S_B, t))))
     low = []
     for i in range(S_N + 1):                     # lower quarter, travelled with DECREASING t
         t = S_BOT * i / S_N; r = math.radians(t)
         low.append(((Cl[0] + A*math.cos(r), Cl[1] + S_B*math.sin(r)),
-                    unit((A*math.sin(r), -S_B*math.cos(r))), _band_at(_ell_nrm(A, S_B, t))))
+                    unit((A*math.sin(r), -S_B*math.cos(r))), band(_ell_nrm(A, S_B, t))))
     P0, P3 = out[-1][0], low[0][0]               # the connector, tangent straight down at both ends
     P1, P2 = (P0[0], P0[1] - S_WAIST), (P3[0], P3[1] + S_WAIST)
     w0, w3 = out[-1][2], low[0][2]
@@ -574,11 +585,43 @@ def _edges(pts):
         return T
     return (L, tans(L)), (R, tans(R))
 
+_S_RANGES = []
+def _s_ranges():
+    """Where the S's cubics start and end, as sample indices along the spine: the fixed-count
+    fit's own choice, taken ONCE at the axis origin and held at every instance.
+
+    The knots have to sit at a fixed construction PARAMETER, not at a fixed fit quality.  At a
+    fixed sample index this construction is exactly affine in both knobs -- the two quarters are
+    the same ellipse quarter translated (S_BODY and S_B do not move with WEIGHT), the connector's
+    four control points are linear in the band widths, and _band_at is linear in RING_W and in
+    RING_OFF -- so sample i is the same place on the letter in every master, and varLib's straight
+    line between two masters IS the construction's own straight line.
+
+    Let the fit choose per master instead and it re-cuts the curve wherever two pieces' residuals
+    cross.  Between WEIGHT 1.1650 and 1.1700 the count is 19 both times and the first knot moves
+    327 units along the outline; control point i then describes a different place in each master,
+    and the line varLib draws between them runs nowhere near the letter.  Measured as the gap
+    between the construction's own midpoint shape and the blend of its two neighbours, that was
+    42.4 units on the S and 47 on the 8, in glyphs that are correct at every master.
+
+    The origin is the right place to take them: it is where the mark's own measurements sit, it
+    leaves the S at (1, 1) bit for bit what it was, and of the freeze points tried it gives the
+    lowest worst-case fit error over the 18 masters (0.1233, against 0.1469 at 2.00/1.00, 0.1964
+    at 1.20/0.65 and 0.2441 at 0.85/1.00).  More masters is the other answer and it does not work:
+    the error is a STEP at a residual crossing, not a bend, so two masters 0.001 apart still blend
+    37.4 units wrong, and there are 73 crossings along WEIGHT alone."""
+    if not _S_RANGES:
+        (L, TL), (R, TR) = _edges(_s_spine(rules.RING_W_1, rules.RING_OFF_1))
+        _S_RANGES.append(fit_ranges(L, TL, S_SEGS))
+        _S_RANGES.append(fit_ranges(R[::-1], [mul(t, -1) for t in TR[::-1]], S_SEGS))
+    return _S_RANGES
+
 def build_S():
     pts = _s_spine()
     (L, TL), (R, TR) = _edges(pts)
-    segL, eL = fit_cubics(L, TL, nseg=S_SEGS)                       # fixed pieces: see
-    segR, eR = fit_cubics(R[::-1], [mul(t, -1) for t in TR[::-1]], nseg=S_SEGS)   # pen.fit_cubics
+    rgL, rgR = _s_ranges()                                          # fixed pieces AND fixed
+    segL, eL = fit_cubics(L, TL, ranges=rgL)                        # knots: see _s_ranges
+    segR, eR = fit_cubics(R[::-1], [mul(t, -1) for t in TR[::-1]], ranges=rgR)
     k = Contour(L[0])
     for p1, p2, p3 in segL: k.curve_to(p1, p2, p3)
     k.line_to(R[-1])                                   # the end terminal, square to the spine
@@ -607,7 +650,10 @@ def build_S():
                    f"is a deviation, argued above: it is set by the circular-bowl construction this glyph "
                    f"no longer uses.",
         fit=f"edges fitted by pen.fit_cubics to {S_TOL:g} units; worst deviation {max(eL, eR):.4f} "
-            f"({len(segL)} + {len(segR)} segments), against the compiler's 1-unit rounding.",
+            f"({len(segL)} + {len(segR)} segments), against the compiler's 1-unit rounding.  The "
+            f"{S_SEGS:g} knots per edge are the fit's own choice at the axis origin, held at every "
+            f"instance so that control point i means the same place on the letter in every master "
+            f"and the outline interpolates (pen.fit_ranges, _s_ranges).",
         deviations=f"R8's width class only; the body is {S_BODY:g}, not {BODY_NARROW:g}."))
 
 def build_Q():
@@ -681,7 +727,6 @@ def _curl_counter_r(c2, r2, th):
     what makes the two counters meet exactly instead of the curl biting into the J's."""
     d = r2 - _band_depth(J_C, J_R, J_R - RING_W, th)
     return norm(sub(mul(from_ang(th), d), RING_OFF))
-BURY = 20.0                                # how far a stem's flat end runs on past the junction, buried
 OVERLAP = 1.0                              # how far a fill reaches into the stem it abuts, so the union
                                            # never has to resolve two contours that only touch along a line
 
@@ -761,7 +806,26 @@ def _heavy_junction(c, r, side):
     x_counter = _stem_tangent_x(ci, ri - GRAZE, -side, side)     # inner edge tangent to the counter
     x_outer   = _stem_tangent_x(c,  r  - GRAZE,  side, side)     # outer edge tangent to the silhouette
     x = max(x_counter, x_outer) if side < 0 else min(x_counter, x_outer)
-    q = line_circle(_stem_edge(x, -side), ci, ri, pick='min')   # the lower of the two crossings
+    past = (x_outer > x_counter) if side < 0 else (x_outer < x_counter)
+    if past:
+        # Past the crossover the arc ends on the SILHOUETTE, as the paragraph above says.  Held
+        # to the counter's crossing it ran on down to y=227 at PUSH 0.30 while the stem's outer
+        # edge left the round's circle at y=266, so no foot height both reached the arc and
+        # stayed inside the bowl: the U was built with the stem poking 8.9 units out of its own
+        # silhouette at Regular Flat and 33.8 at Black Flat.  On the silhouette's crossing the
+        # two agree and the counter takes the corner instead, as the light side already does.
+        #
+        # The UPPER of the two crossings -- _light_junction's rule, for the same reason: both
+        # stems come DOWN from the cap, so each meets the circle at the top first and that is
+        # where the silhouette changes hands.  At the lower crossing the arc's end would be the
+        # only height the foot could sit at without leaving the circle, and a flat foot there
+        # sits ABOVE the arc's radial end cut everywhere but the one point the two share, which
+        # opens a 1.8-unit crack across the junction at Black Flat.  The upper crossing leaves
+        # 23.6 units between the two, room enough to bury the foot under the cut (it needs 9.8)
+        # and still stay inside the round.
+        q = line_circle(_stem_edge(x, side), c, r, pick='max')
+    else:
+        q = line_circle(_stem_edge(x, -side), ci, ri, pick='min')  # the lower of the two crossings
     return x, ang(sub(q, c))
 
 def _touch_deg(x_c, edge, c, r, at):
@@ -846,7 +910,31 @@ def build_U():
     # half times and the U came apart -- at every WEIGHT above about 1.05, which is most of the
     # variable font's range.  Normalise the sweep into (0, 360] instead of trusting ang()'s branch.
     a0 += 360.0 * math.floor((a1 - a0) / 360.0)
-    y0 = U_C[1] - BURY
+    # WHERE THE LEFT STEM'S FOOT STOPS.  The foot is a flat cut and the arc's end is a RADIAL
+    # one, so the two agree at exactly one point and part company either side of it.  Sitting
+    # the foot at the arc's end height therefore closes the junction only at that point: across
+    # the rest of the stem's width the cap has fallen away beneath it and the counter runs out
+    # through the gap as a hairline -- 1.8 units at Black Flat, 0.1 at Light, a crack in the ink
+    # either way.  So the foot goes UNDER the cap, by OVERLAP past the cap's inner end, which
+    # puts its whole width inside the arc's ink (R6: overlap and union).
+    #
+    # Two things bound it.  It never sits above the arc's own end, the only height at which it
+    # reaches the round at all: pinned 20 units under the round's centre while the arc's left
+    # end climbed with PUSH, four of the eleven named instances shipped a DETACHED left stem --
+    # a 15-unit gap at Regular Flat, 47 at Black Flat.  And it prefers to stay inside the
+    # round's circle: below y_low the stem's outer edge has left the circle and the flat foot
+    # shows through the silhouette as a step -- 8.9 units at Regular Flat while the arc was
+    # ended on the counter's crossing past the crossover, 19.0 at Bold Flat, 33.8 at Black
+    # Flat, every one of them landing on x=40, the bowl's own left extreme.
+    #
+    # At Light Flat alone the two cannot both hold: the cap's inner end is 3.3 units BELOW the
+    # height at which the outer edge leaves the circle.  Closure wins there, because the poke
+    # it costs is 0.3 units and the crack it avoids is 3.3.
+    y_hand = U_C[1] + U_R * math.sin(math.radians(a0))
+    y_cap = line_circle(line(U_C, from_ang(a0)), add(U_C, RING_OFF), U_R - RING_W,
+                        pick='max')[1] - OVERLAP               # under the arc's radial end cap
+    y_low = line_circle(_stem_edge(xl, -1), U_C, U_R, pick='min')[1]   # outer edge leaves the circle
+    y0 = max(min(y_hand, y_cap), min(y_low, y_cap))
     left  = stem(xl, y0,  CAP, bottom=None, top='right')
     right = stem(xr, y0r, CAP, bottom=None, top='left')
     arc   = round_arc(U_C, U_R, a0, a1)
@@ -875,9 +963,12 @@ def build_U():
               f"left stem's outer edge stands {xl - w_stem(U_C[1])/2:.1f} units inside the round's left "
               f"extreme, which is why the round shows on the left a little higher than on the right -- R1's "
               f"displacement, made visible.",
-        stem_feet=f"the left stem's foot is flat and buried {BURY:g} units past the junction at y={y0:.0f}, "
-                  f"inside the round's own band: its outer edge stands at x={xl - w_stem(y0)/2:.1f} there "
-                  f"against the circle's own {_circ_x(U_C, U_R, y0, -1):.1f}, well inside the silhouette.  The "
+        stem_feet=f"the left stem's foot is flat and stops at y={y0:.1f}, {y_cap + OVERLAP - y0:.1f} units "
+                  f"under the inner end of the arc's radial end cut (y={y_cap + OVERLAP:.1f}) so that its whole "
+                  f"width is inside the arc's ink rather than meeting it at the single point a flat cut and a "
+                  f"radial one share; the arc's own end is at y={y_hand:.1f} and the height below which the "
+                  f"stem's outer edge leaves the round's circle is y={y_low:.1f}.  Its outer edge stands at "
+                  f"x={xl - w_stem(y0)/2:.1f} there against the circle's own {_circ_x(U_C, U_R, y0, -1):.1f}.  The "
                   f"right stem's foot stops at y={y0r:.1f}, the tangency with the circle {GRAZE:g} units "
                   f"inside the round's, which is the last height at which the whole foot is still inside the "
                   f"silhouette; carried down to the round's centre as it was, its outer corner stood 0.9 "

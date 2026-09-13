@@ -47,6 +47,11 @@ jobs:
         env:
           VAULT_PATH: ${{ github.workspace }}/.vault
 
+      # Asserts on the dist/ the step above just produced, so it gates the deploy
+      # on the real artefact. `test:routes` rather than `test`, which would build
+      # a second time from a different vault checkout.
+      - run: npm run test:routes
+
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist/

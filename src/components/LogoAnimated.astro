@@ -39,7 +39,9 @@ interface Props {
   /** Start playing on load. Off, the mark sits in its final state until
    *  something adds the `la-play` class. */
   autoplay?: boolean;
-  /** Prefix for the mask ids (`<id>-l`, `-r`, `-b`, and `-t` in the swash mode). Unique
+  /** The element's DOM id, AND the prefix for its mask ids (`<id>-l`, `-r`, `-b`, and `-t`
+   *  in the swash mode). It used to be the prefix only, which meant passing `id` gave you
+   *  something getElementById could not find. Unique
    *  per page. Defaults to `la1`, `la2`, ... in render order, so the built HTML
    *  is the same on every build; pass one when you need a stable name that
    *  does not depend on render order. */
@@ -100,8 +102,19 @@ const LEG_R = 'M5916 10247 L8232 506';
 // split (its last two points) so the fills interpenetrate: abutting fills are antialiased
 // independently and leave a hairline of background down the apex for the whole animated
 // span. The overlap is clipped to the A's own right edge, so the union is still the A.
-const LEG_L_QUAD = 'M5916 10247 L1232 1018 L2324 1335 L5905 9411 L5962 10082 Z';
-const LEG_R_QUAD = 'M5916 10247 L5845 9416 L7752 730 L8712 283 Z';
+// These BOUND each leg; they no longer draw it. The mark's own outline is what gets drawn,
+// clipped to the region belonging to that leg, because a quad is a straight-sided stand-in and
+// the A's feet are not straight: R5 cuts them to a point. Drawing the quad meant the foot sat
+// blunt from the moment the leg finished until the finished mark replaced it, and then changed
+// shape at the hand-off.
+//
+// The quads themselves are geometry.json's left/right_leg_quad_d, re-derived from the mark,
+// with each foot-end corner pushed 700 units further along its own edge so the clip never
+// truncates the real cut; the leg simply ends where the mark ends. The apex ends are the
+// generated values untouched: they still split the A along apex->counter, with the left piece
+// overlapping 60 units so the two fills interpenetrate.
+const LEG_L_QUAD = 'M5916 10247 L915 394 L2040 695 L5905 9411 L5962 10082 Z';
+const LEG_R_QUAD = 'M5916 10247 L5845 9416 L7902 46 L8901 -391 Z';
 // Each leg mask's stroke: 2x the piece's covering half-width about its centre-line, plus
 // 8 % (geometry.json stroke_widths.leg_mask). The left piece is wider for its overlap.
 const LEG_L_W = 1230;
@@ -156,6 +169,7 @@ const easeTail = `linear(${dash(0)}, ${at(TAIL_STOPS)}, 1)`;
 // inner edge, so the counter jumped and the 157-to-623 modulation appeared at the cross-fade.
 ---
 <svg
+  id={id}
   style={`${timing};--la-ease-head-l:${easeHead};--la-ease-tail-l:${easeTail}${vars ? ';' + vars : ''}`}
   class={`site-logo site-logo-${variant} site-logo-anim site-logo-anim-${variant} site-logo-anim-trail-${trail} ${autoplay ? 'la-play' : ''} ${className}`.trim()}
   viewBox="-70 -70 1246 1246"
@@ -175,6 +189,10 @@ const easeTail = `linear(${dash(0)}, ${at(TAIL_STOPS)}, 1)`;
     <mask id={`${uid}-c`} maskUnits="userSpaceOnUse" x="-600" y="-600" width="13000" height="13000">
       <path class="la-mask la-coil-m" d={RING_COIL_CENTRE_D} pathLength="1" stroke-width={RING_COIL_WIDTH} />
     </mask>
+    <!-- Each leg's region. The mark is drawn through these, so a leg carries its own true
+         outline -- R5 foot included -- for the whole time it is on screen. -->
+    <clipPath id={`${uid}-cl`} clipPathUnits="userSpaceOnUse"><path d={LEG_L_QUAD} /></clipPath>
+    <clipPath id={`${uid}-cr`} clipPathUnits="userSpaceOnUse"><path d={LEG_R_QUAD} /></clipPath>
     <mask id={`${uid}-l`} maskUnits="userSpaceOnUse" x="-600" y="-600" width="13000" height="13000">
       <path class="la-mask la-leg-l" d={LEG_L} pathLength="1" stroke-width={LEG_L_W} />
     </mask>
@@ -204,8 +222,8 @@ const easeTail = `linear(${dash(0)}, ${at(TAIL_STOPS)}, 1)`;
   <g class="la-pieces" transform="translate(0,1084) scale(0.1,-0.1)">
     <path class="la-coil" d={RING_COIL_D} mask={`url(#${uid}-c)`} />
     <path class="la-ring" d={RING_ANNULUS_D} fill-rule="evenodd" mask={`url(#${uid}-o)`} />
-    <path class="la-leg" d={LEG_L_QUAD} mask={`url(#${uid}-l)`} />
-    <path class="la-leg" d={LEG_R_QUAD} mask={`url(#${uid}-r)`} />
+    <g clip-path={`url(#${uid}-cl)`}><path class="la-leg" d={LOGO_MARK_D} mask={`url(#${uid}-l)`} /></g>
+    <g clip-path={`url(#${uid}-cr)`}><path class="la-leg" d={LOGO_MARK_D} mask={`url(#${uid}-r)`} /></g>
     <path class="la-bar" d={BAR} mask={`url(#${uid}-b)`} />
   </g>
 
@@ -358,11 +376,17 @@ const easeTail = `linear(${dash(0)}, ${at(TAIL_STOPS)}, 1)`;
     }
     /* Hero only: flat has neither a shadow nor a stroke, and animating stroke-width there
        would give it a red outline it is not supposed to have. */
+    /* `both`, not `forwards`, and that is load-bearing: the shadow group carries
+       transform="translate(22,22)" and the mark carries stroke-width="300" as MARKUP
+       attributes, so under `forwards` each paints its finished treatment during the
+       animation's delay -- a grey shadow at full offset and a red outline at full width,
+       for the frames between the final layer fading in and the treatment starting.
+       `backwards` fill makes the delay show the keyframes' from-state instead. */
     .site-logo-anim-hero.la-play .la-final-shadow {
-      animation: la-shadow var(--la-d-treat) var(--la-ease-grow) var(--la-t-treat) forwards;
+      animation: la-shadow var(--la-d-treat) var(--la-ease-grow) var(--la-t-treat) both;
     }
     .site-logo-anim-hero.la-play .la-final-mark {
-      animation: la-outline var(--la-d-treat) var(--la-ease-grow) var(--la-t-treat) forwards;
+      animation: la-outline var(--la-d-treat) var(--la-ease-grow) var(--la-t-treat) both;
     }
     .la-play .la-bar-m { animation: la-draw var(--la-d-bar) var(--la-e-bar) var(--la-t-bar) forwards; }
     /* Linear timing on purpose: ease-grow's stops are baked into the keyframe values so the
