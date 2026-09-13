@@ -3002,8 +3002,18 @@ a {
    12. Blog Styles
    ============================================ */
 
+/* width:100% and border-box, not max-width alone. With only a max-width this sizes to its
+   CONTENT, so one unbreakable token -- a code block, a long URL -- sets the column's width
+   and the article grows past the viewport. Measured at 390px with a post containing a code
+   fence: the article came out 634px wide, and html/body's overflow-x:hidden then clipped it
+   with no scrollbar to say so. The pre was innocent; it has overflow-x:auto and fits.
+
+   784, not 720, because border-box counts the 2rem gutters inside the width: 720 + 2 x 32.
+   That is the same number .site-footer--static carries, so the two still line up. */
 .blog-post {
-  max-width: 720px;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 784px;
   margin: 0 auto;
   padding: 7rem 2rem 4rem;
 }
@@ -3068,6 +3078,10 @@ a {
   font-family: 'Comfortaa', sans-serif;
   font-size: 1rem;
   line-height: 1.8;
+  /* The column can no longer grow to fit an unbreakable token, so anything longer than the
+     column has to break instead: a bare URL in a sentence, or a long inline `code` span. `pre`
+     is exempt by nature -- it is white-space:pre and scrolls itself. */
+  overflow-wrap: anywhere;
 }
 .blog-post-body p {
   color: var(--color-primary);
@@ -3083,7 +3097,15 @@ a {
   letter-spacing: 0.08em;
   margin: 2rem 0 0.75rem;
 }
-.blog-post-body a { color: var(--color-accent); }
+/* The global `a` reset is display:flex, width/height:100%, justify-content:center, so a link
+   inside prose took the whole column and centred itself on its own line -- every sentence
+   containing one broke into three pieces. Same reset as .post-card-title a and .tag-strip-more. */
+.blog-post-body a {
+  display: inline;
+  width: auto;
+  height: auto;
+  color: var(--color-accent);
+}
 .blog-post-body code {
   background: #0d1b24;
   padding: 0.15rem 0.4rem;
@@ -3104,8 +3126,11 @@ a {
 }
 
 /* Blog list page */
+/* Same as .blog-post above: sized to the viewport, not to its content. */
 .blog-page {
-  max-width: 720px;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 784px;
   margin: 0 auto;
   padding: 7rem 2rem 4rem;
 }
