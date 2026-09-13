@@ -114,7 +114,8 @@ HERE = os.path.dirname(os.path.abspath(__file__)); FONT = os.path.dirname(HERE)
 sys.path.insert(0, os.path.join(FONT, 'lib')); sys.path.insert(0, FONT)
 from pen import *
 from metrics import *
-from rules import (RING_W, RING_OFF, ROUND_THICK, ROUND_THIN, round_ring, round_arc,
+from rules import (WEIGHT, WEIGHT_TOP, RING_W, RING_OFF, ROUND_THICK, ROUND_THIN, ROUND_THICK_1,
+                   round_ring, round_arc,
                    w_slash, w_backslash, w_stem, w_horizontal, HORIZ_MID, HORIZ_TAPER, CUT_DEG,
                    glyph, stem, diagonal, horizontal, arm)
 from glyphs import core
@@ -153,7 +154,25 @@ def _check_bar_y():
 _BAR_CHECK = _check_bar_y()
 
 # ---- the dot ----------------------------------------------------------------------
-DOT_D = ROUND_THICK                  # 53.0
+# A DOT HAS NO DIRECTION, so it carries the face's undirected weight: the R2 stem at the
+# baseline, where the dot sits.  It used to take ROUND_THICK, the O's THICKEST side, and that is
+# a directed measurement -- it grows with PUSH, which is contrast rather than weight, so the dot
+# inflated as the face got more contrasty while every stem stayed put.
+#
+# Nothing moves at the axis origin.  The two are the same number there, and not by coincidence:
+# ROUND_THICK is RING_W + |RING_OFF| and the stem at the baseline is 39.899 + FOOT_WIDEN + TAPER,
+# and R2c's TAPER is defined as whatever makes the second equal the first.  Both reduce to
+# (_RING_MARK + |_OFF0|) * RING_GAIN = 64.97.  So this is the same dot, read off the rule that
+# actually governs it.
+#
+# What it fixes is the comma, where the dot is a HEAD on an R2 leg.  Measured against that leg
+# the old dot ran from 1.18 times its width down to 0.71 -- crossing 1.0, so the head was a bulb
+# at one corner of the design space and had vanished into the leg at the other, and in between
+# the circle cut the leg's edge and left a spur in the silhouette.  Both come from the head and
+# the leg following different rules.  On this one they follow the same rule: the ratio is exactly
+# constant in PUSH and runs 1.012 to 1.056 over the whole weight axis, so the head always reads
+# and always swallows the leg's corners.
+DOT_D = w_slash(0.0)                 # 64.97 at the axis origin, the stem at the baseline
 DOT_R = DOT_D / 2
 DOT_CY = DOT_R - OVER_ROUND          # a dot on the baseline: bottom at -OVER_ROUND like every round
 def _dot(cx, cy):
@@ -225,10 +244,37 @@ def _notes(construction, deviations='none', **kw):
 # ==================================================================================
 def build_period():
     return glyph(46, [_dot(0, DOT_CY)], sb=(SB_ROUND, SB_ROUND), notes=_notes(
-        "The dot: a circle of diameter ROUND_THICK (53.0), the O's heaviest stroke, bottom at -OVER_ROUND.",
+        f"The dot: a circle of diameter {DOT_D:.1f}, the R2 stem's width at the baseline -- the face's "
+        f"undirected weight, since a dot has no direction -- with its bottom at -OVER_ROUND like every "
+        f"round.  At the axis origin that is exactly ROUND_THICK, which is what it used to be written as; "
+        f"away from the origin ROUND_THICK follows PUSH, which is contrast rather than weight.",
         dot_diameter=DOT_D, centre_y=DOT_CY))
 
-COMMA_TIP_Y = -2.6 * DOT_D          # the tail's tip, 138 below the baseline
+# HOW DEEP THE TAIL GOES.  Written as 2.6 dots it followed the stroke, because a dot is
+# ROUND_THICK: the tip sank from 137 below the baseline at the light end of the axis to 275 at
+# the heavy one, and from about wght 517 upward the comma and the semicolon hung as much as 75
+# units below the font's own declared descent of 200 -- where GDI and several PDF paths clip.
+# They were the only two glyphs in the face outside either vertical metric, anywhere on either
+# axis.
+#
+# The depth still grows with weight, because a heavier comma wants the length to carry the
+# heavier tail, but it is now anchored at both ends of the axis rather than left to run:
+#
+#   at the axis origin   2.6 dots of the dot the face was DRAWN with, so the mark's own cut is
+#                        unchanged at 169
+#   at the top of the axis   the declared descent less COMMA_TIP_CLEAR, so the deepest cut the
+#                        family ships still sits inside the metric with room to spare
+#
+# and linear in WEIGHT between and below, which matters for more than tidiness: a variable font
+# draws the straight line between its masters, so a depth that is linear in the axis is a depth
+# the interpolation reproduces exactly.  A rule that clamped at the metric instead would put a
+# kink mid-axis -- at WEIGHT 1.62 on the flat side -- and the blend across the master pair that
+# straddles it would miss by about 9 units.
+COMMA_TIP_CLEAR = 10.0                            # descent the tip leaves free: ten times the
+                                                  # compiler's rounding, and room for the R5 cut
+COMMA_TIP_1   = 2.6 * ROUND_THICK_1               # 169, the depth at the axis origin
+COMMA_TIP_TOP = DESCENT - COMMA_TIP_CLEAR         # 190, the deepest the tip may ever go
+COMMA_TIP_Y = -(COMMA_TIP_1 + (COMMA_TIP_TOP - COMMA_TIP_1) * (WEIGHT - 1.0) / (WEIGHT_TOP - 1.0))
 def comma_parts(cx):
     """The comma: the dot, and an R2 '/' tail at the A's leg angle from the dot's centre down to
     the lower left, cut at its tip like the A's left foot (tip at the outer lower-left corner)."""
@@ -248,8 +294,11 @@ def build_comma():
         "down-left to a tip 2.6 dots below the baseline, cut per R5 with the tip at the outer lower-left "
         "corner; the tail's flat upper end is buried in the dot.",
         "R2's height field is read below the baseline (39.5 at 0 growing to 41.9 at the tip), so the tail "
-        "is very slightly heavier at its tip than at the dot, which is R7's direction.",
-        tail_tip_y=COMMA_TIP_Y, tail_angle_deg=LEG_DEG))
+        "is very slightly heavier at its tip than at the dot, which is R7's direction.  The tip's DEPTH is "
+        f"anchored at both ends of the weight axis -- {COMMA_TIP_1:.0f} at the origin, {COMMA_TIP_TOP:.0f} at "
+        f"the top, linear between -- rather than taken from this instance's dot, which reached 275 below the "
+        "baseline at the heavy end, 75 past the declared descent.",
+        tail_tip_y=COMMA_TIP_Y, tail_angle_deg=LEG_DEG, tip_below_descent=DESCENT + COMMA_TIP_Y))
 
 COLON_TOP = 0.75 * CAP              # top of the upper dot: three quarters of the cap height
 def upper_dot(cx):
@@ -268,8 +317,19 @@ def build_semicolon():
 # ==================================================================================
 # exclam, question
 # ==================================================================================
-DOT_GAP = DOT_D                     # clear space between a dot and the stroke above it: one dot
-STEM_FOOT_Y = DOT_CY + DOT_R + DOT_GAP     # 96: where the exclam's and question's stems end
+# Clear space between a dot and the stroke above it: one dot, TAKEN AT THE AXIS ORIGIN and held.
+#
+# Written as one dot of THIS instance it compounded, because the stem's foot is already a dot and
+# a half above the baseline: foot = 2 * DOT_D - 10.  Once the dot followed the stem rather than
+# ROUND_THICK that put the foot at 250 at the heavy end against 167 before, and the exclam and the
+# question mark lost most of their stems to white space -- 130 units of gap under a 700 cap.
+#
+# Held at the origin the gap is 65 everywhere, the foot is DOT_D + 55, and the two glyphs keep the
+# proportions they had: 185 at Black against 201 and 167 before it, 100 at Light against 96, and
+# 120 at the origin, which is exactly where it was.  Vertical white closing up as the marks get
+# heavier is what the face does elsewhere too -- the colon's own gap is 535 - 2*DOT_D, and shrinks.
+DOT_GAP = ROUND_THICK_1             # 65.0, one dot at the axis origin
+STEM_FOOT_Y = DOT_CY + DOT_R + DOT_GAP     # where the exclam's and question's stems end
 
 def build_exclam():
     s = stem(0, STEM_FOOT_Y, CAP, bottom='right', top='left')
