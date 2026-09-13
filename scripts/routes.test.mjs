@@ -293,3 +293,109 @@ test('wipEntries returns exactly the wip entries', () => {
 test('entryFor throws on an unknown slug rather than returning undefined', () => {
   assert.throws(() => entryFor('no-such-page'), /No design-index entry for slug "no-such-page"/);
 });
+
+// ---------------------------------------------------------------------------
+// global.css gives every anchor `display: flex; width: 100%; justify-content:
+// center`, which the hero link bar wants and running prose very much does not:
+// an unguarded link takes the whole column and centres itself on its own line,
+// so the sentence around it breaks into three pieces. Four components have been
+// caught by eye this way -- the WIP banner, both index pages, and the blog body
+// -- each found only because someone looked at the page.
+//
+// Resolving this properly means computing styles, which needs a browser. It is
+// tractable statically here only because the stylesheet uses plain
+// class-descendant selectors, so "does a rule match this anchor" is a question
+// about class tokens. If that stops being true, this should become a browser
+// check rather than a cleverer parser.
+
+/** Every rule that sets `display`, as {tokens, tag, display}. Reads minified
+ *  output, so selectors arrive without whitespace to spare. */
+function displayRules(css) {
+  const out = [];
+  for (const m of css.matchAll(/([^{}@]+)\{([^{}]*)\}/g)) {
+    const d = /display:\s*([a-z-]+)/.exec(m[2]);
+    if (!d) continue;
+    for (const sel of m[1].split(',')) {
+      const s = sel.trim();
+      if (!s || s.includes('[') || s.includes('(')) continue;
+      const last = s.split(/\s+|>/).filter(Boolean).pop() ?? '';
+      out.push({
+        tokens: [...s.matchAll(/\.([A-Za-z0-9_-]+)/g)].map((c) => c[1]),
+        tag: /^[a-z]/.test(last) ? last.split(/[.:]/)[0] : null,
+        display: d[1],
+      });
+    }
+  }
+  return out;
+}
+
+/** All CSS a page actually applies: its linked stylesheets plus its inline
+ *  <style> blocks. Astro inlines the small ones, and the component overrides
+ *  this test is about are exactly the small ones. */
+async function cssOf(route) {
+  const doc = await html(route);
+  const hrefs = [...doc.matchAll(/<link[^>]+rel="stylesheet"[^>]+href="(\/_astro\/[^"]+)"/g)].map((m) => m[1]);
+  const linked = await Promise.all(hrefs.map((h) => readFile(join(DIST, h), 'utf8')));
+  const inline = [...doc.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map((m) => m[1]);
+  return [...linked, ...inline].join('\n');
+}
+
+/** Anchors sitting inside a <p>, with the class chain of their ancestors.
+ *  A <p> is the marker for running text; nav lists and link bars are not it. */
+function anchorsInProse(doc) {
+  const body = doc.slice(doc.indexOf('<body'));
+  const VOID = new Set(['meta', 'link', 'img', 'br', 'hr', 'input', 'source', 'path', 'use', 'circle', 'rect', 'stop']);
+  const stack = [];
+  const found = [];
+  for (const m of body.matchAll(/<(\/?)([a-zA-Z][a-zA-Z0-9-]*)([^>]*?)(\/?)>/g)) {
+    const [, closing, rawTag, attrs, selfClose] = m;
+    const tag = rawTag.toLowerCase();
+    if (closing) {
+      for (let i = stack.length - 1; i >= 0; i--) {
+        if (stack[i].tag === tag) { stack.length = i; break; }
+      }
+      continue;
+    }
+    const classes = (/class="([^"]*)"/.exec(attrs)?.[1] ?? '').split(/\s+/).filter(Boolean);
+    if (tag === 'a') {
+      const p = stack[stack.length - 1];
+      if (p && p.tag === 'p') {
+        found.push({ own: classes, parent: p, chain: stack.flatMap((s) => s.classes) });
+      }
+    }
+    if (!VOID.has(tag) && !selfClose) stack.push({ tag, classes });
+  }
+  return found;
+}
+
+const matches = (rule, chain, own, tag) =>
+  (rule.tag === null || rule.tag === tag) && rule.tokens.every((t) => chain.includes(t) || own.includes(t));
+
+test('no link in running prose inherits the global full-width flex reset', async () => {
+  const offenders = [];
+  for (const route of builtRoutes()) {
+    const doc = await html(route);
+    const anchors = anchorsInProse(doc);
+    if (!anchors.length) continue;
+    const rules = displayRules(await cssOf(route));
+    const anchorRules = rules.filter((r) => r.tag === 'a');
+    for (const a of anchors) {
+      // A <p> that is itself a flex container means these anchors are flex items
+      // on purpose -- the typeface page's download pills are laid out that way.
+      const parentIsFlex = rules.some(
+        (r) => r.display === 'flex' && r.tag !== 'a' && r.tokens.length
+          && r.tokens.every((t) => a.parent.classes.includes(t)),
+      );
+      if (parentIsFlex) continue;
+      const winner = anchorRules.filter((r) => matches(r, a.chain, a.own, 'a')).pop();
+      if (winner && winner.display === 'flex') {
+        offenders.push(`/${route || ''} <p class="${a.parent.classes.join(' ')}">`);
+      }
+    }
+  }
+  assert.deepEqual(
+    [...new Set(offenders)],
+    [],
+    'these prose links render as full-width centred flex blocks; add `display: inline; width: auto; height: auto`',
+  );
+});
