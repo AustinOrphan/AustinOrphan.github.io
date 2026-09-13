@@ -39,9 +39,9 @@ const heroSvg = (size, { pad = 0 } = {}) => {
     + ` stroke-linejoin="round" paint-order="stroke fill markers"><path d="${D}"/></g></svg>`;
 };
 
-/** A flat single-colour mark, for the Safari mask icon. */
-const flatSvg = (fill) =>
-  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-70 -70 1246 1246" width="1246" height="1246">`
+/** A flat single-colour mark, for the Safari mask icon and the small favicons. */
+const flatSvg = (fill, size = 1246) =>
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-70 -70 1246 1246" width="${size}" height="${size}">`
   + `<g transform="${INNER}" fill="${fill}"><path d="${D}"/></g></svg>`;
 
 /** A minimal ICO container holding PNGs -- every browser since Vista reads these. */
@@ -80,8 +80,20 @@ const SQUARE = {
   'mstile-150x150.png': 150, 'mstile-310x310.png': 310,
 };
 
+// The hero treatment is three layers -- an accent copy offset by (22,22), the ink fill, and
+// the 300-unit outline under it -- and they need room to stay distinct. Rendered small they
+// collapse into each other: at 16px the mark came out a pale smudge that all but disappears
+// on a light tab strip, because the ink is #EEE5E9 and a tab strip is nearly white. Measured
+// at the sizes the site ships, the treatment holds from 48px up and loses the plot below it.
+//
+// So everything in the .ico is the flat accent mark instead: one solid colour, legible on
+// white, grey and dark, which is what the 16px favicon was before the icons were re-derived
+// from the mark. 180px and up keep the hero treatment.
+const FLAT_MAX = 48;
+
 const png = (size, pad = 0) =>
-  sharp(Buffer.from(heroSvg(size * 4, { pad })), { density: 384 })
+  sharp(Buffer.from(size <= FLAT_MAX ? flatSvg(SHADOW, size * 4) : heroSvg(size * 4, { pad })),
+    { density: 384 })
     .resize(size, size).png({ compressionLevel: 9 }).toBuffer();
 
 for (const [name, size] of Object.entries(SQUARE)) put(name, await png(size));
