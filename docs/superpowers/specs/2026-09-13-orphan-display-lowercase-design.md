@@ -113,16 +113,27 @@ special case, but it is recorded here as the thinnest claim in this document.
 
 ## 4. Bowls
 
-**A bowled letter's stem sits with its outer edge on the bowl's outer extreme.**
+**A bowled letter's stem is placed so its outer edge runs TANGENT to the bowl's outer
+circle**, solved with `set_round._stem_tangent_x`.
 
-This is the principle `_heavy_junction` and `_light_junction` already share in the U,
-where one ring meets a stem on each side. It gives full band coverage on both sides
-with no stem protruding past its own bowl.
+Not on the circle's extreme. R3's stems taper, so a stem edge is not vertical, and an
+edge set on the extreme meets the circle at exactly one height and parts from it
+everywhere else. Measured on the lowercase bowls, the circle then pokes **6.17 units**
+past the stem at the bowl's widest point, on both sides, putting an S-curve in a flank
+that should run straight. Tangency gives 0.00: the two touch and never cross.
 
-The obvious alternative — centring the stem on the band — fails because **the ring is
-not symmetric**. R1 displaces the counter toward 45°, so the band is 57.86 units on the
-left and 23.52 on the right. A mirrored placement rule is mirrored; the ring under it
-is not. Drawn that way, `d` and `q` carry a stem protruding 12 units past their bowls.
+This is not a new rule. `_stem_tangent_x`'s own docstring records the same mistake and
+the same fix at capital scale — *"setting the edge on the extreme leaves the two curves
+a fraction of a unit apart everywhere else, which is a small step in the finished
+outline (0.6 units on the U's counter, 1.1 on the J's silhouette)."* The lowercase
+version of that step is ten times larger, because the bowl is smaller relative to the
+taper.
+
+Two alternatives were drawn and rejected. Centring the stem on the band fails because
+**the ring is not symmetric**: R1 displaces the counter toward 45°, so the band is 57.86
+units on the left and 23.52 on the right, and a mirrored placement rule sitting over an
+unmirrored ring leaves `d` and `q` with a stem protruding 12 units past their bowls.
+Setting the outer edge on the extreme is the 6.17-unit case above.
 
 ### `d` and `q` are the light-side case
 
