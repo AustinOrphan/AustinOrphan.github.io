@@ -10,6 +10,7 @@
     "preview": "astro preview",
     "check": "npm run sync && astro check",
     "plot:backdrop": "node scripts/plot-hero-backdrop-curve.mjs",
+    "check:derived": "node scripts/check-derived.mjs && node scripts/make-icons.mjs --check",
     "test:routes": "node --test scripts/routes.test.mjs",
     "test": "npm run build && node --test scripts/routes.test.mjs"
   },

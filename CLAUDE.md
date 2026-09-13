@@ -56,6 +56,9 @@ npm run preview
 # Build, then assert on the built dist/ (routing, robots, the merged logo page)
 npm test
 
+# Are the generated artifacts still in sync with the mark they come from?
+npm run check:derived
+
 # Same assertions without rebuilding first — only valid if dist/ is current
 npm run test:routes
 ```
@@ -269,6 +272,40 @@ first match by design, which is exactly why the separate count assertion exists.
 `npm test` builds and then runs `scripts/routes.test.mjs`, which asserts on the
 built `dist/` output rather than on module internals. It uses `node:test` and
 `node:assert` only: no test framework is installed and none should be added.
+
+## Derived Artifacts
+
+Much of the brand is **generated from the mark**, not drawn: the icons, the social card, the
+`@font-face` file, and the mark embedded in a few hand-maintained HTML/SVG files. The failure
+mode is always the same — a generated file silently keeps showing the old thing after its
+source changes, and nobody notices until it looks wrong. That has happened twice: the icons
+after the mark was re-derived, and `public/fonts/` after the font sources were fixed.
+
+The source of truth is `src/components/logo-mark.ts`:
+
+- `LOGO_MARK_D` — the whole mark, the union of the A, the ring and the hoop
+- `LOGO_A_D` — the A alone, used only for the write-on's leg pieces, because clipping the
+  union to a leg region also catches the slivers of ring and hoop that cross it
+
+Both come from `font/measure/mark_derived.py`. **Extract them by export name**, never by
+"the first long path in the file" — there is more than one now.
+
+| Generator | Owns |
+| --- | --- |
+| `font/measure/mark_derived.py` | `LOGO_MARK_D`, `LOGO_A_D` (paste its `site_path` output in) |
+| `scripts/make-icons.mjs` | every icon in `public/`, plus `favicon.svg` and `safari-pinned-tab.svg` |
+| `scripts/make-og-image.mjs` | `public/og-image.png` and the path inside `docs/og-image.html` |
+| `font/build_variable.py` | `public/fonts/OrphanDisplay-VF.{ttf,woff2}` — **installs them itself** |
+| *(none)* | `docs/repo-social-preview.html` — paste the path by hand |
+
+`npm run check:derived` verifies all of it, and `.github/workflows/derived.yml` runs it on
+every push. It is deliberately **not** part of `deploy.yml`'s build job: that job's 13:00 UTC
+cron is what publishes a post once its `pubDate` arrives, and a stale favicon should not be
+able to hold a post back.
+
+The font is the one thing not checked — verifying it needs a six-minute rebuild. Instead
+`build_variable.py` installs what it builds, so the hand-copy step that caused that drift is
+gone. Running the font or mark generators needs `font/requirements.txt` installed.
 
 ## Design System
 

@@ -24,8 +24,11 @@ const INK = '#EEE5E9';       // --color-primary
 const OUTLINE = '#D16666';   // --color-secondary
 const SHADOW = '#2892D7';    // --color-accent
 
+// Anchored to the export name. logo-mark.ts holds more than one path now -- LOGO_A_D is the
+// A alone, for the write-on's legs -- and "the first long quoted string in the file" would
+// quietly pick whichever came first if they were ever reordered.
 const src = readFileSync(join(ROOT, 'src/components/logo-mark.ts'), 'utf8');
-const D = src.match(/['"`]([Mm][^'"`]{200,})['"`]/)?.[1];
+const D = src.match(/export const LOGO_MARK_D\s*=\s*['"`]([^'"`]+)['"`]/)?.[1];
 if (!D) throw new Error('LOGO_MARK_D not found in src/components/logo-mark.ts');
 
 const INNER = 'translate(0.000000,1084.000000) scale(0.100000,-0.100000)';

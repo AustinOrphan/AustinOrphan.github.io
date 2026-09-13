@@ -1,0 +1,43 @@
+name: Derived artifacts
+
+# Deliberately its own workflow rather than a step in deploy.yml's build job.
+#
+# That job's 13:00 UTC cron is what publishes a post once its pubDate arrives, and a stale
+# favicon has no business holding a post back. This runs on every push instead, where a
+# failure is a message to whoever pushed rather than a blocked publish.
+#
+# The class of bug it guards: a generated artifact drifting from the sources it is generated
+# from, with nothing detecting it. That has happened twice here -- the icons kept showing the
+# old mark after the mark was re-derived, and public/fonts/ lagged its sources by a day and
+# served a font whose weight axis barely moved. Both were caught by a person, late.
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      # No install needed: the mark is embedded as text in every hand-maintained copy, so
+      # this is a string compare against src/components/logo-mark.ts. Runs in milliseconds.
+      - name: Hand-maintained copies of the mark
+        run: node scripts/check-derived.mjs
+
+      # The rendered icons are binary and need sharp, so this one pays for an install.
+      - run: npm ci
+
+      - name: Rendered icons
+        run: node scripts/make-icons.mjs --check
