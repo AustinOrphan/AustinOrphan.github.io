@@ -248,36 +248,63 @@ def _band_k():
     """R4's join weight against its value at the mark's own knobs."""
     return (rules.RING_W + rules.RING_OFF[1]) / _JOIN_AT_11
 
-def _ring_ellipses():
-    """Outer (traced) and inner (derived) semi-axes of the ring, in source points."""
+def _ring_ellipses(band_k=None):
+    """Outer (traced) and inner (derived) semi-axes of the ring, in source points.
+
+    band_k defaults to this instance's; _bar_ranges passes 1.0, the axis origin, where
+    _band_k() is 1 by its own definition (R4's join weight over its value at the mark)."""
     R = _RING_FIT
     ao, bo, ai, bi = R['a_outer'], R['b_outer'], R['a_inner'], R['b_inner']
-    k = _band_k() * _BAR_CAL
+    k = (_band_k() if band_k is None else band_k) * _BAR_CAL
     return (ao, bo), (ao - (ao - ai) * k, bo - (bo - bi) * k)
 
 _BAR_ARC = (18.0, 152.0)   # theta range drawn, generous: the legs clip it back
+
+def _bar_samples(band_k=None):
+    """The bar's two edges as dense samples, with a numeric unit tangent along each."""
+    R = _RING_FIT
+    C, tl = tuple(R['centre']), math.radians(R['tilt_deg'])
+    ct, st = math.cos(tl), math.sin(tl)
+    def E(a, b, th):
+        x, y = a * math.cos(th), b * math.sin(th)
+        return (C[0] + x * ct - y * st, C[1] + x * st + y * ct)
+    (ao, bo), (ai, bi) = _ring_ellipses(band_k)
+    t0, t1 = (math.radians(t) for t in _BAR_ARC)
+    N = 120
+    up = [E(ao, bo, t0 + (t1 - t0) * i / N) for i in range(N + 1)]
+    lo = [E(ai, bi, t0 + (t1 - t0) * i / N) for i in range(N + 1)]
+    tg = lambda P: [unit(sub(P[min(i + 1, len(P) - 1)], P[max(i - 1, 0)])) for i in range(len(P))]
+    return up, lo, tg
+
+
+_BAR_RANGES = []
+def _bar_ranges():
+    """Where the bar's cubics start and end, taken ONCE at the axis origin and held.
+
+    Sample i is a fixed angle on the ellipse at every instance, so it is the same place on the
+    bar in every master; the fit's own choice of cut is not, because it is an argmax over
+    residuals that move with the band.  See pen.fit_ranges."""
+    if not _BAR_RANGES:
+        up, lo, tg = _bar_samples(1.0)
+        _BAR_RANGES.append(fit_ranges(up, tg(up), 13))
+        _BAR_RANGES.append(fit_ranges(lo[::-1], tg(lo[::-1]), 11))
+    return _BAR_RANGES
+
 
 def _derived_bar():
     """The bar as a piece of the ring's annulus, in SOURCE coordinates, so it goes through
     build_A's own lean/scale untouched.  Upper edge on the outer ellipse, lower on the derived
     inner one; the ends run well past the legs and are cut by clip_legs like the traced bar."""
-    R = _RING_FIT
-    C, tl = tuple(R['centre']), math.radians(R['tilt_deg'])
-    ct, st = math.cos(tl), math.sin(tl)
-    def E(a, b, th):
-        x, y = a*math.cos(th), b*math.sin(th)
-        return (C[0] + x*ct - y*st, C[1] + x*st + y*ct)
-    (ao, bo), (ai, bi) = _ring_ellipses()
-    t0, t1 = (math.radians(t) for t in _BAR_ARC)
-    N = 120
-    up = [E(ao, bo, t0 + (t1-t0)*i/N) for i in range(N+1)]
-    lo = [E(ai, bi, t0 + (t1-t0)*i/N) for i in range(N+1)]
-    tg = lambda P: [unit(sub(P[min(i+1, len(P)-1)], P[max(i-1, 0)])) for i in range(len(P))]
+    up, lo, tg = _bar_samples()
     # Fixed piece counts, not a tolerance: the outer edge is knob-independent and always came out
     # at 13, but the inner one is derived from the ring's band and ran 6 to 11 across the masters,
     # which is why the A would not interpolate.  13 and 11 are those maxima.  See pen.fit_cubics.
-    su, _eu = fit_cubics(up, tg(up), nseg=13)
-    sl, _el = fit_cubics(lo[::-1], tg(lo[::-1]), nseg=11)
+    # Fixed KNOTS as well, for the reason set out there: a fixed count makes the masters agree on
+    # how many control points there are and not on what each one means, and the inner edge moves
+    # with the band, so its cuts would slide along the curve from master to master.
+    rgu, rgl = _bar_ranges()
+    su, _eu = fit_cubics(up, tg(up), ranges=rgu)
+    sl, _el = fit_cubics(lo[::-1], tg(lo[::-1]), ranges=rgl)
     k = Contour(up[0])
     for sg in su: k.curve_to(*sg)
     k.line_to(lo[-1])
