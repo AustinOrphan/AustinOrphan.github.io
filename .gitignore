@@ -46,3 +46,6 @@ src/content/blog/
 public/blog-assets/
 
 ds-bundle/
+
+# Derived from the mark by font/measure/emit_derived_objects.py
+design/logo-animation/ai_objects_derived.json

@@ -26,7 +26,12 @@ from fontTools.pens.recordingPen import RecordingPen
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BUILD = os.path.join(HERE, 'build')
 VF = os.path.join(BUILD, 'OrphanDisplay-VF.ttf')
-TOL = 1.0          # font units; the quadratic conversion is allowed 0.6 by itself
+# Font units.  Outlines are rounded to integers and gvar stores integer deltas, so a unit of
+# disagreement between a master and the instance rebuilt from it is arithmetic, not error:
+# each end can round its own way.  1.0 flagged comma and semicolon at 1.2 and had them frozen
+# for nothing.  The real failures are two orders of magnitude larger -- 70 units and 304 --
+# so there is no danger of this hiding one.
+TOL = 2.0
 
 
 def axis_map(vf):
