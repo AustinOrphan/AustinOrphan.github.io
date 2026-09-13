@@ -22,8 +22,10 @@ const PORT = Number(process.env.CDP_PORT || 9222);
 const W = 1200;
 const H = 630;
 
+// Anchored to the export name: logo-mark.ts carries LOGO_A_D as well now, and a positional
+// match would quietly take whichever path came first.
 const D = readFileSync(join(ROOT, 'src/components/logo-mark.ts'), 'utf8')
-  .match(/['"`]([Mm][^'"`]{200,})['"`]/)?.[1];
+  .match(/export const LOGO_MARK_D\s*=\s*['"`]([^'"`]+)['"`]/)?.[1];
 if (!D) throw new Error('LOGO_MARK_D not found in src/components/logo-mark.ts');
 
 // One <path> lives inside .markwrap; replace its d and leave the rest of the card alone.
