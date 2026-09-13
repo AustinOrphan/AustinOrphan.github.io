@@ -258,6 +258,15 @@ links (see `.post-card-title a`, `.tag-strip-more`), `-webkit-text-stroke: 0;
 text-shadow: none` for headings, and an explicit `font-size` on any `<p>`. The
 typeface page's `.od-head` block is the worked example.
 
+The link case is the one that kept recurring, so `scripts/routes.test.mjs` now
+guards it: a test walks the built pages for anchors inside a `<p>` and fails if
+the winning `display` rule for one is the global `flex`. Anchors whose `<p>` is
+itself a flex container are exempt — the typeface page's download pills are laid
+out that way on purpose. It resolves the cascade by matching class tokens, which
+works only because the stylesheet uses plain class-descendant selectors; if that
+stops being true it should become a browser check rather than a cleverer parser.
+Nothing guards the heading or paragraph cases — those are still on you.
+
 ### Robots directives
 
 `BaseLayout.astro` owns the robots directive through its `robots` prop and emits
