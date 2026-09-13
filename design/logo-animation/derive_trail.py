@@ -10,6 +10,15 @@ bar.  Fitting the trail to the video instead is fitting to a different drawing: 
 is narrower than the source's (registration IoU 0.55 at best), while the swash joins the
 source's own A exactly, to 0.00 pt.
 
+The trail IS that swash: its own outline, its own centre-line, its own width.  Everything
+this used to do to it -- remodelling the width as a taper plus a fraction of its swell,
+rebuilding the last half of the path onto the bar's hook, blending the head back onto the
+authored edges -- was a fix for the ARTWORK's swash sitting on a mark it did not quite
+match.  The re-derived swash is built on the re-derived mark's own two cuts and carries a
+drawn width profile, so all three corrections measure zero and are gone.  Run with
+--ai pointing at the artwork and you get the artwork's swash, heavy loop, flat last fifth
+and all; that is what it is, and it is no longer what the site ships.
+
 This writes design/logo-animation/geometry.json's `trail_from_swash` block:
   outline_d     the swash outline itself, in site path units (y-up, for the same
                 <g transform="translate(0,1084) scale(0.1,-0.1)"> group as Logo.astro's path)
@@ -30,7 +39,15 @@ FONT = ROOT.parent / 'font' / 'font'
 sys.path.insert(0, str(FONT / 'lib'))
 from pen import source_contours                                     # noqa: E402
 
-SRC = json.load(open(FONT / 'source' / 'ai_objects.json'))['AO'][0]
+# --ai lets the trail be re-anchored to a re-derived mark.  The head is built to start on the A's
+# rcut and rtip and the tail is rebuilt onto the bar's left hook, so both joins follow whichever
+# description is passed; with the artwork's file this is exactly what it always did.
+import argparse as _argparse
+_ap = _argparse.ArgumentParser()
+_ap.add_argument('--ai', default=str(FONT / 'source' / 'ai_objects.json'))
+_args, _ = _ap.parse_known_args()
+SRC = json.load(open(_args.ai))['AO'][0]
+print(f'  reading {_args.ai}')
 OBJ = {o['role']: o for o in SRC['objects']}
 (sw,) = source_contours(OBJ['white']['items'])
 (bar,) = source_contours(OBJ['bar']['items'])
@@ -232,7 +249,15 @@ centre, ring_note = follow_ring(centre, width)
 # authored path.  Tried and set aside on the way: a single arc, which cannot satisfy both
 # ends and arrived 20.8 deg off the hook, and a biarc, tangent at both ends but with a
 # curvature jump at its joint.
-ANCHOR = 0.50
+# OFF for the re-derived swash.  The flatness this cured is the ARTWORK's: measured on its
+# own centre-line the artwork runs at a median radius of 383 pt through 40-60% of its
+# length, 614 through 60-80%, and then 5469 through the last fifth -- an order of magnitude,
+# which is what read as "too straight for a period".  The re-derived swash does not do that.
+# Its tail was rebuilt to meet the hoop with its centre parallel to the ring, and it reads
+# 337 / 591 / 675 pt across the same three stretches: a steady opening, not a flat.  So
+# there is nothing to rebuild, and rebuilding it would be replacing the swash with a curve
+# that is not the swash -- which is the one thing the trail must not be.
+ANCHOR = None if os.environ.get('ANCHOR', 'none') == 'none' else float(os.environ['ANCHOR'])
 
 def _hook_arrival_dir():
     """The direction the pen should be travelling as it reaches the hook's face: the
@@ -289,31 +314,26 @@ centre_j, width_j, join_note = continue_to_hook(centre, width)
 # BULGE scales the swell (0 = a plain taper, 1 = the authored swash) and LEVEL scales the
 # whole thing.  Both ends are held at the authored widths over HOLD of the length, so the
 # foot and hook joins are unaffected by either knob.
-BULGE, LEVEL = 0.40, 0.90
-
-def shape_width(C, W):
-    """taper + BULGE * (the authored profile's SWELL above that taper), all times LEVEL.
-
-    Two things the obvious version got wrong, both visible as a nip just before the hook:
-
-    1. The authored swash PINCHES below its own taper near the hook (2.55 pt against 3.35
-       at the face).  Scaling that alongside the swell narrowed the trail and then made it
-       climb back, so only the swell is carried over.
-    2. The trail MUST be the hook's own width, 355.6, where they meet, or the join stops
-       being smooth.  Forcing that with an end-ramp reintroduced the pinch, because the
-       ramp blended back toward the authored profile.  Instead the taper is built to
-       W/LEVEL at both ends, so that after LEVEL it lands exactly on the authored end
-       widths and needs no correction at all.  The approach is then monotone.
-    """
-    taper = np.linspace(W[0]/LEVEL, W[-1]/LEVEL, len(C))
-    swell = np.maximum(W - taper*LEVEL, 0.0)              # the loop's swell, never the pinch
-    return (taper + BULGE*swell/LEVEL) * LEVEL
-
-width_j = shape_width(centre_j, width_j)
-Cpj = np.array([to_path(p) for p in centre_j]); Wpj = width_j * scale
-d = np.gradient(Cpj, axis=0); d /= np.hypot(d[:, 0], d[:, 1])[:, None]
-nrm = np.c_[-d[:, 1], d[:, 0]]
-left = Cpj + nrm*(Wpj[:, None]/2); right = Cpj - nrm*(Wpj[:, None]/2)
+# THE BAND IS THE SWASH.  Not a model of it -- its own two edges, verbatim.
+#
+# This used to decompose the swash into a straight taper plus the swell above it and paint
+# taper + 0.40*swell, all at 0.90 level.  The reason given was the ARTWORK's swash: heavy
+# through the loop at 12.3 pt and thin at the hook at 2.8, more contrast than a band wants
+# when it is on screen for half a second and has to sit under the bar.  That reason is
+# gone.  The swash is no longer the artwork's: it is rebuilt on the re-derived mark's own
+# two cuts, and its width along its length is a measured, solved, drawn profile
+# (font/source/swash_width_profile.json).  Painting 40% of the swell of a curve that was
+# drawn on purpose throws away the drawing.
+#
+# So there is nothing left to model.  The pen trail is the pen's own outline.
+Cpj = np.array([to_path(p) for p in centre_j])
+Aip = np.array([to_path(p) for p in Ai]); Bip = np.array([to_path(p) for p in Bi])
+_d = np.gradient(Cpj, axis=0); _d /= np.hypot(_d[:, 0], _d[:, 1])[:, None]
+_n = np.c_[-_d[:, 1], _d[:, 0]]
+if float((Aip[0] - Cpj[0]) @ _n[0]) < 0:
+    Aip, Bip = Bip, Aip                          # Aip is the edge on the +normal side
+left, right = Aip.copy(), Bip.copy()
+Wpj = np.hypot(*(Aip - Bip).T)
 
 # ---- pin the tail's end cross-section back onto the hook's face -----------------------
 # Re-aiming the centre-line turns the end cross-section with it, so the band's last edge
@@ -384,23 +404,12 @@ left, right, k_end, ang_end = fit_end_width(
     left, right, *face, np.clip((Lp - (Lp[-1] - PIN*scale)) / (PIN*scale), 0, 1))
 k_foot = ang_foot = float('nan')
 
-# The HEAD gets none of that, because the foot cut is not an end cap: it lies only 22.3 deg
-# off the pen's own direction, so it runs nearly ALONG the trail rather than across it.
-# width_path's first samples are the chord of that near-tangential cut, which is not a pen
-# width at all, and no width the band could have would make a perpendicular cross-section
-# reach both of the A's foot vertices.  The authored outline already solves that end -- it
-# starts on rcut and rtip to 0.1 units -- so the band is simply blended back onto the
-# AUTHORED EDGES over the first HOLD_FOOT of its length.  The foot is then the artwork,
-# exactly, and BULGE and LEVEL shape only the body.
-HOLD_FOOT = (0.05, 0.32)                         # hold fully to the first, released by the second
-Aip = np.array([to_path(p) for p in Ai]); Bip = np.array([to_path(p) for p in Bi])
-if np.linalg.norm(Aip[0] - left[0]) > np.linalg.norm(Bip[0] - left[0]):
-    Aip, Bip = Bip, Aip                          # Aip is the left edge
-_h0, _h1 = (float(x) for x in os.environ.get('HOLD', '').split(',')) if os.environ.get('HOLD') else HOLD_FOOT
-_h = np.clip((np.linspace(0, 1, len(left)) - _h0) / (_h1 - _h0), 0, 1)[:, None]
-_h = 3*_h**2 - 2*_h**3
-left = _h*left + (1 - _h)*Aip[:len(left)]
-right = _h*right + (1 - _h)*Bip[:len(right)]
+# The HEAD needs no end correction at all now, and it never wanted one: the foot cut is
+# not an end cap.  It lies only 22.3 deg off the pen's own direction, so it runs nearly
+# ALONG the trail rather than across it, and no perpendicular width could make a
+# cross-section reach both of the A's foot vertices.  The band used to be blended back onto
+# the authored edges over the first 5-32% of its length to fix that.  It IS the authored
+# edges now, so the foot is the swash's own head cap, which is the A's foot cut, exactly.
 left0, right0 = left, right                      # the band before the cut, for the width report
 
 left = trim(left, *face, at_start=False)
@@ -408,8 +417,8 @@ right = trim(right, *face, at_start=False)
 
 gap_after = (float(np.linalg.norm(face[0] - left[-1])), float(np.linalg.norm(face[1] - right[-1])))
 start_gap_after = (float(np.linalg.norm(foot[0] - left[0])), float(np.linalg.norm(foot[1] - right[0])))
-print(f"  head: authored edges held to {100*_h0:.0f}% and released by {100*_h1:.0f}% of the trail;"
-      f"  tail: cut straight on the hook's face, {ang_end:.1f} deg off the cross-section (width x{k_end:.3f})")
+print(f"  head: the swash's own foot cut;  tail: cut straight on the hook's face,"
+      f" {ang_end:.1f} deg off the cross-section (width x{k_end:.3f})")
 
 def inside(pt, P):
     """Even-odd point-in-polygon, for checking an overlap lands inside the shape it hides in."""
@@ -526,7 +535,7 @@ print(f"    narrowest anywhere in the last quarter: {_true[int(0.75*len(_true)):
 
 G = json.load(open(gp))
 G['trail_from_swash'].update(
-    join=dict(**join_note, **ring_note, pin_pt=PIN, hold_foot=[_h0, _h1],
+    join=dict(**join_note, **ring_note, pin_pt=PIN, band='the swash outline itself',
               end_gap_before_cut=gap_before, end_gap_after_cut=gap_after,
               start_gap_before_hold=start_gap_before, start_gap_after_hold=start_gap_after,
               overlap_path=OVERLAP, face_path=[face[0].tolist(), face[1].tolist()],
@@ -538,15 +547,17 @@ G['trail_from_swash'].update(
     width_joined_path=dict(at_foot=float(Wpj[0]), max=float(Wpj.max()), at_left_end=float(Wpj[-1])),
     mask=mask)
 json.dump(G, open(gp, 'w'), indent=1)
-print(f"\n  approach: curvature-continuous from t={join_note['anchor']}, inheriting radius "
-      f"{join_note['inherited_radius_pt']:.0f} pt and rebuilding the last "
-      f"{100*join_note['rebuilt_fraction']:.0f}% of the trail; arrives {join_note['arrival_deg']:+.2f} deg "
-      f"against the hook's {join_note['hook_deg']:+.2f}")
-print(f"  width: bulge {BULGE:.2f} at level {LEVEL:.2f} (swell only); foot {Wpj[0]:.0f}, loop {Wpj[int(0.22*len(Wpj))]:.0f}, "
+if join_note.get('anchor') is None:
+    print("\n  approach: the swash's own path, unmodified")
+else:
+    print(f"\n  approach: curvature-continuous from t={join_note['anchor']}, inheriting radius "
+          f"{join_note['inherited_radius_pt']:.0f} pt and rebuilding the last "
+          f"{100*join_note['rebuilt_fraction']:.0f}% of the trail; arrives {join_note['arrival_deg']:+.2f} deg "
+          f"against the hook's {join_note['hook_deg']:+.2f}")
+print(f"  width: the swash's own, foot {Wpj[0]:.0f}, loop {Wpj[int(0.22*len(Wpj))]:.0f}, "
       f"mid {Wpj[int(0.7*len(Wpj))]:.0f}, hook {Wpj[-1]:.0f} path units")
 print(f"  tail cut on the hook's face (width corrected over the last {PIN:.0f} pt):"
       f" corners {gap_before[0]:.1f}/{gap_before[1]:.1f} -> {gap_after[0]:.3f}/{gap_after[1]:.3f} units from its vertices")
-print(f"  head held on the authored edges to {100*_h0:.0f}%, released by {100*_h1:.0f}%:"
-      f" corners {start_gap_before[0]:.1f}/{start_gap_before[1]:.1f}"
-      f" -> {start_gap_after[0]:.3f}/{start_gap_after[1]:.3f} units from the A's foot vertices")
+print(f"  head: the swash's own foot cut, {start_gap_after[0]:.3f}/{start_gap_after[1]:.3f}"
+      f" units from the A's foot vertices")
 print( "  wrote trail_from_swash.centre_joined_d / outline_joined_d  (use these, not the raw outline_d)")
