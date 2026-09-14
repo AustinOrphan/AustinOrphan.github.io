@@ -85,6 +85,42 @@ The cost is accepted: single-storey forms are less legible in running text and r
 more mannered. With a 55% x-height and long ascenders the result is a distinctly
 classical-geometric character.
 
+### The descender terminals are not a free choice
+
+A single-storey `g` is a ring with a descender. So is a `q`. Drawn with the same
+terminal they are **the same glyph** — this was confirmed by drawing all five
+descending letters against seven terminals and finding `q` and `g` indistinguishable in
+every row. The terminal is therefore what makes a `g` a `g`, and it cannot be uniform
+across the set.
+
+| letter | terminal |
+|---|---|
+| `p` `q` | plain, R5 cut |
+| `g` | an R1 arc of radius 280, turning at y 85.6, sweeping left to a tip on −185 |
+| `j` | the J's hook, an R1 arc of radius 92 |
+| `y` | no terminal; the right arm runs to the foot and takes an R5 cut |
+
+`p` and `q` stay plain precisely so that `g`'s tail can do its work. Every free end in
+the face is cut per R5, so a flat descender foot would be the only uncut terminal in
+the typeface.
+
+The `g`'s tail is the J's hook opened out: same R1 arc, larger radius, shallower sweep.
+Its radius is a design choice; its turn height is **solved**, not chosen — 85.6 is
+wherever the tip lands on the descender line for that radius. Drawn at radius 280 with
+a turn of 70 it reaches −200.6 and breaks the declared descent, which is the sort of
+thing §8's vertical-metrics sweep exists to catch.
+
+### The `y`
+
+Two R2 arms, the right one carrying on past the junction to the foot: a v with a tail,
+not a capital Y with a descender bolted on.
+
+The junction sits at **114.5**. That is the capital Y's own rule — `MID_Y = CAP/2 +
+HORIZ_MID/4`, the optical middle it shares with E H K X — applied to the lowercase
+stroke **measured whole**. The capital's stroke runs from the baseline to the cap line;
+the lowercase's runs 185 units further down, so the same rule puts its junction lower
+relative to the x-height: 0.297 of it rather than 0.521.
+
 ## 3. Stems
 
 **R3 unchanged.** A lowercase stem takes `w_slash(y)` exactly as a capital does.
@@ -105,11 +141,18 @@ the face solves it per junction with `_heavy_junction`, `_light_junction`, burie
 and fill lenses. The lowercase junctions get the same treatment. A butt joint between a
 65-unit stem and a 40.7-unit band is a drawing error, not a consequence of R3.
 
-**Below the baseline, R2 extrapolates.** R2 was measured on the A's legs, which span
-the baseline to the cap line. A descender foot at y = −185 reads 76.66 units, wider
-than anything in the mark and wider than the A's own foot. This is the one number in
-the lowercase with no measurement behind it. It is kept because the alternative is a
-special case, but it is recorded here as the thinnest claim in this document.
+**Below the baseline, R2 extrapolates — and the face already does this.** R2 was
+measured on the A's legs, which span the baseline to the cap line, so a descender foot
+at y = −185 reads 76.66 units by extrapolation.
+
+That looked like the weakest claim in this document until the face was asked what it
+already does down there. Exactly one stroke in the existing 63 glyphs descends below
+the baseline: the comma's tail, which reaches −169. R2 gives it **75.65** units at its
+tip, 16.4% wider than at the baseline, and that is what ships today. A lowercase
+descender at −185 reads 76.66, within **one unit** of shipped precedent.
+
+So the extrapolation is not invented. It is the rule the face's only descending stroke
+already follows, and the lowercase lands a unit away from it.
 
 ## 4. Bowls
 
