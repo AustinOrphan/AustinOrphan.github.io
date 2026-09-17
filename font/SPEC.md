@@ -586,6 +586,33 @@ What bounds it now is geometry, not tooling:
 - **Past weight 2.00** the bowl's outer circle and its horizontal's outer edge
   stop meeting.
 
+### How stroke weights are compared
+
+**Stroke weights in Orphan Display are compared as perpendicular optical
+thickness at equivalent positions in the construction field, never as raw
+horizontal or vertical extent.** A diagonal measured horizontally reads wider
+than it is by 1/sin of its lean; a tapering stem measured at the wrong height
+reads as a different stroke than the same stem measured at the right one.
+
+**R3 is the canonical thin-stroke field, and it is shared by the capitals and
+the lowercase ascenders.** A lowercase ascender runs 0..700 through the same
+field as a capital stem, so it is not a separate lowercase weight -- it is the
+same stroke. Measured perpendicular over y 600-700, where an ascender ends:
+
+| I | H | N | M | A | b / d ascender |
+|---|---|---|---|---|---|
+| 24.22 | 24.28 | 24.43 | 24.81 | 24.20 | **24.15** |
+
+The b and d land inside the capitals' own range, 0.2% from the I. R2's field
+predicts `w_slash(650) = 24.04`. The diagonals in A, M and N sit in the same
+range once measured perpendicular rather than horizontally, which is what makes
+this one system rather than two.
+
+This convention decided the b/d ascender: a nominal "27 units" measured as
+horizontal extent is 24.15 measured properly, and the alternatives at 32 and 36
+measure 29.46 and 33.73 -- +21.7% and +39.4% over a stroke the face already has,
+corresponding to nothing in it.
+
 ### FOLLOW is a third axis, not yet cut
 
 The face ships two axes, and they are not symmetric: **PUSH is the rounds'
