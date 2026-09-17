@@ -31,9 +31,11 @@ at the height of a round's own crown.
 import math, os, sys
 HERE = os.path.dirname(os.path.abspath(__file__)); FONT = os.path.dirname(HERE)
 sys.path.insert(0, os.path.join(FONT, 'lib'))
-from pen import (add, ang, cut_for, from_ang, line_circle, mul, norm, perp, stroke, sub,
+from pen import (add, ang, cut_for, fit_cubics, fit_ranges, from_ang, isect, line_2pt,
+                 line_ang, line_circle, mul, norm, perp, stroke, sub, unit,
                  Contour, from_poly, ccw)
 from metrics import ASC_LC, DESC_LC, OVER_ROUND, SB_ROUND, SB_STRAIGHT, XH
+import rules
 from rules import RING_OFF, RING_W, CUT_DEG, glyph, round_ring, w_stem
 from glyphs import set_round as SR
 
@@ -128,4 +130,200 @@ def build_a():
                    "departure from them."))
 
 
-GLYPHS = {'o': build_o, 'a': build_a}
+def _descender_letter(cp, side, name):
+    """p and q: the bowl and one stem, mirrored.  The stem runs to the descender line and
+    stops there EXACTLY -- OVER_ROUND is the overshoot a round takes through a metric line,
+    and an R5 cut is not a round, so a flat foot sits on -185 the way a straight sits on 0."""
+    foot = 'right' if side < 0 else 'left'
+    sb = (SB_STRAIGHT, SB_ROUND) if side < 0 else (SB_ROUND, SB_STRAIGHT)
+    return glyph(cp, bowl() + [joint_stem(side, DESC_LC, foot)], sb=sb, notes=dict(
+        construction=f"The o's ring verbatim, plus a stem centred x={stem_x(side):.2f} (section 4 "
+                     f"tangency, {'left' if side < 0 else 'right'} of the bowl) running from the "
+                     f"descender line to the joint at y={CROWN_Y:.2f}.",
+        joint=f"The crown-wedge joint: the stem stops where the bowl's outline meets its inner "
+              f"edge and its buried top is cut on the bowl's tangent there ({CROWN_DEG:.2f} deg), "
+              f"so the curve enters the cut with no corner.  Same construction as the a and the g.",
+        foot=f"R5, {CUT_DEG:g} deg, on {DESC_LC} exactly.  A round overshoots a metric line by "
+             f"OVER_ROUND ({OVER_ROUND}); an R5 cut does not, so this foot sits on the descender "
+             f"line the way the I's sits on the baseline.",
+        spacing=f"{sb[0]}/{sb[1]}: the stem is the outer extreme on its own side and the bowl on "
+                f"the other (R9).  The stem is {abs(stem_x(side) - (0 if side < 0 else 2*BOWL_R)):.2f} "
+                f"from the bowl's extreme, and at the descender it is the wider of the two.",
+        deviations="none from R1-R9."))
+
+
+def build_p(): return _descender_letter(ord('p'), -1, 'p')
+def build_q(): return _descender_letter(ord('q'), +1, 'q')
+
+
+# ---- g ---------------------------------------------------------------------------------
+# The g is the a's stem with its foot turned into a tail.  What makes it a g rather than a q
+# is that turn, and what makes the turn the face's own is where it leaves: at G_KICK_Y the
+# stem bends onto the MARK'S STRESS AXIS -- the 45.07 deg direction R1 displaces the counter
+# along, which is also the Q's tail -- runs G_KICK_LEN along it, and only then turns.
+#
+# The angle is fixed, not axis-dependent: RING_OFF's two components both scale with PUSH, so
+# PUSH changes the displacement's length and never its direction.  Measured at all twelve
+# cells of the shipped grid it is 45.067 degrees in every one.  What does move is the band the
+# kick departs through: 28.50 at Thin, 40.74 at Regular, 81.43 at Black.
+G_KICK_Y   = 90.0                      # where the stem stops running vertical
+G_KICK_LEN = 110.0                     # how far it runs on the stress axis before the turn
+G_KNEE_X   = 212.0
+G_TIP      = (74.0, -104.0)
+G_TIP_T    = (-0.72, 0.70)
+G_TIP_W    = 34.0                      # the terminal band, never under ROUND_THIN
+G_NSEG     = 34                        # cubics per edge, frozen at the axis origin
+G_N        = 130                       # spine samples per span
+G_DEPTH    = DESC_LC - OVER_ROUND      # the tail turns THROUGH the descender line, so it
+                                       # overshoots as a round does; the q's flat foot does not
+
+
+def _w1(y):
+    """R3's width at the AXIS ORIGIN.  The field is linear in WEIGHT, so dividing it out is
+    exact, and the g's knots have to be chosen on the origin's shape to stay compatible."""
+    return w_stem(y) / rules.WEIGHT
+
+
+def _tangent_x(wf, side):
+    """set_round._stem_tangent_x with the width field injectable, so the origin's placement can
+    be rebuilt from inside any master."""
+    r = BOWL_R - GRAZE
+    e0 = (side * wf(0.0) / 2, 0.0); e1 = (side * wf(XH) / 2, XH)
+    v = unit(sub((e1[0], XH), (e0[0], 0.0))); n = perp(v)
+    d0 = n[0] * (BOWL_C[0] - e0[0]) + n[1] * (BOWL_C[1] - e0[1])
+    return (d0 - side * r) / n[0]
+
+
+def _crown(wf, side):
+    """CROWN_Y and CROWN_DEG for a given width field."""
+    x = _tangent_x(wf, side)
+    edge = line_2pt((x - side * wf(0.0) / 2, 0.0), (x - side * wf(XH) / 2, XH))
+    p = line_circle(edge, BOWL_C, BOWL_R, pick='max')
+    d = sub(p, BOWL_C)
+    return p[1], math.degrees(math.atan2(abs(d[0]), d[1]))
+
+
+def _g_spine(ky, wf):
+    """The tail's centre line: down the stem, out along the stress axis, round the knee, to the
+    tip.  A C1 chain of cubics, sampled evenly."""
+    x = _tangent_x(wf, +1)
+    crown_y, _deg = _crown(wf, +1)
+    u = from_ang(-ang(RING_OFF))                       # the mark's stress axis, mirrored
+    n2 = (x, G_KICK_Y)
+    nodes = [((x, crown_y), (0.0, -1.0), None, 70.0),
+             (n2,           (0.0, -1.0), 70.0, 60.0),
+             (add(n2, mul(u, G_KICK_LEN)), u, 60.0, 92.0),
+             ((G_KNEE_X, ky), unit((-1.0, 0.03)), 120.0, 64.0),
+             (G_TIP, unit(G_TIP_T), 82.0, None)]
+    pts = []
+    for i in range(len(nodes) - 1):
+        (P0, t0, _i0, h0), (P1, t1, h1, _o1) = nodes[i], nodes[i + 1]
+        A = add(P0, mul(t0, h0)); B = sub(P1, mul(t1, h1))
+        for k in range(G_N + 1):
+            if i and k == 0: continue
+            t = k / G_N; m = 1 - t
+            pts.append((m**3*P0[0] + 3*m*m*t*A[0] + 3*m*t*t*B[0] + t**3*P1[0],
+                        m**3*P0[1] + 3*m*m*t*A[1] + 3*m*t*t*B[1] + t**3*P1[1]))
+    return pts, crown_y
+
+
+def _g_tan(P):
+    return [unit(sub(P[min(i+1, len(P)-1)], P[max(i-1, 0)])) for i in range(len(P))]
+
+
+def _g_edges(ky, wf):
+    """Both offset edges.  The width runs from the stem's own at the joint down to the terminal
+    band as one smoothstep, and takes R3's widening below the baseline on top of that, so the
+    tail is neither a constant-width ribbon nor thinner than the field says."""
+    pts, crown_y = _g_spine(ky, wf)
+    n = len(pts); w_top = wf(crown_y)
+    L, Rt = [], []
+    for i, (q, t) in enumerate(zip(pts, _g_tan(pts))):
+        f = i / (n - 1); e = f * f * (3 - 2 * f)
+        w = (w_top + (G_TIP_W - w_top) * e) * (wf(q[1]) / w_top)
+        nv = perp(t)
+        L.append(add(q, mul(nv, w / 2))); Rt.append(sub(q, mul(nv, w / 2)))
+    return L, Rt, crown_y
+
+
+def _g_solve(wf):
+    """Move the knee until the ink bottoms on G_DEPTH.  Damped: once the turn is tight the knee
+    moves the lowest point non-linearly."""
+    ky = -170.0
+    for i in range(40):
+        L, Rt, _c = _g_edges(ky, wf)
+        low = min(z[1] for z in L + Rt)
+        if abs(low - G_DEPTH) < 0.01: break
+        ky += (G_DEPTH - low) * (1.0 if i < 6 else 0.5)
+    return ky
+
+
+def _g_profile(wf):
+    """Both edges, with BOTH ends already cut: R5 on the free tip, the crown-wedge joint on the
+    buried top.  The cuts have to happen before the knots are chosen, not after -- the joint
+    moves the outer corner about 50 units down the edge, and a knot fitted to the uncut shape
+    then sits nowhere near the curve it is meant to describe."""
+    ky = _g_solve(wf)
+    L, Rt, crown_y = _g_edges(ky, wf)
+    _cy, crown_deg = _crown(wf, +1)
+    t = unit(sub(L[-1], L[-2])); wt = norm(sub(L[-1], Rt[-1]))
+    k5 = math.tan(math.radians(CUT_DEG))
+    L = L[:-1] + [add(L[-1], mul(t, wt/2*k5))]
+    Rt = Rt[:-1] + [add(Rt[-1], mul(t, -wt/2*k5))]
+    # the tip of the joint cut is the INNER corner, which for a spine travelling downwards is
+    # Rt[0]; the cut runs from it on the bowl's tangent there to meet the outer edge
+    L = [isect(line_2pt(L[0], L[1]), line_ang(Rt[0], -crown_deg))] + L[1:]
+    return L, Rt, crown_y, wt, ky
+
+
+def _g_ranges():
+    """Where the g's cubics start and end, as sample indices: chosen ONCE on the axis origin's
+    shape and held.  A fixed segment COUNT does not fix the knots -- fit_cubics splits on an
+    argmax over residuals, which lands on a different sample as the axes move, and masters whose
+    knots disagree cannot interpolate.  This is the fault that broke the S and the 8."""
+    L, Rt, _c, _w, _k = _g_profile(_w1)
+    return (fit_ranges(L, _g_tan(L), G_NSEG),
+            fit_ranges(Rt[::-1], [mul(t, -1) for t in _g_tan(Rt)[::-1]], G_NSEG))
+
+
+_G_RANGES = _g_ranges()
+
+
+def build_g():
+    """The a's stem with its foot turned into a tail, on the mark's own stress axis."""
+    L, Rt, crown_y, wt, ky = _g_profile(w_stem)
+    rg_out, rg_in = _G_RANGES
+    so, eo = fit_cubics(L, _g_tan(L), tol=9e9, ranges=[tuple(r) for r in rg_out])
+    si, ei = fit_cubics(Rt[::-1], [mul(x, -1) for x in _g_tan(Rt)[::-1]], tol=9e9,
+                        ranges=[tuple(r) for r in rg_in])
+    k = Contour(L[0])
+    for sg in so: k.curve_to(*sg)
+    k.line_to(Rt[-1])
+    for sg in si: k.curve_to(*sg)
+    return glyph(ord('g'), bowl() + [k.ccw()], sb=(SB_ROUND, SB_ROUND), adv=485, notes=dict(
+        construction=f"The o's ring verbatim, plus one fitted stroke: the a's stem from the joint "
+                     f"at y={crown_y:.2f} down to y={G_KICK_Y:g}, then {G_KICK_LEN:g} units along "
+                     f"the mark's stress axis ({-ang(RING_OFF):.3f} deg), then the turn and the tail.",
+        stress_axis="The kick's direction is R1's own counter displacement mirrored in the "
+                    "horizontal -- the Q's tail axis.  It is FIXED across the design space: "
+                    "RING_OFF's two components both scale with PUSH, so PUSH moves the "
+                    "displacement's length and never its angle.  The band it departs through does "
+                    "move, 28.50 at Thin to 81.43 at Black.",
+        joint=f"The crown-wedge joint, as on a, p and q: the stroke starts where the bowl's "
+              f"outline meets its inner edge and its buried top is cut on the bowl's tangent "
+              f"({CROWN_DEG:.2f} deg).",
+        depth=f"Solved per master: the knee moves until the ink bottoms on {G_DEPTH:g}, the "
+              f"descender plus OVER_ROUND, because the tail turns THROUGH the line as a round "
+              f"does.  The q's flat R5 foot does not overshoot and sits on {DESC_LC:g}.",
+        knots=f"{G_NSEG} cubics per edge, taken once on the axis origin's shape and held.",
+        tip=f"R5, {CUT_DEG:g} deg, band {wt:.1f} -- a free end.",
+        spacing=f"{SB_ROUND}/{SB_ROUND} and the advance PINNED to the o's 485: the tail reaches "
+                f"past it and projects into the next letter's bearing rather than being paid for "
+                f"in width, the way a swash does.  Setting the advance from the tail instead "
+                f"opens a hole beside every g at x-height level, because the tail's extreme is "
+                f"below the baseline where nothing else is.",
+        deviations="none from R1-R9.",
+        fit=dict(worst_error=max(eo, ei), segs=(len(so), len(si)), knee_y=ky)))
+
+
+GLYPHS = {'o': build_o, 'a': build_a, 'p': build_p, 'q': build_q, 'g': build_g}
