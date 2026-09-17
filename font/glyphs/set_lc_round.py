@@ -156,6 +156,44 @@ def build_p(): return _descender_letter(ord('p'), -1, 'p')
 def build_q(): return _descender_letter(ord('q'), +1, 'q')
 
 
+def _ascender_letter(cp, side):
+    """b and d: the bowl and one stem that RUNS PAST it to the ascender.
+
+    These are the joint's other case and want none of it.  A stem that stops at the x-height
+    leaves its top and the bowl's crown at the same height with a wedge between them, which
+    reads as a nick; a stem that carries on leaves an ordinary APERTURE between bowl and
+    ascender, which is a feature every b and d has ever had.  So the stem is a plain R3 stem
+    with two free R5 ends, and the only thing shared with a p or q is the bowl and the section
+    4 tangency that places it.
+
+    They are NOT mirrored geometry.  Both take stem_x for their own side, and R1's counter
+    displacement makes those two positions different letters: the d's stem meets a 16.45-unit
+    band and the b's a 42.50-unit one, so the b joins its bowl over a longer run and reads
+    slightly heavier at the join.  That is R1 showing, not an error to correct out."""
+    x = stem_x(side)
+    body = 'right' if side < 0 else 'left'
+    sb = (SB_STRAIGHT, SB_ROUND) if side < 0 else (SB_ROUND, SB_STRAIGHT)
+    st = rules.stem(x, 0.0, ASC_LC, bottom=body, top=body)
+    return glyph(cp, bowl() + [st], sb=sb, notes=dict(
+        construction=f"The o's ring verbatim, plus a plain R3 stem centred x={x:.2f} (section 4 "
+                     f"tangency, {'left' if side < 0 else 'right'} of the bowl) from the baseline "
+                     f"to the ascender at {ASC_LC:g}, level with the cap line.",
+        joint="None, and deliberately.  The crown-wedge joint exists for a stem that STOPS at the "
+              "x-height beside a bowl; this one runs past, so the gap above the bowl is the "
+              "ordinary aperture between bowl and ascender and wants no correction.",
+        ends=f"Two free R5 cuts at {CUT_DEG:g} deg, the body side of each taken from the bowl.",
+        taper=f"R3 read literally runs this stem from {w_stem(0.0):.2f} at the baseline to "
+              f"{w_stem(ASC_LC):.2f} at the ascender -- half the bowl's own band ({RING_W:.2f}). "
+              f"The capitals' stems do exactly the same over the same span; it shows more here "
+              f"because the bowl beside it is half the size.  Flagged, not corrected.",
+        spacing=f"{sb[0]}/{sb[1]}: the stem on its own side, the bowl on the other (R9).",
+        deviations="none from R1-R9."))
+
+
+def build_b(): return _ascender_letter(ord('b'), -1)
+def build_d(): return _ascender_letter(ord('d'), +1)
+
+
 # ---- g ---------------------------------------------------------------------------------
 # The g is the a's stem with its foot turned into a tail.  What makes it a g rather than a q
 # is that turn, and what makes the turn the face's own is where it leaves: at G_KICK_Y the
@@ -326,4 +364,5 @@ def build_g():
         fit=dict(worst_error=max(eo, ei), segs=(len(so), len(si)), knee_y=ky)))
 
 
-GLYPHS = {'o': build_o, 'a': build_a, 'p': build_p, 'q': build_q, 'g': build_g}
+GLYPHS = {'o': build_o, 'a': build_a, 'b': build_b, 'd': build_d,
+          'p': build_p, 'q': build_q, 'g': build_g}
