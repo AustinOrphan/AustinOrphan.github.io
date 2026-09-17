@@ -364,5 +364,167 @@ def build_g():
         fit=dict(worst_error=max(eo, ei), segs=(len(so), len(si)), knee_y=ky)))
 
 
+
+
+
+# ---- n and h ---------------------------------------------------------------------------
+# An n is not two posts with an arch dropped between them.  It is ONE stroke that runs up the
+# left leg, turns over, and comes down the right leg, and the shoulder is simply where that
+# stroke is curving.  Built that way the shoulder is seamless by construction: there is no
+# junction in the letter to solve.  Built as three pieces unioned together -- which was tried
+# -- the arch's radial end cuts show as notches against the legs and the letter reads as an
+# arcade.
+#
+# The h is the same stroke with the left leg carried on to the ascender as a plain R3 stem.
+# Its shoulder starts BURIED at H_BURY rather than at the baseline: the leg already makes that
+# foot, and two opposite R5 cuts unioned together square it off flat.
+N_SPRING = 180.0                # where the leg stops running straight
+N_HANDLE = 150.0                # the handles into the apex
+H_BURY   = 165.0                # where the h's shoulder starts, inside the leg
+HN_NSEG  = 38                   # cubics per edge, frozen at the axis origin.  30 holds the n
+                                # (0.165 worst) but not the h, whose buried start moves further
+                                # across the axis: 0.909 at Black against MAX_ERR 0.6.
+HN_SAMP  = 150                  # spine samples per span
+
+
+def _band_at(th, ring_w=None, ring_off=None):
+    """R1's band for a point whose outward normal points at page angle `th`.  Defaults to this
+    instance's ring; _hn_ranges passes the axis origin's, to rebuild the shape the knots were
+    chosen on."""
+    ring_w = RING_W if ring_w is None else ring_w
+    ring_off = RING_OFF if ring_off is None else ring_off
+    return ring_w - norm(ring_off) * math.cos(math.radians(th) - math.radians(ang(ring_off)))
+
+
+def _hn_spine(y0, wf, ring_w, ring_off):
+    """(left leg x, y0) up, over the apex, down to (right leg x, 0)."""
+    xl, xr = _tangent_x(wf, -1), _tangent_x(wf, +1)
+    apex_y = BOWL_C[1] + BOWL_R - _band_at(90.0, ring_w, ring_off) / 2.0
+    nodes = [((xl, y0),          (0.0, 1.0),  None,     60.0),
+             ((xl, N_SPRING),    (0.0, 1.0),  60.0,     N_HANDLE),
+             ((BOWL_C[0], apex_y),(1.0, 0.0), N_HANDLE, N_HANDLE),
+             ((xr, N_SPRING),    (0.0,-1.0),  N_HANDLE, 60.0),
+             ((xr, 0.0),         (0.0,-1.0),  60.0,     None)]
+    pts = []
+    for i in range(len(nodes) - 1):
+        (P0, t0, _i, h0), (P1, t1, h1, _o) = nodes[i], nodes[i + 1]
+        A = add(P0, mul(t0, h0)); B = sub(P1, mul(t1, h1))
+        for k in range(HN_SAMP + 1):
+            if i and k == 0: continue
+            t = k / HN_SAMP; m = 1 - t
+            pts.append((m**3*P0[0] + 3*m*m*t*A[0] + 3*m*t*t*B[0] + t**3*P1[0],
+                        m**3*P0[1] + 3*m*m*t*A[1] + 3*m*t*t*B[1] + t**3*P1[1]))
+    return pts, (xl, xr)
+
+
+def _hn_edges(y0, wf, ring_w, ring_off):
+    """Both offset edges.  The legs carry R3's field and the apex carries R1's own top band,
+    blended by the SPINE'S OWN TANGENT -- vertical while the stroke is a leg, horizontal at the
+    apex.  (The radial direction reads the opposite way round and inverts the blend.)"""
+    pts, (xl, xr) = _hn_spine(y0, wf, ring_w, ring_off)
+    apex_w = _band_at(90.0, ring_w, ring_off)
+    ts = [unit(sub(pts[min(i+1, len(pts)-1)], pts[max(i-1, 0)])) for i in range(len(pts))]
+    L, Rt = [], []
+    for p, t in zip(pts, ts):
+        turn = abs(t[0]); k = turn * turn * (3 - 2 * turn)
+        w = wf(p[1]) * (1 - k) + apex_w * k
+        nv = perp(t)
+        L.append(add(p, mul(nv, w/2))); Rt.append(sub(p, mul(nv, w/2)))
+    return L, Rt, (xl, xr)
+
+
+def _r5_foot(L, Rt, mid, at_start):
+    """R5 on a foot of the fitted stroke.  R5 puts the tip on the corner AWAY from the body and
+    cuts the corner toward the body back, so on a symmetric letter the two feet MIRROR.  Taking
+    "away from the body" as "further from the letter's own centre" gets that for free; cutting
+    the same corner at both ends does not, and leaves an n whose feet lean the same way."""
+    i = 0 if at_start else -1
+    j = 1 if at_start else -2
+    w = norm(sub(L[i], Rt[i]))
+    k5 = math.tan(math.radians(CUT_DEG))
+    if abs(L[i][0] - mid) > abs(Rt[i][0] - mid):        # L is the tip: cut Rt back
+        Rt = list(Rt); Rt[i] = sub(Rt[i], mul(unit(sub(Rt[i], Rt[j])), w * k5))
+    else:                                                # Rt is the tip: cut L back
+        L = list(L); L[i] = sub(L[i], mul(unit(sub(L[i], L[j])), w * k5))
+    return L, Rt
+
+
+def _hn_profile(y0, wf, ring_w, ring_off, cut_start):
+    L, Rt, (xl, xr) = _hn_edges(y0, wf, ring_w, ring_off)
+    mid = (xl + xr) / 2.0
+    if cut_start: L, Rt = _r5_foot(L, Rt, mid, True)
+    L, Rt = _r5_foot(L, Rt, mid, False)
+    return L, Rt, (xl, xr)
+
+
+def _hn_ranges(y0, cut_start):
+    """Knots chosen once on the axis origin's shape and held, as for the g."""
+    L, Rt, _x = _hn_profile(y0, _w1, rules.RING_W_1, rules.RING_OFF_1, cut_start)
+    return (fit_ranges(L, _g_tan(L), HN_NSEG),
+            fit_ranges(Rt[::-1], [mul(t, -1) for t in _g_tan(Rt)[::-1]], HN_NSEG))
+
+
+_N_RANGES = _hn_ranges(0.0, True)
+_H_RANGES = _hn_ranges(H_BURY, False)
+
+
+def _hn_stroke(y0, cut_start, ranges):
+    L, Rt, (xl, xr) = _hn_profile(y0, w_stem, RING_W, RING_OFF, cut_start)
+    rg_out, rg_in = ranges
+    so, eo = fit_cubics(L, _g_tan(L), tol=9e9, ranges=[tuple(r) for r in rg_out])
+    si, ei = fit_cubics(Rt[::-1], [mul(x, -1) for x in _g_tan(Rt)[::-1]], tol=9e9,
+                        ranges=[tuple(r) for r in rg_in])
+    k = Contour(L[0])
+    for sg in so: k.curve_to(*sg)
+    k.line_to(Rt[-1])
+    for sg in si: k.curve_to(*sg)
+    return k.ccw(), max(eo, ei), (xl, xr)
+
+
+def _arch_note(xl, xr, err):
+    return dict(
+        construction=f"One stroke: up the left leg at x={xl:.2f}, over the apex, down the right "
+                     f"leg at x={xr:.2f}.  Both legs take section 4's tangency.  The shoulder is "
+                     f"where that stroke is curving, not a join -- built as separate pieces the "
+                     f"arch's radial end cuts show as notches and the letter reads as an arcade.",
+        arch=f"The leg stops running straight at y={N_SPRING:g} and the handles into the apex are "
+             f"{N_HANDLE:g}.  Chosen over 250/120 (a flat bridge), 120/185 (a generic inverted U) "
+             f"and 60/215 (a peaked counter and a picket rhythm).",
+        weight=f"The legs carry R3's field and the apex carries R1's own top band "
+               f"({_band_at(90.0):.2f}), blended by the spine's own tangent -- vertical on a leg, "
+               f"horizontal at the apex.  The radial direction reads the opposite way round and "
+               f"inverts the blend.",
+        feet=f"R5, {CUT_DEG:g} deg, and MIRRORED: the tip is the corner away from the body, so an "
+             f"n's two feet lean opposite ways, as the H's do.",
+        knots=f"{HN_NSEG} cubics per edge, taken once on the axis origin's shape and held.  "
+              f"Worst fit {err:.3f}.",
+        deviations="none from R1-R9.")
+
+
+def build_n():
+    """One stroke, up and over and down."""
+    k, err, (xl, xr) = _hn_stroke(0.0, True, _N_RANGES)
+    return glyph(ord('n'), [k], sb=(SB_STRAIGHT, SB_STRAIGHT), notes=_arch_note(xl, xr, err))
+
+
+def build_h():
+    """The n's stroke with the left leg carried on to the ascender.
+
+    The shoulder starts buried at H_BURY rather than at the baseline: the leg already makes that
+    foot, and two opposite R5 cuts unioned together square it off flat."""
+    k, err, (xl, xr) = _hn_stroke(H_BURY, False, _H_RANGES)
+    leg = rules.stem(xl, 0.0, ASC_LC, bottom='right', top='right')
+    n = _arch_note(xl, xr, err)
+    n['construction'] = ("The n's stroke exactly, with the left leg carried on to the ascender as "
+                         "a plain R3 stem -- the same field a capital stem takes, so the ascender "
+                         "is the established thin stroke and not a lowercase weight of its own.  "
+                         + n['construction'])
+    n['feet'] = (f"R5, {CUT_DEG:g} deg, mirrored.  The shoulder starts buried at y={H_BURY:g} so "
+                 f"the leg alone makes the left foot; reaching the baseline unions two opposite "
+                 f"cuts and squares it flat.")
+    return glyph(ord('h'), [leg, k], sb=(SB_STRAIGHT, SB_STRAIGHT), notes=n)
+
+
 GLYPHS = {'o': build_o, 'a': build_a, 'b': build_b, 'd': build_d,
-          'p': build_p, 'q': build_q, 'g': build_g}
+          'p': build_p, 'q': build_q, 'g': build_g,
+          'n': build_n, 'h': build_h}
