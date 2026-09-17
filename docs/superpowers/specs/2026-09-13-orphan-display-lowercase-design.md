@@ -96,7 +96,7 @@ across the set.
 | letter | terminal |
 |---|---|
 | `p` `q` | plain, R5 cut |
-| `g` | an R1 arc of radius 280, turning at y 85.6, sweeping left to a tip on −185 |
+| `g` | the stem bends onto the mark's stress axis and turns into a tail — see below |
 | `j` | the J's hook, an R1 arc of radius 92 |
 | `y` | no terminal; the right arm runs to the foot and takes an R5 cut |
 
@@ -104,11 +104,42 @@ across the set.
 the face is cut per R5, so a flat descender foot would be the only uncut terminal in
 the typeface.
 
-The `g`'s tail is the J's hook opened out: same R1 arc, larger radius, shallower sweep.
-Its radius is a design choice; its turn height is **solved**, not chosen — 85.6 is
-wherever the tip lands on the descender line for that radius. Drawn at radius 280 with
-a turn of 70 it reaches −200.6 and breaks the declared descent, which is the sort of
-thing §8's vertical-metrics sweep exists to catch.
+### The `g` and the `q` are one construction
+
+Both letters are the `o`'s ring plus **one R3 stem**, placed by §4's tangency. The `q`
+leaves that stem straight and cuts both free ends per R5. The `g` bends the same stem
+onto the mark's own stress axis at y 90, runs 110 units along it, and then turns into
+the tail, whose tip is R5-cut at 34 units. Nothing else differs, which is what makes
+them read as one family rather than two unrelated letters.
+
+The kick's direction is the mark's stress axis, **−45.067°**, and it is fixed: `RING_OFF`'s
+two components both scale with PUSH, so PUSH changes the displacement's length and never
+its angle. Measured at all twelve cells of the shipped axis grid, the angle is 45.067° in
+every one. What does move is the band the kick departs through — 28.50 at Thin, 40.74 at
+Regular, 81.43 at Black.
+
+The tail's depth is **solved per master**, not chosen: the knee is moved until the ink
+bottoms on −195, the descender plus `OVER_ROUND`. That holds to −195.0 in all twelve
+cells. The overshoot is correct for the `g`, whose tail turns through the descender line
+as a round does. It is **not** correct for the `q`, whose foot is a flat R5 cut and should
+sit on the declared −185 exactly, the way a straight sits on the baseline; the drawings
+currently put it at −195 and need correcting. Worst cubic fit over the grid is 0.262 against `MAX_ERR` 0.6, with the knots taken
+once at the axis origin and held.
+
+**An alternate is kept.** The same stem with no kick turns straight into its tail; it
+reaches only 409.6 and so stays inside the advance, needing no kerning anywhere. It is
+the safer letter and the less characterful one, and it should stay drawn until the rest
+of the descending set exists.
+
+**A stemless `g` was drawn and rejected.** It was the `o` plus the `Q`'s own leg — a
+straight R2 diagonal springing from the counter on the stress axis, turned into a tail.
+Alone it was the better letter: its spine was the best-conditioned of anything drawn
+(compatible at 32 knots and insensitive to the count, where the stemmed versions needed
+26 to 40 and one failed a corner), its departure dent was 27.0 against the shipped `Q`'s
+71.4 at the same junction, and having no stem it could not collide with `q`. It was
+rejected because of what it did to the `q`: with both letters built that way, the `q`'s
+bowl is unsupported above y 95 and reads as an `o` with a leg. The construction that made
+the `g` good made the `q` weak.
 
 ### The `y`
 
@@ -132,8 +163,23 @@ x-height (+30%) and 65.00 at the baseline (+60%).
 Two alternatives were drawn and rejected. Holding the stem flat at the band's 40.69
 gives the evenest colour and seamless shoulders, but makes the lowercase monolinear
 while the capitals keep R2's baseline widening. Re-anchoring R3's field over 0..385 so
-mid-x-height lands on the band gives 50.0 tapering to 31.4, keeping R3's sentence true
-at both scales. Both were rejected under the governing principle: each adds a rule.
+mid-x-height lands on the band keeps R3's sentence true at both scales.
+
+The objection to re-anchoring is stronger than "it adds a rule", and the earlier draft
+undersold it. **Re-anchoring is not a coherent rule at all.** Read over 0..385, the field
+gives −15.2 units at the ascender line; scaled by 385/700 it gives −8.4. Ascenders run to
+700, so both readings have run out of field before `b d h k l` reach their tops, and the
+stem has no width there. Anchoring each letter on its own extent instead would give `l`
+and `n` different stem widths at the same height, which is plainly wrong. R3 read
+literally is the only one of the three that is well defined.
+
+**The cost is real and belongs in the record.** Lowercase stems are **2.24×** the
+capitals' relative weight — 13.73% of the x-height against 6.13% of the cap height — and
+the rounds 1.78×. Set together, `DOG gogo` reads close to two different fonts on one
+line. That is a consequence of R1's band being absolute rather than anything R3 could
+fix: §1 already records that scaling the band puts it at 22.88 against a displacement of
+24.31 and opens the `o` into a `C`. The lever, if this ever needs one, is the x-height,
+not R3.
 
 **The step this implies is solved, not accepted.** The capitals have the identical
 mismatch — a capital B's stem is 65 at the baseline against a bowl band of 40.7 — and
@@ -178,6 +224,29 @@ units on the left and 23.52 on the right, and a mirrored placement rule sitting 
 unmirrored ring leaves `d` and `q` with a stem protruding 12 units past their bowls.
 Setting the outer edge on the extreme is the 6.17-unit case above.
 
+### The junction notch is one problem, not five
+
+Tangency has a consequence §4's first draft did not state. A stem's inner edge leaves the
+ring's outline at **y = 322.2**, so everything above that stands proud of the bowl and the
+gap beside it is a notch in the letter's crown. Every bowled lowercase letter has it:
+
+| letter | notch |
+|---|---|
+| `d` `b` | 70.4 |
+| `q` `p` | 60.3 |
+| `g` | 60.4 |
+
+It is one shared junction and takes the capitals' own machinery — `_heavy_junction`,
+`_light_junction`, buried feet, fill lenses — applied once across `b d p q g`, exactly as
+§3 already says lowercase junctions should be treated. It is not five separate defects
+and must not get five bespoke fixes.
+
+One bespoke fix was drawn and rejected: an arc bridging the `g`'s stem-top to the bowl,
+tangent to the bowl at 70° and passing through the stem's R5 corner. It closed the notch
+and read as an added part rather than as a junction. The notch's depth is exactly
+`stem top − 324.6`, so lowering the stem to 324.6 also closes it — at the cost of a stem
+that no longer reaches the x-height.
+
 ### `d` and `q` are the light-side case
 
 No capital in the face puts a stem to the right of a bowl. B, D, P and R all have the
@@ -189,6 +258,22 @@ U's right junction needed, and they are the ones most likely to fight during sta
 ## 5. Spacing
 
 R9 unchanged: 60 beside a stem, 40 beside a round, by the shape of the extreme.
+
+**The `g` is the first glyph whose advance is not set by its own ink.** Its tail reaches
+499.4, but the advance is 485 — the `o`'s own, measured from the bowl — and the tail
+projects 54 units past it. Setting the advance from the tail instead gives 579 and opens
+a hole beside every `g` at x-height level, because the tail's extreme is below the
+baseline where nothing else is.
+
+The projection is safe as measured and tight as measured: the closest approach to a
+following `g`, `q` or `o` is **61 units**, against the **80** two `o`s clear. The face
+already pays for this idiom in the capitals the other way round — the `Q`'s advance is
+844 against the `O`'s 800 — but a `Q` appears once a paragraph and a `g` appears
+constantly, which is why the `g` projects rather than widens.
+
+**This clearance is provisional.** It is measured against `g`, `q` and `o` only. `j`, `y`
+and `p` do not exist yet and could sit closer; the number must be re-taken once the
+descending set is drawn.
 
 ## 6. Scope and staging
 
@@ -247,7 +332,12 @@ their own codepoints, and the declared x-height becomes 385.
 
 - The ampersand. It is the worst-drawn glyph in the face and it cannot be judged until
   there is a lowercase rhythm to sit it on.
-- Whether R3's taper survives contact with a paragraph. 44 units of taper over a
-  700-unit ascender is pronounced at this x-height, and it is the first thing likely to
-  want revisiting once stage one can be read as text.
+- Whether R3's taper survives contact with a paragraph. §3 now records the measured
+  consequence — lowercase stems at 2.24× the capitals' relative weight — and shows that
+  neither alternative reading is coherent. What is still open is whether that ratio is
+  acceptable, and the lever is the x-height rather than R3.
+- Whether the `g` ships with the kick or the no-kick alternate, and whether the kicked
+  `g`'s 61-unit clearance survives `j`, `y` and `p`.
+- The `q`'s flat foot is drawn at −195 and should be −185: overshoot belongs to rounds,
+  not to R5 cuts. Same question for `p`, and for every flat lowercase foot.
 - Kerning of any kind.
