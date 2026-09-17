@@ -224,28 +224,31 @@ units on the left and 23.52 on the right, and a mirrored placement rule sitting 
 unmirrored ring leaves `d` and `q` with a stem protruding 12 units past their bowls.
 Setting the outer edge on the extreme is the 6.17-unit case above.
 
-### The junction notch is one problem, not five
+### The crown notch belongs to `p q g`, not to `b d`
 
 Tangency has a consequence §4's first draft did not state. A stem's inner edge leaves the
-ring's outline at **y = 322.2**, so everything above that stands proud of the bowl and the
-gap beside it is a notch in the letter's crown. Every bowled lowercase letter has it:
+ring's outline at **y = 322.2**, so above that the stem stands clear of the bowl and there
+is a gap beside it. Measured as a dip in the top profile, every bowled letter shows one:
+`b` and `d` 70.4, `p` and `q` 60.3, `g` 60.4.
 
-| letter | notch |
-|---|---|
-| `d` `b` | 70.4 |
-| `q` `p` | 60.3 |
-| `g` | 60.4 |
+**Those are not the same thing, and an earlier draft of this section wrongly said they
+were.** What the dip means depends on where the stem stops.
 
-It is one shared junction and takes the capitals' own machinery — `_heavy_junction`,
-`_light_junction`, buried feet, fill lenses — applied once across `b d p q g`, exactly as
-§3 already says lowercase junctions should be treated. It is not five separate defects
-and must not get five bespoke fixes.
+- On `b` and `d` the stem runs on to the ascender, so the profile rises past the bowl and
+  the gap is the **aperture** between bowl and ascender — a normal feature of the letter,
+  present in every `b` and `d` ever drawn. Nothing to fix.
+- On `p`, `q` and `g` the stem stops level with the bowl's crown. Two ink extremes sit at
+  the same height with a V between them, and that reads as a **nick**. This is the defect.
 
-One bespoke fix was drawn and rejected: an arc bridging the `g`'s stem-top to the bowl,
-tangent to the bowl at 70° and passing through the stem's R5 corner. It closed the notch
-and read as an added part rather than as a junction. The notch's depth is exactly
-`stem top − 324.6`, so lowering the stem to 324.6 also closes it — at the cost of a stem
-that no longer reaches the x-height.
+So it is three letters, not five, and the fix has to put ink in the wedge rather than take
+it away: ending the bowl's arc on the stem's crossing, the way `build_D` does, leaves the
+dip unchanged at 70.43 and 60.3 because the D closes that wedge with its cap-line **arm**,
+which a lowercase bowl does not have.
+
+The notch's depth is exactly `stem top − 324.6`, so dropping the stem to 324.6 closes it —
+at the cost of a stem that no longer reaches the x-height. A bespoke fix was also drawn and
+rejected: an arc bridging the `g`'s stem-top to the bowl, tangent at 70° and passing through
+the stem's R5 corner. It closed the notch and read as an added part rather than a junction.
 
 ### `d` and `q` are the light-side case
 
@@ -340,4 +343,9 @@ their own codepoints, and the declared x-height becomes 385.
   `g`'s 61-unit clearance survives `j`, `y` and `p`.
 - The `q`'s flat foot is drawn at −195 and should be −185: overshoot belongs to rounds,
   not to R5 cuts. Same question for `p`, and for every flat lowercase foot.
+- How `p q g` close their crown wedge. Three letters, one answer wanted.
+- Whether R3's taper is bearable on an **ascender**. `b` and `d` were drawn for the first
+  time here: their stems run 65.00 at the baseline to 20.89 at 700, so the ascender ends at
+  half the bowl's own band (40.69) and reads as a spike. The capitals' stems do exactly the
+  same thing over the same span, but against a bowl twice the size, so it shows far less.
 - Kerning of any kind.
