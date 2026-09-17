@@ -586,6 +586,50 @@ What bounds it now is geometry, not tooling:
 - **Past weight 2.00** the bowl's outer circle and its horizontal's outer edge
   stop meeting.
 
+### FOLLOW is a third axis, not yet cut
+
+The face ships two axes, and they are not symmetric: **PUSH is the rounds'
+contrast knob and the straights have none.** PUSH scales `RING_OFF`, so it moves
+a round's thin and thick sides apart and never touches a straight. The
+straights have their own contrast — R2's field runs 65.00 at the baseline to
+20.89 at the cap, 3.11:1 — and nothing on the shipped font moves it.
+
+`ORPHAN_FOLLOW` already is that knob. It exists as a build parameter, defaults
+to 0.75, and **the shipped font is built at the default**: `build_variable.py`
+sets only `ORPHAN_WEIGHT` and `ORPHAN_PUSH` per master, so every master inherits
+it. Measured at weight 1.00 / push 1.00:
+
+| FOLLOW | straights | rounds | foot → cap | ascender at 650 |
+|---|---|---|---|---|
+| 1.00 | 4.08:1 | 3.97:1 | 68.99 → 16.89 | 20.61 |
+| **0.75** (shipped) | **3.11:1** | 3.97:1 | 65.00 → 20.89 | 24.04 |
+| 0.50 | 2.45:1 | 3.97:1 | 61.00 → 24.88 | 27.46 |
+| 0.43 | 2.30:1 | 3.97:1 | 59.89 → 26.00 | 28.42 |
+
+The rounds' ratio does not move at all. So FOLLOW is exactly PUSH's complement,
+and cutting it as an axis would be **sliding along the one-parameter family R2c
+already leaves open**, not inventing a coordinate: solving foot = `ROUND_THICK`
+fixes everything except where on that family to sit, and the invariant reads
+100.0% at every value above.
+
+Two things it does NOT do, both checked:
+
+- **It cannot repair the PUSH drift.** foot/`ROUND_THICK` reads 135.5% at push
+  0.30 whatever FOLLOW is, because FOLLOW scales the foot and the round's
+  thickest proportionally and the ratio is invariant under it. The drift
+  recorded in R2c stays.
+- **It is not free.** The grid is 6 weights × 3 pushes = 18 masters, about six
+  minutes. Three FOLLOW samples makes 54, and every frozen-knot glyph's
+  compatibility has to hold over a 3-D grid rather than a 2-D one.
+
+**Decision: left as a build parameter for now, wanted as an axis later.** The
+reason to wait is that the lowercase is what has an opinion about it and the
+lowercase is incomplete. 0.75 was picked for a unicase face, on unicase
+arguments — `rules.py` records them as "5.1 units of cap … still above the
+round's thinnest stroke, and 5.5% of colour" — and the ascender's weight, which
+that choice sets, is now a live question. Cutting the axis before the letters
+that stress it exist would lock in the compatibility cost too early.
+
 ## 5c. The figures
 
 The ten figures were settled together rather than one at a time, because the
