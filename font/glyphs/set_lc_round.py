@@ -31,7 +31,8 @@ at the height of a round's own crown.
 import math, os, sys
 HERE = os.path.dirname(os.path.abspath(__file__)); FONT = os.path.dirname(HERE)
 sys.path.insert(0, os.path.join(FONT, 'lib'))
-from pen import (add, ang, cut_for, fit_cubics, fit_ranges, from_ang, isect, line_2pt,
+from pen import (add, ang, arc_segments, cut_for, fit_cubics, fit_ranges, from_ang, isect,
+                 line_2pt, BAND_SEGS,
                  line_ang, line_circle, mul, norm, perp, stroke, sub, unit,
                  Contour, from_poly, ccw)
 from metrics import ASC_LC, DESC_LC, OVER_ROUND, SB_ROUND, SB_STRAIGHT, XH
@@ -525,6 +526,216 @@ def build_h():
     return glyph(ord('h'), [leg, k], sb=(SB_STRAIGHT, SB_STRAIGHT), notes=n)
 
 
-GLYPHS = {'o': build_o, 'a': build_a, 'b': build_b, 'd': build_d,
-          'p': build_p, 'q': build_q, 'g': build_g,
+
+
+
+# ---- c and e ---------------------------------------------------------------------------
+# The c is the capital C's construction at lowercase size, not a segment erased from the o.
+# The C solves its aperture and the solution is a rule, so the c inherits it: the opening spans
+# 2 * CUT_DEG -- twice R5's cut angle, which is the A's apex angle and the face's one angular
+# constant -- and it is rotated CUT_DEG/2 BELOW the horizontal, so the upper terminal reaches
+# further round than the lower one, as a c wants. Both ends are radial cuts, so a terminal's
+# length is whatever R1's band is at that angle rather than anything chosen.
+#
+# The e is that same arc carried further round, closed by an R4 bar. Its aperture cannot be the
+# c's: a c opens at the middle of its right side and an e opens BELOW its bar, so the opening
+# has to sit lower or the bar lands inside it.
+C_TILT_LC = CUT_DEG / 2.0
+C_TOP_LC, C_BOT_LC = CUT_DEG - C_TILT_LC, -CUT_DEG - C_TILT_LC      # +10.3 / -30.9
+
+E_BAR_Y = XH / 2.0 + rules.HORIZ_MID / 4.0      # the E's own rule, read at lowercase height
+# The e's aperture spans 2 * CUT_DEG, the same opening the c takes and the same one the capital
+# C solves for.  Its UPPER end is not free -- it is pinned where the arc meets the bar -- so the
+# lower end follows from it rather than being chosen.  Left at a chosen value the two letters
+# disagree: the arc ends up wrapping 31.8 deg of opening against the c's 41.2.
+
+
+def build_c():
+    """The C's aperture rule at lowercase size."""
+    # ccw FROM the upper terminal all the way round TO the lower one, so the gap is the
+    # 2*CUT_DEG between them.  The other way round spans 401 deg and closes the letter.
+    arc = rules.round_arc(BOWL_C, BOWL_R, C_TOP_LC, C_BOT_LC + 360.0)
+    return glyph(ord('c'), [arc], sb=(SB_ROUND, SB_ROUND), notes=dict(
+        construction=f"One R1 arc of the o's own ring (centre {BOWL_C}, r={BOWL_R:g}, counter "
+                     f"inset RING_W and displaced RING_OFF), opened on the right between the "
+                     f"radial ends at {C_BOT_LC:+.2f} and {C_TOP_LC:+.2f} deg.  This is the "
+                     f"capital C's construction read at the lowercase size, not a segment erased "
+                     f"from the o.",
+        aperture=f"The opening spans {2*CUT_DEG:.1f} deg -- twice CUT_DEG, R5's cut angle and the "
+                 f"face's one angular constant -- rotated {C_TILT_LC:.2f} deg below the "
+                 f"horizontal, so the upper terminal reaches further round than the lower one.  "
+                 f"The C's own solution; see set_round.build_C for the alternatives it was "
+                 f"chosen over.",
+        terminals=f"Both ends are radial cuts (R5: partial rounds end in radial cuts), so each "
+                  f"terminal is as long as R1's band at its own angle -- {_band_at(C_TOP_LC):.2f} "
+                  f"at the upper end and {_band_at(C_BOT_LC):.2f} at the lower, heavy toward the "
+                  f"lower left per R7.",
+        spacing=f"{SB_ROUND}/{SB_ROUND}: a round on both extremes (R9).",
+        deviations="none from R1-R9."))
+
+
+def _e_bar_edges_OLD():
+    """Where the bar's two ends sit, and where the arc must stop so it is buried under it.
+
+    The arc's radial terminal at the bar's height is a nearly HORIZONTAL face pointing right,
+    and the bar arrives side-on, so the two cannot both be the terminal there: butted together
+    they leave a step.  The BAR is the terminal -- it is the free end R5 governs -- and the arc
+    runs on underneath it and stops out of sight.
+
+    Each end of the bar is taken to the ring's OUTER circle at the bar's own extreme height, not
+    at its centre line, so a flat end cannot poke out of the round where the circle bulges past
+    it."""
+    half = rules.w_horizontal(2 * BOWL_R, 0) / 2.0
+    ys = (E_BAR_Y - half, E_BAR_Y + half)
+    def circ_dx(y): return math.sqrt(max(BOWL_R**2 - (y - BOWL_C[1])**2, 0.0))
+    dx = min(circ_dx(y) for y in ys)            # the tighter of the two, so both corners are inside
+    return BOWL_C[0] - dx, BOWL_C[0] + dx, ys
+
+
+def _e_bar_edges():
+    """Where the bar's two ends sit.
+
+    The right end takes the ring's outer circle at the bar's BOTTOM edge, and its R5 cut puts
+    the tip there -- so the tip lands exactly on the arc's own outer end and the two share that
+    point, while the cut carries the top corner well back inside the round.  Taking the top edge
+    instead pulls the end short and leaves the arc touching it at a pinch; taking a radial cut
+    gives a nearly horizontal face at this angle, which reads as a blunt chop."""
+    half = rules.w_horizontal(2 * BOWL_R, 0) / 2.0
+    ys = (E_BAR_Y - half, E_BAR_Y + half)
+    def dx(y): return math.sqrt(max(BOWL_R**2 - (y - BOWL_C[1])**2, 0.0))
+    # The two ends want OPPOSITE crossings.  The left end must clear the circle at BOTH its
+    # corners to stay buried, so it takes the tighter one; the right end's tip has to land on
+    # the arc's outer end, so it takes the wider.  Using one for both leaves the left poking out
+    # of the bowl or the right falling short of the arc.
+    return BOWL_C[0] - min(dx(ys[0]), dx(ys[1])), BOWL_C[0] + max(dx(ys[0]), dx(ys[1])), ys
+
+
+def _e_bar_angle():
+    """The angle at which the arc stops.
+
+    _e_bar_edges takes the bar's right end to the ring's outer circle at the bar's TOP edge --
+    the tighter of its two corners.  So the arc must end at exactly that angle: its outer corner
+    and the bar's top-right corner are then the SAME point, the two outlines meet there with
+    nothing left over, and the bar's R5 cut is the letter's terminal.
+
+    Burying the arc further round instead does not work, and was tried: below that angle the
+    ring is further right than the bar's end, so the arc's radial cut pokes out under the bar
+    as a spur."""
+    _x0, _x1, ys = _e_bar_edges()
+    return math.degrees(math.asin(max(-1.0, min(1.0, (ys[0] - BOWL_C[1]) / BOWL_R))))
+
+
+def _e_bar_note():
+    a = _e_bar_angle()
+    return a
+
+
+def _arc_flat_end(a1, y_cut):
+    """R1's band from a HORIZONTAL cut at y_cut, counter-clockwise to a radial end at a1.
+
+    rules.round_arc cuts both ends along rays from the centre.  At the e's terminal that ray is
+    nearly horizontal but not quite, so the bowl's end does not lie flush with the bar's
+    underside and the two leave a sliver.  Cutting that one end on the horizontal puts them on
+    the same line."""
+    c, r_out, r_in, off = BOWL_C, BOWL_R, BOWL_R - RING_W, RING_OFF
+    ci = add(c, off)
+    o0 = (c[0] + math.sqrt(max(r_out**2 - (y_cut - c[1])**2, 0.0)), y_cut)
+    i0 = (ci[0] + math.sqrt(max(r_in**2 - (y_cut - ci[1])**2, 0.0)), y_cut)
+    a0 = ang(sub(o0, c))
+    start, outer = arc_segments(c, r_out, a0, a1, BAND_SEGS)
+    i1 = line_circle(line_ang(c, a1), ci, r_in, pick='max')
+    def _near(b, a): return a + ((b - a + 180) % 360) - 180
+    _, inner = arc_segments(ci, r_in, _near(ang(sub(i1, ci)), a1),
+                            _near(ang(sub(i0, ci)), a0), BAND_SEGS)
+    k = Contour(start)
+    for sg in outer: k.curve_to(sg[1], sg[2], sg[3])
+    k.line_to(i1)
+    for sg in inner: k.curve_to(sg[1], sg[2], sg[3])
+    return k.ccw()
+
+
+def _bar_underside(bar, x):
+    """The bar's own bottom edge at x.  R4 horizontals TAPER along their length, so a bar has no
+    single bottom; reading one off a nominal half-width put the bowl's cut 3.3 units below where
+    the underside actually is, and the bowl showed beneath the bar."""
+    below = [q for q in bar.flatten(per=1.0) if q[1] < E_BAR_Y]
+    return min(below, key=lambda q: abs(q[0] - x))[1]
+
+
+def _e_open():
+    """Where the e's arc stops at the bottom: the SAME angle the c stops at.
+
+    The two letters sit beside each other constantly, and what shows is where each arc ends --
+    so the bottom terminals are shared and only the top differs, the c's being free and the e's
+    pinned under its bar.  Giving the e its own 2 * CUT_DEG of opening instead put its lower
+    terminal at -43.38 against the c's -30.90, and the pair read as two unrelated letters."""
+    return C_BOT_LC
+
+
+# The crossbar's shape is a WORKING DEFAULT, not a settled decision.  Five candidates were
+# drawn and measured; this is the one chosen to carry on with.  The others, with their numbers,
+# are recorded in the note below.
+#
+#   A    R4's horizontal, R5-cut, flush on the bowl.  mean 40.98, ink 11.68%.  The ONLY
+#        candidate inside the face's established horizontal band -- E 40.01, F 40.68, H 41.16.
+#   H2   a flipped wedge whose point starts at x 120.  mean 19.57, ink 10.14%.  Lightest, but
+#        it reads as a spike and its weight is nearer the bowl's thin band (16.38) than any
+#        horizontal in the face.
+#   J35  tapers to 35% at the band.  mean 29.05, ink 11.10%.  Costs most of A's departure from
+#        R4 without changing the letter much.
+#   M2   this construction cut at x 100.  mean 30.50, ink 10.80%.
+#   M3   this construction cut at x 140.  mean 29.66, ink 10.46%.  <- current default
+#
+# M is the only family that sheds mass by LENGTH rather than by thinness, so the bar keeps real
+# weight along everything that shows; the saving comes from stopping short.  That is also its
+# risk: cut this far back the bar no longer closes the counter on the left, and the e moves
+# toward a c with a cross-stroke.
+E_BAR_STOP  = 140.0       # where the bar's free end is cut, short of the left band
+E_BAR_TAPER = 0.70        # its width there, as a fraction of the width at the bowl
+
+
+def _e_bar():
+    """The crossbar: full width and R5-cut flush on the bowl at the right, tapering gently
+    leftward, then cut on the mark's stress axis short of the left band.
+
+    The right end is unchanged from A -- its R5 tip sits on the ring's outer circle at the bar's
+    bottom edge, which is exactly where the arc's own outer end lands, so the two meet at a
+    point they both already own.  The free left end is cut at 45.07 deg, the angle R1 displaces
+    the counter along and the one the Q's leg runs at."""
+    x0, x1, _ys = _e_bar_edges()
+    hr = rules.w_horizontal(x1 - x0, 1.0) / 2.0
+    hl = hr * E_BAR_TAPER
+    t5 = math.tan(math.radians(CUT_DEG))
+    run = 2 * hl / math.tan(math.radians(abs(ang(RING_OFF))))
+    k = Contour((E_BAR_STOP, E_BAR_Y - hl))
+    k.line_to((x1, E_BAR_Y - hr))
+    k.line_to((x1 - 2 * hr * t5, E_BAR_Y + hr))
+    k.line_to((E_BAR_STOP + run, E_BAR_Y + hl))
+    return k.ccw()
+
+
+def build_e():
+    """The c's arc carried round to an R4 bar."""
+    bar = _e_bar()
+    arc = _arc_flat_end(_e_open() + 360.0, _bar_underside(bar, _e_bar_edges()[1]))
+    return glyph(ord('e'), [arc, bar], sb=(SB_ROUND, SB_ROUND), notes=dict(
+        construction=f"The c's arc carried further round -- from {_e_open():+.2f} deg, below the "
+                     f"bar, all the way over the top and down to where the bar meets it at "
+                     f"{_e_bar_angle():+.2f} -- and closed by an R4 horizontal at y={E_BAR_Y:.2f}.",
+        bar=f"On the E's own rule (CAP/2 + HORIZ_MID/4) read at the x-height rather than the cap: "
+            f"y={E_BAR_Y:.2f}.  Full width and R5-cut flush on the bowl at the right; tapering to "
+            f"{E_BAR_TAPER:.0%} leftward and cut on the mark's stress axis at x={E_BAR_STOP:g}, "
+            f"short of the left band.  A WORKING DEFAULT -- see the note above _e_bar for the four "
+            f"alternatives and their measurements.",
+        aperture=f"The lower terminal is the c's own, {C_BOT_LC:+.2f} deg, so the two letters end "
+                 f"their arcs in the same place; only the top differs, the c's being free and the "
+                 f"e's pinned under the bar at {_e_bar_angle():+.2f}.  That makes the e's opening "
+                 f"{_e_bar_angle()-C_BOT_LC:.1f} deg against the c's {2*CUT_DEG:.1f} -- narrower, "
+                 f"because the bar closes its top, which is what an e wants.",
+        spacing=f"{SB_ROUND}/{SB_ROUND} (R9).",
+        deviations="none from R1-R9."))
+
+
+GLYPHS = {'o': build_o, 'a': build_a, 'b': build_b, 'c': build_c, 'd': build_d,
+          'e': build_e, 'p': build_p, 'q': build_q, 'g': build_g,
           'n': build_n, 'h': build_h}
