@@ -403,15 +403,15 @@ def _band_at(th, ring_w=None, ring_off=None):
     return ring_w - norm(ring_off) * math.cos(math.radians(th) - math.radians(ang(ring_off)))
 
 
-def _hn_spine(y0, wf, ring_w, ring_off):
-    """(left leg x, y0) up, over the apex, down to (right leg x, 0)."""
+def _hn_spine(y0, wf, ring_w, ring_off, y1=0.0):
+    """(left leg x, y0) up, over the apex, down to (right leg x, y1)."""
     xl, xr = _tangent_x(wf, -1), _tangent_x(wf, +1)
     apex_y = BOWL_C[1] + BOWL_R - _band_at(90.0, ring_w, ring_off) / 2.0
     nodes = [((xl, y0),          (0.0, 1.0),  None,     60.0),
              ((xl, N_SPRING),    (0.0, 1.0),  60.0,     N_HANDLE),
              ((BOWL_C[0], apex_y),(1.0, 0.0), N_HANDLE, N_HANDLE),
              ((xr, N_SPRING),    (0.0,-1.0),  N_HANDLE, 60.0),
-             ((xr, 0.0),         (0.0,-1.0),  60.0,     None)]
+             ((xr, y1),          (0.0,-1.0),  60.0,     None)]
     pts = []
     for i in range(len(nodes) - 1):
         (P0, t0, _i, h0), (P1, t1, h1, _o) = nodes[i], nodes[i + 1]
@@ -424,11 +424,11 @@ def _hn_spine(y0, wf, ring_w, ring_off):
     return pts, (xl, xr)
 
 
-def _hn_edges(y0, wf, ring_w, ring_off):
+def _hn_edges(y0, wf, ring_w, ring_off, y1=0.0):
     """Both offset edges.  The legs carry R3's field and the apex carries R1's own top band,
     blended by the SPINE'S OWN TANGENT -- vertical while the stroke is a leg, horizontal at the
     apex.  (The radial direction reads the opposite way round and inverts the blend.)"""
-    pts, (xl, xr) = _hn_spine(y0, wf, ring_w, ring_off)
+    pts, (xl, xr) = _hn_spine(y0, wf, ring_w, ring_off, y1)
     apex_w = _band_at(90.0, ring_w, ring_off)
     ts = [unit(sub(pts[min(i+1, len(pts)-1)], pts[max(i-1, 0)])) for i in range(len(pts))]
     L, Rt = [], []
@@ -456,17 +456,17 @@ def _r5_foot(L, Rt, mid, at_start):
     return L, Rt
 
 
-def _hn_profile(y0, wf, ring_w, ring_off, cut_start):
-    L, Rt, (xl, xr) = _hn_edges(y0, wf, ring_w, ring_off)
+def _hn_profile(y0, wf, ring_w, ring_off, cut_start, y1=0.0):
+    L, Rt, (xl, xr) = _hn_edges(y0, wf, ring_w, ring_off, y1)
     mid = (xl + xr) / 2.0
     if cut_start: L, Rt = _r5_foot(L, Rt, mid, True)
     L, Rt = _r5_foot(L, Rt, mid, False)
     return L, Rt, (xl, xr)
 
 
-def _hn_ranges(y0, cut_start):
+def _hn_ranges(y0, cut_start, y1=0.0):
     """Knots chosen once on the axis origin's shape and held, as for the g."""
-    L, Rt, _x = _hn_profile(y0, _w1, rules.RING_W_1, rules.RING_OFF_1, cut_start)
+    L, Rt, _x = _hn_profile(y0, _w1, rules.RING_W_1, rules.RING_OFF_1, cut_start, y1)
     return (fit_ranges(L, _g_tan(L), HN_NSEG),
             fit_ranges(Rt[::-1], [mul(t, -1) for t in _g_tan(Rt)[::-1]], HN_NSEG))
 
@@ -474,9 +474,17 @@ def _hn_ranges(y0, cut_start):
 _N_RANGES = _hn_ranges(0.0, True)
 _H_RANGES = _hn_ranges(H_BURY, False)
 
+# Where the m's middle leg stops.  The m is a two-counter letter like the capital M, whose vee
+# sits at 0.40 of the cap and whose notes argue that a middle carried to the baseline reads as a
+# third counter rather than a stem.  This is the lowercase of the same decision, one step lower:
+# at 0.40 (y=154) the two counters are open but the middle barely exists, and above that -- 0.49
+# and up -- the two counters merge into one 651-unit space and the letter stops reading as an m.
+M_MID_Y   = 115.0
+_M_RANGES = _hn_ranges(0.0, True, M_MID_Y)
 
-def _hn_stroke(y0, cut_start, ranges):
-    L, Rt, (xl, xr) = _hn_profile(y0, w_stem, RING_W, RING_OFF, cut_start)
+
+def _hn_stroke(y0, cut_start, ranges, y1=0.0):
+    L, Rt, (xl, xr) = _hn_profile(y0, w_stem, RING_W, RING_OFF, cut_start, y1)
     rg_out, rg_in = ranges
     so, eo = fit_cubics(L, _g_tan(L), tol=9e9, ranges=[tuple(r) for r in rg_out])
     si, ei = fit_cubics(Rt[::-1], [mul(x, -1) for x in _g_tan(Rt)[::-1]], tol=9e9,
@@ -837,7 +845,7 @@ def build_m():
     leg -- with a second shoulder springing from that middle leg exactly as the h's springs from
     its ascender, buried at H_BURY so the leg alone makes the foot.  Both shoulders are the same
     stroke, so the two arches are identical rather than merely similar."""
-    first, e1, (xl, xr) = _hn_stroke(0.0, True, _N_RANGES)
+    first, e1, (xl, xr) = _hn_stroke(0.0, True, _M_RANGES, M_MID_Y)
     second, e2, _x = _hn_stroke(H_BURY, False, _H_RANGES)
     span = xr - xl
     n = _arch_note(xl, xr + span, max(e1, e2))
@@ -845,9 +853,18 @@ def build_m():
                          f"distance between the n's own legs -- so the m's two arches are the SAME "
                          f"stroke, not two drawings of one idea.  Three legs at x={xl:.2f}, "
                          f"{xr:.2f} and {xr+span:.2f}.")
-    n['feet'] = (f"R5, {CUT_DEG:g} deg.  The outer two mirror as the n's do; the middle leg's foot "
-                 f"is made by the first stroke alone, the second being buried at y={H_BURY:g} so "
-                 f"two opposite cuts cannot union into a flat.")
+    n['middle'] = (f"The middle leg stops at y={M_MID_Y:g}, {100*M_MID_Y/XH:.0f}% of the x-height, and "
+                   f"ends in R5's own foot -- one face at {CUT_DEG:g} deg with the tip on the RIGHT, "
+                   f"which is not a choice: the middle IS the first stroke's right leg, and R5 puts "
+                   f"that leg's tip on the corner away from its own stroke's centre, which is the "
+                   f"right.  Carrying it to the baseline gives three legs and three counters; "
+                   f"stopping it higher than about 0.49 of the x-height merges the two counters into "
+                   f"one 651-unit space and the letter stops reading as an m.  The capital M makes "
+                   f"the same decision at 0.40 of the cap and argues it the same way.")
+    n['feet'] = (f"R5, {CUT_DEG:g} deg.  The two outer feet mirror as the n's do.  The middle needs no "
+                 f"foot rule of its own: the second stroke is buried at y={H_BURY:g}, above where the "
+                 f"first stroke's right leg now ends, so nothing of it reaches down to union with "
+                 f"that cut.")
     return glyph(ord('m'), [first, _shift(second, span)],
                  sb=(SB_STRAIGHT, SB_STRAIGHT), notes=n)
 
