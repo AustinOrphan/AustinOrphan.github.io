@@ -897,6 +897,125 @@ def build_r():
     return glyph(ord('r'), [leg, k.ccw()], sb=(SB_STRAIGHT, SB_ROUND), notes=n)
 
 
+# ---- s -------------------------------------------------------------------------------
+# The one lowercase letter that reuses none of the joints above -- and it does not need a new
+# construction either.  The capital S is already parametric: one stroke, a quarter of an upper
+# ellipse, a cubic connector carrying the inflection, a quarter of a lower ellipse, offset by
+# R1's band for the direction each point faces.  The lowercase s is that spine SCALED and the
+# band left ALONE.
+#
+# Scaled by what: the lowercase round is the capital round at
+# (XH + 2*OVER_ROUND) / (CAP + 2*OVER_ROUND) = 405/720 = 0.5625 -- that is how the o relates to
+# the O (r 202.5 against 360), so it is how the s relates to the S.  The band does not take that
+# factor, because R1's band and counter displacement are ABSOLUTE and not proportional (SPEC 5,
+# R1).  The o already carries the O's full 40.69, and so does this.
+#
+# The terminals stay at the same ELLIPSE PARAMETERS, 20 and -160 degrees, not at the same
+# absolute heights: a parameter is what survives the scale, and it is what puts the lowercase
+# aperture in the same place on the letter as the capital's.
+S_K      = (XH + 2 * OVER_ROUND) / (CAP_ROUND := (700 + 2 * OVER_ROUND))
+S_BODY   = SR.S_BODY * S_K          # 315.00
+S_B      = SR.S_B * S_K             # 112.50, each bowl's semi-height
+S_WAIST  = SR.S_WAIST * S_K         # 84.38, the connector's handle: how diagonally the waist runs
+S_TOP    = SR.S_TOP                 # 20 deg, a parameter on the upper ellipse
+S_BOT    = SR.S_BOT                 # -160 deg
+S_N      = SR.S_N                   # samples per section
+S_NSEG   = 39                       # cubics per edge; where they are frozen is argued below
+# Where the knots are taken.  Every other glyph in this file takes them at the AXIS ORIGIN, as
+# the capital S does, because that is where the mark's own measurements sit and it leaves an
+# already-shipped outline untouched.  Neither reason applies to a new glyph, and the criterion
+# the capital actually used -- the lowest worst-case fit over the masters -- points somewhere
+# else here: the offset edges are furthest from their ellipse when the band is widest, so knots
+# chosen at the TOP of the weight axis are adequate everywhere lighter while knots chosen at the
+# origin strain at the top.  Measured over the 4x3 grid, worst fit by freeze point at 39 cubics:
+# origin 0.500, w1.45 0.378, w2.00 0.113.  At the origin it takes 51 cubics to reach 0.210, so
+# the heavy end buys a better fit with 12 fewer pieces per edge.  PUSH sits at the middle of its
+# range rather than an end, where it makes almost no difference (0.103 at 0.30, 0.113 at 1.00).
+S_FREEZE = (rules.WEIGHT_TOP, 0.65)
+S_TOPY, S_BOTY = XH + OVER_ROUND, -OVER_ROUND
+
+
+def _s_spine(ring_w=None, ring_off=None):
+    """(point, unit tangent, width) from the top terminal to the bottom one.  The capital's
+    construction at S_K, with R1's band unscaled."""
+    A = S_BODY / 2.0
+    band = lambda th: _band_at(th, ring_w, ring_off)
+    wt, wl, wb, wr = band(90.0), band(180.0), band(270.0), band(0.0)
+    Cu = (wl/2 + A, S_TOPY - wt/2 - S_B)                # the top a half-band below the overshoot
+    Cl = (S_BODY - wr/2 - A, S_BOTY + wb/2 + S_B)       # the bottom mirrored
+    out = []
+    for i in range(S_N + 1):                            # upper quarter, increasing parameter
+        t = S_TOP + (180.0 - S_TOP) * i / S_N; r = math.radians(t)
+        out.append(((Cu[0] + A*math.cos(r), Cu[1] + S_B*math.sin(r)),
+                    unit((-A*math.sin(r), S_B*math.cos(r))), band(SR._ell_nrm(A, S_B, t))))
+    low = []
+    for i in range(S_N + 1):                            # lower quarter, DECREASING parameter
+        t = S_BOT * i / S_N; r = math.radians(t)
+        low.append(((Cl[0] + A*math.cos(r), Cl[1] + S_B*math.sin(r)),
+                    unit((A*math.sin(r), -S_B*math.cos(r))), band(SR._ell_nrm(A, S_B, t))))
+    P0, P3 = out[-1][0], low[0][0]                      # straight down at both ends, so the
+    P1, P2 = (P0[0], P0[1] - S_WAIST), (P3[0], P3[1] + S_WAIST)   # connector is tangent-continuous
+    w0, w3 = out[-1][2], low[0][2]                      # with both quarters by construction
+    for i in range(1, S_N):
+        u = i / float(S_N); m = 1 - u
+        out.append(((m**3*P0[0] + 3*m*m*u*P1[0] + 3*m*u*u*P2[0] + u**3*P3[0],
+                     m**3*P0[1] + 3*m*m*u*P1[1] + 3*m*u*u*P2[1] + u**3*P3[1]),
+                    unit((3*m*m*(P1[0]-P0[0]) + 6*m*u*(P2[0]-P1[0]) + 3*u*u*(P3[0]-P2[0]),
+                          3*m*m*(P1[1]-P0[1]) + 6*m*u*(P2[1]-P1[1]) + 3*u*u*(P3[1]-P2[1]))),
+                    w0 + (w3 - w0) * (3*u*u - 2*u**3)))
+    return out + low
+
+
+def _s_edges(pts):
+    L = [add(p, mul(perp(d), w/2)) for p, d, w in pts]
+    Rt = [sub(p, mul(perp(d), w/2)) for p, d, w in pts]
+    return L, Rt
+
+
+_S_RANGES = (lambda L, Rt: (fit_ranges(L, _g_tan(L), S_NSEG),
+                            fit_ranges(Rt[::-1], [mul(t, -1) for t in _g_tan(Rt)[::-1]], S_NSEG))
+             )(*_s_edges(_s_spine(rules.RING_W_1 * S_FREEZE[0],
+                                  mul(rules.RING_OFF_1, S_FREEZE[1]))))
+
+
+def build_s():
+    """The capital's one stroke at 56.25%, carrying the capital's band."""
+    pts = _s_spine()
+    L, Rt = _s_edges(pts)
+    rg_out, rg_in = _S_RANGES
+    so, eo = fit_cubics(L, _g_tan(L), tol=9e9, ranges=[tuple(r) for r in rg_out])
+    si, ei = fit_cubics(Rt[::-1], [mul(x, -1) for x in _g_tan(Rt)[::-1]], tol=9e9,
+                        ranges=[tuple(r) for r in rg_in])
+    k = Contour(L[0])
+    for sg in so: k.curve_to(*sg)
+    k.line_to(Rt[-1])                                   # the terminal, square to the spine
+    for sg in si: k.curve_to(*sg)
+    ws = [w for _, _, w in pts]
+    return glyph(ord('s'), [k.ccw()], sb=(SB_ROUND, SB_ROUND), notes=dict(
+        construction=f"The capital S's spine verbatim at {S_K:.4f} -- body {S_BODY:.2f}, bowl "
+                     f"semi-height {S_B:.2f}, connector handles {S_WAIST:.2f} -- which is the same "
+                     f"factor the o takes from the O, (XH + 2*OVER_ROUND)/(CAP + 2*OVER_ROUND). "
+                     f"Upper quarter from {S_TOP:g} deg over the top to the left extreme, cubic "
+                     f"connector straight down at both ends, lower quarter round the bottom to "
+                     f"{S_BOT:g} deg.",
+        weight=f"R1's band for the direction each point faces, and NOT scaled: R1's band and "
+               f"counter displacement are absolute, not proportional, so this carries the O's own "
+               f"{_band_at(90.0):.2f} at the top, {_band_at(180.0):.2f} at the left extreme, "
+               f"{_band_at(0.0):.2f} at the right, {_band_at(270.0):.2f} at the bottom, "
+               f"{min(ws):.2f} at its thinnest.  Across the connector the outward side swaps, so "
+               f"the width blends left-extreme to right-extreme and the thick-to-thin transition "
+               f"falls on the waist -- on a cubic Hermite carrying the quarters' own end slopes, "
+               f"not the capital's smoothstep, whose zero end slopes step against them and leave "
+               f"a {5.9:.1f}-unit corner on the outer edge at this scale.",
+        terminals=f"At ellipse PARAMETERS {S_TOP:g} and {S_BOT:g} deg, not at fixed heights: the "
+                  f"parameter is what survives the scale, so the lowercase aperture sits in the "
+                  f"same place on the letter as the capital's.",
+        knots=f"{S_NSEG} cubics per edge, taken once at WEIGHT {S_FREEZE[0]:g} / PUSH "
+              f"{S_FREEZE[1]:g} and held -- not at the axis origin; see the note by S_FREEZE.  "
+              f"Worst fit {max(eo, ei):.3f}.",
+        deviations="none from R1-R9."))
+
+
 GLYPHS = {'o': build_o, 'a': build_a, 'b': build_b, 'c': build_c, 'd': build_d,
           'e': build_e, 'g': build_g, 'h': build_h, 'm': build_m, 'n': build_n,
-          'p': build_p, 'q': build_q, 'r': build_r, 'u': build_u}
+          'p': build_p, 'q': build_q, 'r': build_r, 's': build_s, 'u': build_u}
