@@ -916,7 +916,14 @@ def build_r():
 S_K      = (XH + 2 * OVER_ROUND) / (CAP_ROUND := (700 + 2 * OVER_ROUND))
 S_BODY   = SR.S_BODY * S_K          # 315.00
 S_B      = SR.S_B * S_K             # 112.50, each bowl's semi-height
-S_WAIST  = SR.S_WAIST * S_K         # 84.38, the connector's handle: how diagonally the waist runs
+# The connector's handle -- how straight it runs between the two bowls.  The capital's number
+# UNSCALED, alone among the spine quantities, and for the same reason the band is unscaled: what
+# the connector has to do does not shrink with the letter.  At 84.38, the scaled value, the waist
+# runs 11 degrees off horizontal at its flattest and the letter leans; at 150 it runs 2 degrees
+# and stands up.  Swept against it afterwards, the body stays at 315 and the bowls at 112.5 --
+# with a handle this long a DEEPER bowl steepens the waist again (9 degrees at 130, 15 at 145),
+# which is the opposite of what it does at the short handle.
+S_WAIST  = SR.S_WAIST               # 150
 S_TOP    = SR.S_TOP                 # 20 deg, a parameter on the upper ellipse
 S_BOT    = SR.S_BOT                 # -160 deg
 S_N      = SR.S_N                   # samples per section
