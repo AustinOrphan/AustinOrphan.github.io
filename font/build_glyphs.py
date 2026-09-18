@@ -5,7 +5,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ap = argparse.ArgumentParser(); ap.add_argument('--only', help='comma-separated glyph module names, e.g. core,set_straight')
 ap.add_argument('--out', default=os.path.join(HERE, 'build', 'glyphs.json')); args = ap.parse_args()
 sys.path.insert(0, HERE); sys.path.insert(0, os.path.join(HERE, 'lib'))
-from metrics import UPM, CAP, ASCENT, DESCENT
+from metrics import UPM, CAP, ASCENT, DESCENT, XH
 out = dict(upm=UPM, cap=CAP, ascent=ASCENT, descent=DESCENT, glyphs={})
 for path in sorted(glob.glob(os.path.join(HERE, 'glyphs', '*.py'))):
     mod = os.path.basename(path)[:-3]
@@ -18,6 +18,12 @@ for path in sorted(glob.glob(os.path.join(HERE, 'glyphs', '*.py'))):
         g['source'] = mod
         out['glyphs'][name] = g
         print(f"  {name:8s} cp {g['cp']:5d}  adv {g['adv']:4d}  {len(g['contours'])} contours   ({mod})")
+# The DECLARED x-height follows what is actually drawn.  While the lowercase is still aliased
+# onto the capitals by compile_font, the x-height IS the cap height, and saying otherwise would
+# misinform every layout engine that reads it.  It becomes XH as soon as one real lowercase
+# glyph exists.
+out['xheight'] = XH if any(0x61 <= g['cp'] <= 0x7A for g in out['glyphs'].values()) else CAP
+print(f"  declared x-height {out['xheight']}")
 os.makedirs(os.path.dirname(os.path.abspath(args.out)), exist_ok=True)
 json.dump(out, open(args.out, 'w'))
 print(f"  wrote {os.path.relpath(args.out, HERE)} with {len(out['glyphs'])} glyphs")

@@ -19,7 +19,7 @@ for flag in ('hhea_ascent_add', 'hhea_descent_add', 'os2_typoascent_add', 'os2_t
 f.hhea_ascent = G['ascent']; f.hhea_descent = -G['descent']; f.hhea_linegap = 0
 f.os2_typoascent = G['ascent']; f.os2_typodescent = -G['descent']; f.os2_typolinegap = 0
 f.os2_winascent = G['ascent']; f.os2_windescent = G['descent']
-f.os2_capheight = G['cap']; f.os2_xheight = G['cap']          # unicase: the x-height is the cap height
+f.os2_capheight = G['cap']; f.os2_xheight = G.get('xheight', G['cap'])   # cap height while unicase
 f.os2_use_typo_metrics = True
 for name, g in G['glyphs'].items():
     ch = f.createChar(g['cp'] if g['cp'] >= 0 else -1, name)   # cp -1: unencoded alternate
@@ -33,9 +33,11 @@ for name, g in G['glyphs'].items():
     pen = None
     if g['contours']: ch.removeOverlap(); ch.correctDirection(); ch.round()
     ch.width = g['adv']
-# unicase: lowercase reuses the capitals
+# Unicase: lowercase reuses the capitals -- but only for the letters that have no lowercase
+# glyph of their own yet, so that drawing one takes it out of the aliasing automatically.
+drawn = {g['cp'] for g in G['glyphs'].values()}
 for name, g in list(G['glyphs'].items()):
-    if len(name) == 1 and 'A' <= name <= 'Z':
+    if len(name) == 1 and 'A' <= name <= 'Z' and ord(name.lower()) not in drawn:
         lc = f.createChar(ord(name.lower()), name.lower())
         lc.addReference(name); lc.width = g['adv']
 out = args.out
