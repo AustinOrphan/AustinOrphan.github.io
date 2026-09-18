@@ -482,7 +482,89 @@ def _hn_stroke(y0, cut_start, ranges):
     return k.ccw(), max(eo, ei), (xl, xr)
 
 
-def _arch_note(xl, xr, err):
+def _u_spine(y0, wf, ring_w, ring_off):
+    """The n's stroke inverted: down the left leg, under the nadir, up the right leg.
+
+    Not a mirrored n.  R1's band is 23.48 at the top of the ring and 57.90 at the bottom, so the
+    u's turn is more than twice the weight of the n's shoulder -- and that is correct, because
+    the o is heavier at the bottom too.  It also means the u's turn and its legs are close in
+    weight (57.90 against 65.00 at the baseline) where the n's are far apart."""
+    xl, xr = _tangent_x(wf, -1), _tangent_x(wf, +1)
+    nadir = BOWL_C[1] - BOWL_R + _band_at(270.0, ring_w, ring_off) / 2.0
+    nodes = [((xl, y0),               (0.0,-1.0), None,     60.0),
+             ((xl, XH - N_SPRING),    (0.0,-1.0), 60.0,     N_HANDLE),
+             ((BOWL_C[0], nadir),     (1.0, 0.0), N_HANDLE, N_HANDLE),
+             ((xr, XH - N_SPRING),    (0.0, 1.0), N_HANDLE, 60.0),
+             ((xr, XH),               (0.0, 1.0), 60.0,     None)]
+    pts = []
+    for i in range(len(nodes) - 1):
+        (P0, t0, _i, h0), (P1, t1, h1, _o) = nodes[i], nodes[i + 1]
+        A = add(P0, mul(t0, h0)); B = sub(P1, mul(t1, h1))
+        for k in range(HN_SAMP + 1):
+            if i and k == 0: continue
+            t = k / HN_SAMP; m = 1 - t
+            pts.append((m**3*P0[0] + 3*m*m*t*A[0] + 3*m*t*t*B[0] + t**3*P1[0],
+                        m**3*P0[1] + 3*m*m*t*A[1] + 3*m*t*t*B[1] + t**3*P1[1]))
+    return pts, (xl, xr)
+
+
+def _turn_edges(spine_fn, y0, wf, ring_w, ring_off, apex_deg):
+    """Offset both edges of a turning stroke: R3's field on the legs, R1's own band at the turn,
+    blended by the spine's own tangent."""
+    pts, (xl, xr) = spine_fn(y0, wf, ring_w, ring_off)
+    apex_w = _band_at(apex_deg, ring_w, ring_off)
+    ts = [unit(sub(pts[min(i+1, len(pts)-1)], pts[max(i-1, 0)])) for i in range(len(pts))]
+    L, Rt = [], []
+    for p, t in zip(pts, ts):
+        turn = abs(t[0]); k = turn * turn * (3 - 2 * turn)
+        w = wf(p[1]) * (1 - k) + apex_w * k
+        nv = perp(t)
+        L.append(add(p, mul(nv, w/2))); Rt.append(sub(p, mul(nv, w/2)))
+    return L, Rt, (xl, xr)
+
+
+def _u_profile(y0, wf, ring_w, ring_off, cut_start):
+    L, Rt, (xl, xr) = _turn_edges(_u_spine, y0, wf, ring_w, ring_off, 270.0)
+    mid = (xl + xr) / 2.0
+    if cut_start: L, Rt = _r5_foot(L, Rt, mid, True)
+    L, Rt = _r5_foot(L, Rt, mid, False)
+    return L, Rt, (xl, xr)
+
+
+# The u's turn is the heaviest curvature change in the arch family, so it does not fit on the
+# n's 38 cubics: at 38 the worst residual over the axis grid is 0.878, past MAX_ERR's 0.6.  The
+# residual falls to 0.063 at 46 and converges at 0.009 by 54, which is where this sits -- the
+# knee of the curve, not the first count that merely passes.
+U_NSEG = 54
+
+_U_RANGES = (lambda L, Rt: (fit_ranges(L, _g_tan(L), U_NSEG),
+                            fit_ranges(Rt[::-1], [mul(t, -1) for t in _g_tan(Rt)[::-1]], U_NSEG))
+             )(*_u_profile(XH, _w1, rules.RING_W_1, rules.RING_OFF_1, True)[:2])
+
+
+def build_u():
+    """The n's stroke turned upside down."""
+    L, Rt, (xl, xr) = _u_profile(XH, w_stem, RING_W, RING_OFF, True)
+    rg_out, rg_in = _U_RANGES
+    so, eo = fit_cubics(L, _g_tan(L), tol=9e9, ranges=[tuple(r) for r in rg_out])
+    si, ei = fit_cubics(Rt[::-1], [mul(x, -1) for x in _g_tan(Rt)[::-1]], tol=9e9,
+                        ranges=[tuple(r) for r in rg_in])
+    k = Contour(L[0])
+    for sg in so: k.curve_to(*sg)
+    k.line_to(Rt[-1])
+    for sg in si: k.curve_to(*sg)
+    n = _arch_note(xl, xr, max(eo, ei), U_NSEG)
+    n['construction'] = ("One stroke, the n's inverted: down the left leg at x=%.2f, under the "
+                         "nadir, up the right leg at x=%.2f." % (xl, xr))
+    n['weight'] = (f"The turn carries R1's band at the BOTTOM of the ring, {_band_at(270.0):.2f}, "
+                   f"against the n's {_band_at(90.0):.2f} at the top -- more than twice it, "
+                   f"because R1 displaces the counter toward 45 deg and the o is heavier at the "
+                   f"bottom too.  So the u's turn and its legs are close in weight ({_band_at(270.0):.2f} "
+                   f"against {w_stem(0.0):.2f}) where the n's are far apart.")
+    return glyph(ord('u'), [k.ccw()], sb=(SB_STRAIGHT, SB_STRAIGHT), notes=n)
+
+
+def _arch_note(xl, xr, err, nseg=HN_NSEG):
     return dict(
         construction=f"One stroke: up the left leg at x={xl:.2f}, over the apex, down the right "
                      f"leg at x={xr:.2f}.  Both legs take section 4's tangency.  The shoulder is "
@@ -497,7 +579,7 @@ def _arch_note(xl, xr, err):
                f"inverts the blend.",
         feet=f"R5, {CUT_DEG:g} deg, and MIRRORED: the tip is the corner away from the body, so an "
              f"n's two feet lean opposite ways, as the H's do.",
-        knots=f"{HN_NSEG} cubics per edge, taken once on the axis origin's shape and held.  "
+        knots=f"{nseg} cubics per edge, taken once on the axis origin's shape and held.  "
               f"Worst fit {err:.3f}.",
         deviations="none from R1-R9.")
 
@@ -736,6 +818,78 @@ def build_e():
         deviations="none from R1-R9."))
 
 
+def _shift(k, dx):
+    """a contour moved right by dx"""
+    return k.map(lambda p: (p[0] + dx, p[1]))
+
+
+def build_m():
+    """The n's stroke, plus a SECOND shoulder off the middle leg.
+
+    An m is not three posts and two arches.  It is the n's stroke -- left leg, shoulder, middle
+    leg -- with a second shoulder springing from that middle leg exactly as the h's springs from
+    its ascender, buried at H_BURY so the leg alone makes the foot.  Both shoulders are the same
+    stroke, so the two arches are identical rather than merely similar."""
+    first, e1, (xl, xr) = _hn_stroke(0.0, True, _N_RANGES)
+    second, e2, _x = _hn_stroke(H_BURY, False, _H_RANGES)
+    span = xr - xl
+    n = _arch_note(xl, xr + span, max(e1, e2))
+    n['construction'] = (f"The n's stroke, then the h's shoulder shifted right by {span:.2f} -- the "
+                         f"distance between the n's own legs -- so the m's two arches are the SAME "
+                         f"stroke, not two drawings of one idea.  Three legs at x={xl:.2f}, "
+                         f"{xr:.2f} and {xr+span:.2f}.")
+    n['feet'] = (f"R5, {CUT_DEG:g} deg.  The outer two mirror as the n's do; the middle leg's foot "
+                 f"is made by the first stroke alone, the second being buried at y={H_BURY:g} so "
+                 f"two opposite cuts cannot union into a flat.")
+    return glyph(ord('m'), [first, _shift(second, span)],
+                 sb=(SB_STRAIGHT, SB_STRAIGHT), notes=n)
+
+
+R_STOP = 0.62      # how far along the shoulder the r's stroke ends, as a fraction of the spine
+
+
+def _r_profile(wf, ring_w, ring_off):
+    """The h's shoulder truncated at R_STOP and given a free R5 terminal.
+
+    The truncation index comes off HN_SAMP, which is a constant, so the same sample is the end
+    of the stroke in every master and the knots below stay comparable."""
+    L, Rt, (xl, xr) = _hn_edges(H_BURY, wf, ring_w, ring_off)
+    keep = int(len(L) * R_STOP)
+    L, Rt = L[:keep], Rt[:keep]
+    L, Rt = _r5_foot(L, Rt, (xl + xr) / 2.0, False)
+    return L, Rt, (xl, xr)
+
+
+_R_RANGES = (lambda L, Rt: (fit_ranges(L, _g_tan(L), HN_NSEG),
+                            fit_ranges(Rt[::-1], [mul(t, -1) for t in _g_tan(Rt)[::-1]], HN_NSEG))
+             )(*_r_profile(_w1, rules.RING_W_1, rules.RING_OFF_1)[:2])
+
+
+def build_r():
+    """The n's left leg and the start of its shoulder, stopped in a free R5 terminal.
+
+    The r is the arch interrupted: the same leg and the same shoulder as the n, ended partway
+    round instead of coming down into a second leg.  Where it ends is the letter's one decision;
+    the rest is the n's."""
+    L, Rt, (xl, xr) = _r_profile(w_stem, RING_W, RING_OFF)
+    rg_out, rg_in = _R_RANGES
+    so, eo = fit_cubics(L, _g_tan(L), tol=9e9, ranges=[tuple(r) for r in rg_out])
+    si, ei = fit_cubics(Rt[::-1], [mul(x, -1) for x in _g_tan(Rt)[::-1]], tol=9e9,
+                        ranges=[tuple(r) for r in rg_in])
+    k = Contour(L[0])
+    for sg in so: k.curve_to(*sg)
+    k.line_to(Rt[-1])
+    for sg in si: k.curve_to(*sg)
+    leg = rules.stem(xl, 0.0, XH, bottom='right', top='right')
+    n = _arch_note(xl, xr, max(eo, ei))
+    n['construction'] = (f"The n's leg at x={xl:.2f}, and the n's own shoulder ended at "
+                         f"{R_STOP:.0%} of its run instead of carrying down into a second leg.")
+    n['terminal'] = (f"A free R5 cut, {CUT_DEG:g} deg -- the one thing the r decides that the n "
+                     f"does not.  The shoulder is buried at y={H_BURY:g} as the h's is, so the "
+                     f"leg alone makes the foot.")
+    return glyph(ord('r'), [leg, k.ccw()], sb=(SB_STRAIGHT, SB_ROUND), notes=n)
+
+
 GLYPHS = {'o': build_o, 'a': build_a, 'b': build_b, 'c': build_c, 'd': build_d,
-          'e': build_e, 'p': build_p, 'q': build_q, 'g': build_g,
-          'n': build_n, 'h': build_h}
+          'e': build_e, 'g': build_g, 'h': build_h, 'm': build_m, 'n': build_n,
+          'p': build_p, 'q': build_q, 'r': build_r, 'u': build_u}
