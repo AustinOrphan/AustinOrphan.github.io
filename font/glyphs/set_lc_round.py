@@ -869,18 +869,30 @@ def build_m():
                  sb=(SB_STRAIGHT, SB_STRAIGHT), notes=n)
 
 
-R_STOP = 0.62      # how far along the shoulder the r's stroke ends, as a fraction of the spine
+# How far along the stroke the r ends, as a fraction of the spine.  0.619 is where the arm reaches
+# exactly as far as it did when the r was built as a separate stem plus an arm; the number differs
+# from that build's 0.62 only because the spine now starts at the baseline rather than at H_BURY.
+R_STOP = 0.619
 
 
 def _r_profile(wf, ring_w, ring_off):
-    """The h's shoulder truncated at R_STOP and given a free R5 terminal.
+    """The n's WHOLE stroke -- foot, leg, shoulder -- truncated at R_STOP and given a free R5
+    terminal.
 
-    The truncation index comes off HN_SAMP, which is a constant, so the same sample is the end
-    of the stroke in every master and the knots below stay comparable."""
-    L, Rt, (xl, xr) = _hn_edges(H_BURY, wf, ring_w, ring_off)
+    One stroke, as the n and the h are.  It was previously a rules.stem leg with the h's shoulder
+    unioned on top of it, and that is wrong for the reason a union always is here: the two pieces
+    draw the same left edge from different code, they disagree by fractions of a unit all the way
+    up, and the leg's own R5 top cut is then left standing proud of the arm.  Measured, the leg
+    contour minus the arm contour came to 258 separate slivers and the step showed at the top left.
+
+    The truncation index comes off HN_SAMP, a constant, so the same sample ends the stroke in every
+    master and the knots below stay comparable."""
+    L, Rt, (xl, xr) = _hn_edges(0.0, wf, ring_w, ring_off)
+    mid = (xl + xr) / 2.0
+    L, Rt = _r5_foot(L, Rt, mid, True)            # the foot, cut as the n's left foot is
     keep = int(len(L) * R_STOP)
     L, Rt = L[:keep], Rt[:keep]
-    L, Rt = _r5_foot(L, Rt, (xl + xr) / 2.0, False)
+    L, Rt = _r5_foot(L, Rt, mid, False)           # the arm's terminal, the one thing the r decides
     return L, Rt, (xl, xr)
 
 
@@ -904,14 +916,14 @@ def build_r():
     for sg in so: k.curve_to(*sg)
     k.line_to(Rt[-1])
     for sg in si: k.curve_to(*sg)
-    leg = rules.stem(xl, 0.0, XH, bottom='right', top='right')
     n = _arch_note(xl, xr, max(eo, ei))
-    n['construction'] = (f"The n's leg at x={xl:.2f}, and the n's own shoulder ended at "
-                         f"{R_STOP:.0%} of its run instead of carrying down into a second leg.")
+    n['construction'] = (f"ONE stroke, the n's own: up from the foot at x={xl:.2f}, through the "
+                         f"spring, and stopped at {R_STOP:.1%} of its run instead of carrying over "
+                         f"the apex and down into a second leg.  Not a stem with an arm unioned on "
+                         f"-- see the note in _r_profile.")
     n['terminal'] = (f"A free R5 cut, {CUT_DEG:g} deg -- the one thing the r decides that the n "
-                     f"does not.  The shoulder is buried at y={H_BURY:g} as the h's is, so the "
-                     f"leg alone makes the foot.")
-    return glyph(ord('r'), [leg, k.ccw()], sb=(SB_STRAIGHT, SB_ROUND), notes=n)
+                     f"does not.  The foot is the n's own left foot, cut by the same rule.")
+    return glyph(ord('r'), [k.ccw()], sb=(SB_STRAIGHT, SB_ROUND), notes=n)
 
 
 # ---- s -------------------------------------------------------------------------------
