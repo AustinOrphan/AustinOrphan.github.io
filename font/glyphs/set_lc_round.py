@@ -380,7 +380,13 @@ def build_g():
 # Its shoulder starts BURIED at H_BURY rather than at the baseline: the leg already makes that
 # foot, and two opposite R5 cuts unioned together square it off flat.
 N_SPRING = 180.0                # where the leg stops running straight
-N_HANDLE = 150.0                # the handles into the apex
+# The handles into the apex.  120, not the 150 this file carried: the four-panel sheet the arch
+# was chosen from was drawn by a scratch prototype whose spine() bound h_in as a DEFAULT ARGUMENT
+# and whose build() passed only the spring positionally, so the handle knob never moved and all
+# four panels were drawn at 120 while their labels read 120 / 150 / 185 / 215.  What was chosen
+# there was the SPRING; the shape approved was 180/120.  At 120 this module reproduces that image
+# to 0.15% of its area, at 150 it is 21.59% off it.
+N_HANDLE = 120.0
 H_BURY   = 165.0                # where the h's shoulder starts, inside the leg
 HN_NSEG  = 38                   # cubics per edge, frozen at the axis origin.  30 holds the n
                                 # (0.165 worst) but not the h, whose buried start moves further
@@ -571,8 +577,9 @@ def _arch_note(xl, xr, err, nseg=HN_NSEG):
                      f"where that stroke is curving, not a join -- built as separate pieces the "
                      f"arch's radial end cuts show as notches and the letter reads as an arcade.",
         arch=f"The leg stops running straight at y={N_SPRING:g} and the handles into the apex are "
-             f"{N_HANDLE:g}.  Chosen over 250/120 (a flat bridge), 120/185 (a generic inverted U) "
-             f"and 60/215 (a peaked counter and a picket rhythm).",
+             f"{N_HANDLE:g}.  The spring was chosen against 250 (a flat bridge), 120 (a generic "
+             f"inverted U) and 60 (a peaked counter and a picket rhythm), all four drawn at this "
+             f"same handle.",
         weight=f"The legs carry R3's field and the apex carries R1's own top band "
                f"({_band_at(90.0):.2f}), blended by the spine's own tangent -- vertical on a leg, "
                f"horizontal at the apex.  The radial direction reads the opposite way round and "
