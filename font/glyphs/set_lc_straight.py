@@ -153,13 +153,15 @@ def _hook_edges(pts):
 
 _HOOK_RANGES = (lambda L, Rt: (fit_ranges(L, LR._g_tan(L), HOOK_NSEG),
                                fit_ranges(Rt[::-1], [mul(t, -1) for t in LR._g_tan(Rt)[::-1]], HOOK_NSEG))
-                )(*_hook_edges(_hook_spine(LR._w1, rules.RING_W_1, rules.RING_OFF_1)[0]))
+                )(*LR._r5_foot(*_hook_edges(_hook_spine(LR._w1, rules.RING_W_1,
+                                                        rules.RING_OFF_1)[0]), 0.0, False))
 
 
 def build_f():
     """A stem that turns over at the top, and the t's bar."""
     pts, y_turn = _hook_spine(w_stem, RING_W, rules.RING_OFF)
     L, Rt = _hook_edges(pts)
+    L, Rt = LR._r5_foot(L, Rt, 0.0, False)       # the r's own terminal; see the note
     rg_out, rg_in = _HOOK_RANGES
     so, eo = fit_cubics(L, LR._g_tan(L), tol=9e9, ranges=[tuple(r) for r in rg_out])
     si, ei = fit_cubics(Rt[::-1], [mul(x, -1) for x in LR._g_tan(Rt)[::-1]], tol=9e9,
@@ -180,6 +182,10 @@ def build_f():
              f"starts at the stem's width; horizontal at the top, so it ends at the o's band.",
         radius=f"{HOOK_R:g}, half the ascender gap, so the quarter fills it: the hook's top edge "
                f"lands on the ascender line and its left edge is the stem's own line.",
+        terminal=f"A free R5 cut, {rules.CUT_DEG:g} deg, the r's own -- the tip on the corner away "
+                 f"from the body, which is the outer one.  It ended square to the spine before, "
+                 f"and since the spine is horizontal there that was a flat vertical wall: the only "
+                 f"terminal in the face that was not cut.",
         knots=f"{HOOK_NSEG} cubics per edge, taken once at the axis origin and held.  Worst fit "
               f"{max(eo, ei):.3f}.",
         bar="the t's bar, same length and height, so f and t hold one horizontal through a word.",

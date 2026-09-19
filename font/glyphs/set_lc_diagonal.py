@@ -14,7 +14,8 @@ import math, os, sys
 HERE = os.path.dirname(os.path.abspath(__file__)); FONT = os.path.dirname(HERE)
 sys.path.insert(0, os.path.join(FONT, 'lib'))
 from metrics import ASC_LC, CAP, DESC_LC, OVER_ROUND, SB_ROUND, SB_STRAIGHT, XH
-from pen import ang, ccw, from_poly, isect, line, line_ang, line_2pt, cut_for, sub
+from pen import (add, ang, ccw, from_poly, isect, line, line_ang, line_2pt, cut_for,
+                 mul, sub, unit)
 import rules
 from rules import glyph, w_stem, w_horizontal, CUT_DEG
 from glyphs import set_diagonal as SD
@@ -129,12 +130,16 @@ def build_y():
     t = math.tan(math.radians(HALF_APEX))
     J = (HALF, POINT_Y)                                  # the v's point, where the two lines cross
     tip = (J[0] - (J[1] - DESC_LC) * t, DESC_LC)         # carry on at the same lean to the descender
-    left = SD._diag(J, 0, (0.0, XH), +1, top='right')    # buried where it meets the other line
+    # The arm's buried end is cut PARALLEL to the line it dies into, so its end face lies along
+    # that line instead of across it.  A flat end (square to the arm) left a 0.7-unit sliver
+    # standing out at y=-26; pushing it deeper only moved the sliver to the other side.
+    tail_ang = ang(sub((BODY, XH), tip))
+    left = SD._placed_stroke(J, 0, (0.0, XH), +1, end0=tail_ang, end1='right')
     right = SD._diag(tip, +1, (BODY, XH), -1, bottom='right', top='left')
     return glyph(ord('y'), [left, right], sb=(SB_ROUND, SB_ROUND), notes=_note(
         f"Two strokes.  One runs unbroken from the x-height at x={BODY:.2f} down to the descender "
         f"at ({tip[0]:.2f}, {DESC_LC:g}); the other drops from the left corner and is buried where "
-        f"it meets it, at ({J[0]:.2f}, {J[1]:g}).",
+        f"it meets it, at ({J[0]:.2f}, {J[1]:g}), reaching one stroke width past to stay buried.",
         vertex=f"That meeting point is the v's own, and it is not arranged: two lines at the A's "
                f"{HALF_APEX:.2f} deg lean dropped from the x-height corners cross at "
                f"XH - BODY/(2 tan), and BODY is 2*(XH-POINT_Y)*tan, so the crossing is POINT_Y "
