@@ -15,10 +15,11 @@ HERE = os.path.dirname(os.path.abspath(__file__)); FONT = os.path.dirname(HERE)
 sys.path.insert(0, os.path.join(FONT, 'lib'))
 from metrics import ASC_LC, CAP, DESC_LC, OVER_ROUND, SB_ROUND, SB_STRAIGHT, XH
 from pen import (add, ang, ccw, from_poly, isect, line, line_ang, line_2pt, cut_for,
-                 mul, stroke, sub, unit)
+                 mul, perp, stroke, sub, unit)
 import rules
 from rules import glyph, w_stem, w_horizontal, CUT_DEG
 from glyphs import set_diagonal as SD
+from glyphs import set_round as SR
 from glyphs import set_lc_round as LR
 
 HALF_APEX = SD.HALF_APEX                       # 21.29: the A's leg lean, the face's only diagonal
@@ -27,6 +28,7 @@ TIP_Y     = XH + SD.OVER_POINT                 # 401: where a point's tip sits a
 MID       = XH / 2.0 + SD.HORIZ_MID / 4.0      # 206.97: the optical middle, as the capitals' is
 HALF      = SD._spread(XH - POINT_Y, HALF_APEX)   # 156.27: the A's lean over the x-height
 BODY      = 2 * HALF                           # 312.54 -- derived, not the capitals' body scaled
+Y_NUDGE   = 10.0                               # how far the y's arm reaches into its leg
 W_PEAK    = XH - LR.M_MID_Y                    # 270: mirrors the m's middle, as the W mirrors the M's vee
 
 
@@ -121,43 +123,52 @@ def build_x():
 
 
 def build_y():
-    """TWO lines: the v, with its right arm carried on down to the descender.
+    """The v, with its right leg longer.  Nothing else differs.
 
-    The arm is the v's OWN, not another stroke at the same nominal lean.  _centres shifts a
-    stroke's centre-line to put its corners on the points it is given, so a line placed on the
-    descender and the x-height corner comes out at a slightly different angle from the v's arm
-    placed on the v's point and the same corner.  Here the v's arm is built first and its own
-    centre-line is then extended, so the two letters share an angle exactly."""
+    Both arms are the v's own, mitred at the v's own point by _point_cuts; only the right one is
+    carried on past that point, down to the descender.  The left arm's mitre then sits inside the
+    leg that continues, which is what keeps the junction clean -- cutting it parallel to the leg
+    instead left it ending in a long wedge that hung out past the leg's left edge."""
     T = (HALF, POINT_Y); TL, TR = (0.0, XH), (BODY, XH)
-    c0, c1 = SD._centres(T, -1, TR, -1)                  # the v's right arm, centre-line ends
-    d = unit(sub(c0, c1))                                # down and to the left, along that line
-    # Carried down until the R5 TIP lands on the descender, not the centre-line: putting the
-    # centre-line there left the tip at -170.1, fifteen units short.
+    c0, c1 = SD._centres(T, -1, TR, -1)                  # the v's right leg, centre-line ends
+    d = unit(sub(c0, c1))                                # on down the same line
     wf = rules.w_slash
-    def tail(depth):
+    def leg(depth):
         bot = add(c1, mul(d, depth))
         return bot, stroke(bot, c1, wf(bot[1]), wf(c1[1]),
                            cut_for(bot, c1, 'bottom', 'right', CUT_DEG),
                            SD._end('left', -1, 1, c1, bot))
-    lo, hi = 0.0, 2.0 * (c1[1] - DESC_LC)
+    lo, hi = 0.0, 2.0 * (c1[1] - DESC_LC)                # solved so the R5 TIP lands on -185
     for _ in range(40):
         mid = (lo + hi) / 2
-        if min(p[1] for p in tail(mid)[1].flatten()) > DESC_LC: lo = mid
+        if min(p[1] for p in leg(mid)[1].flatten()) > DESC_LC: lo = mid
         else: hi = mid
-    bot, right = tail((lo + hi) / 2)
-    cL, _cR = SD._point_cuts(ang(sub(TL, T)), ang(sub(TR, T)))
-    left = SD._placed_stroke(T, +1, TL, +1, end0=ang(sub(c1, bot)), end1='right')
+    bot, right = leg((lo + hi) / 2)
+    # The left arm ends FLUSH with the leg's own left edge: its outer edge is carried down to
+    # where the leg's outer edge crosses it, and cut along that edge.  Anything else leaves a
+    # tooth -- a square end is too long to fit across the leg at this angle (63 units of end over
+    # a 70-unit leg crossed at 42 deg needs 94), and the v's mitre assumes BOTH arms stop.
+    lw = wf(T[1]) / 2.0
+    leg_l = line_2pt(add(bot, mul(perp(d), -lw)), add(c1, mul(perp(d), -lw)))
+    da = unit(sub(T, TL))
+    arm_l = line_2pt(add(TL, mul(perp(da), lw)), add(T, mul(perp(da), lw)))
+    # The cut sits at the leg's near edge, nudged NUDGE units in so the contours share area
+    # rather than only an edge.  It cannot go much further: the end face is parallel to the leg
+    # and therefore longer than the leg is wide, so past a point the arm starts out the far side.
+    P = add(isect(leg_l, arm_l), mul(perp(d), Y_NUDGE))
+    left = SD._placed_stroke(P, +1, TL, +1, end0=ang(sub(c1, bot)), end1='right')
     return glyph(ord('y'), [left, right], sb=(SB_ROUND, SB_ROUND), notes=_note(
-        f"The v with its right arm not stopping: that arm's own centre-line, carried from the v's "
-        f"point at ({T[0]:.2f}, {T[1]:g}) on down to ({bot[0]:.2f}, {DESC_LC:g}).",
-        angle=f"The arm is the v's own stroke extended, not a second stroke at the same nominal "
-              f"lean.  _centres moves a centre-line to put the corners where they are asked for, "
-              f"so a line placed on the descender instead of on the v's point comes out at a "
-              f"slightly different angle -- which read as the y disagreeing with the v.",
-        junction=f"The left arm is the v's left arm, its lower end cut PARALLEL to the line it "
-                 f"dies into so the face lies along that line rather than across it.  Square to "
-                 f"the arm left a 0.7-unit sliver standing out at y=-26.",
-        tail=f"straight, at the arm's own lean, ending in a free R5 cut at the descender."))
+        f"The v with its right leg longer: the same two strokes, mitred at the same point "
+        f"({T[0]:.2f}, {T[1]:g}), with the right one carried on to ({bot[0]:.2f}, {DESC_LC:g}).",
+        junction=f"The left arm ends flush with the leg's own left edge, at "
+                 f"({P[0]:.2f}, {P[1]:.2f}), cut along it.  The v's mitre cannot serve here: it "
+                 f"assumes both arms stop at the point, and when one carries on the other's "
+                 f"mitred end stands out past it as a tooth.",
+        angle=f"The leg is the v's stroke extended along its own centre-line, so the two letters "
+              f"share the line and not merely a nominal lean: measured, the y's right edge is the "
+              f"v's to 0.00 units at every height from 120 to 360.",
+        tail=f"solved so the R5 tip lands on {DESC_LC:g}; putting the centre-line there left the "
+             f"tip fifteen units short."))
 
 
 def build_z():
