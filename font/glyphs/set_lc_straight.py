@@ -145,6 +145,21 @@ def _hook_spine(wf, ring_w, ring_off):
     return pts, y_turn
 
 
+def _hook_cut(L, Rt):
+    """R5 at the hook's end, with the tip on the UPPER corner.
+
+    LR._r5_foot cannot be used here: it picks the tip by comparing the two corners' x, and this
+    end is a near-vertical cut on a horizontal stroke, so both corners sit at nearly the same x
+    and the comparison decides nothing.  The end's own geometry decides instead -- the tip is the
+    corner further from the body, and the body is below."""
+    k5 = math.tan(math.radians(rules.CUT_DEG))
+    w = math.dist(L[-1], Rt[-1])
+    Rt = list(Rt)
+    d = unit(sub(Rt[-1], Rt[-2]))
+    Rt[-1] = sub(Rt[-1], mul(d, w * k5))
+    return L, Rt
+
+
 def _hook_edges(pts):
     L = [add(p, mul(perp(t), w / 2.0)) for p, t, w in pts]
     Rt = [sub(p, mul(perp(t), w / 2.0)) for p, t, w in pts]
@@ -153,15 +168,15 @@ def _hook_edges(pts):
 
 _HOOK_RANGES = (lambda L, Rt: (fit_ranges(L, LR._g_tan(L), HOOK_NSEG),
                                fit_ranges(Rt[::-1], [mul(t, -1) for t in LR._g_tan(Rt)[::-1]], HOOK_NSEG))
-                )(*LR._r5_foot(*_hook_edges(_hook_spine(LR._w1, rules.RING_W_1,
-                                                        rules.RING_OFF_1)[0]), 0.0, False))
+                )(*_hook_cut(*_hook_edges(_hook_spine(LR._w1, rules.RING_W_1,
+                                                      rules.RING_OFF_1)[0])))
 
 
 def build_f():
     """A stem that turns over at the top, and the t's bar."""
     pts, y_turn = _hook_spine(w_stem, RING_W, rules.RING_OFF)
     L, Rt = _hook_edges(pts)
-    L, Rt = LR._r5_foot(L, Rt, 0.0, False)       # the r's own terminal; see the note
+    L, Rt = _hook_cut(L, Rt)
     rg_out, rg_in = _HOOK_RANGES
     so, eo = fit_cubics(L, LR._g_tan(L), tol=9e9, ranges=[tuple(r) for r in rg_out])
     si, ei = fit_cubics(Rt[::-1], [mul(x, -1) for x in LR._g_tan(Rt)[::-1]], tol=9e9,
@@ -183,7 +198,7 @@ def build_f():
         radius=f"{HOOK_R:g}, half the ascender gap, so the quarter fills it: the hook's top edge "
                f"lands on the ascender line and its left edge is the stem's own line.",
         terminal=f"A free R5 cut, {rules.CUT_DEG:g} deg, the r's own -- the tip on the corner away "
-                 f"from the body, which is the outer one.  It ended square to the spine before, "
+                 f"from the body, which here is the UPPER corner -- the body is below.  It ended square to the spine before, "
                  f"and since the spine is horizontal there that was a flat vertical wall: the only "
                  f"terminal in the face that was not cut.",
         knots=f"{HOOK_NSEG} cubics per edge, taken once at the axis origin and held.  Worst fit "

@@ -15,7 +15,7 @@ HERE = os.path.dirname(os.path.abspath(__file__)); FONT = os.path.dirname(HERE)
 sys.path.insert(0, os.path.join(FONT, 'lib'))
 from metrics import ASC_LC, CAP, DESC_LC, OVER_ROUND, SB_ROUND, SB_STRAIGHT, XH
 from pen import (add, ang, ccw, from_poly, isect, line, line_ang, line_2pt, cut_for,
-                 mul, sub, unit)
+                 mul, stroke, sub, unit)
 import rules
 from rules import glyph, w_stem, w_horizontal, CUT_DEG
 from glyphs import set_diagonal as SD
@@ -121,32 +121,43 @@ def build_x():
 
 
 def build_y():
-    """TWO lines, not three: the v with its right arm carried on through to the descender.
+    """TWO lines: the v, with its right arm carried on down to the descender.
 
-    The v's own point is where they cross, and that is not arranged -- it falls out.  Two strokes
-    at the A's lean dropped from the x-height corners meet at XH - BODY/(2 tan HALF_APEX), and
-    since BODY is itself 2 * (XH - POINT_Y) * tan HALF_APEX, that is exactly POINT_Y.  So the y
-    and the v share a vertex by construction, and the y is the v with one arm not stopping."""
-    t = math.tan(math.radians(HALF_APEX))
-    J = (HALF, POINT_Y)                                  # the v's point, where the two lines cross
-    tip = (J[0] - (J[1] - DESC_LC) * t, DESC_LC)         # carry on at the same lean to the descender
-    # The arm's buried end is cut PARALLEL to the line it dies into, so its end face lies along
-    # that line instead of across it.  A flat end (square to the arm) left a 0.7-unit sliver
-    # standing out at y=-26; pushing it deeper only moved the sliver to the other side.
-    tail_ang = ang(sub((BODY, XH), tip))
-    left = SD._placed_stroke(J, 0, (0.0, XH), +1, end0=tail_ang, end1='right')
-    right = SD._diag(tip, +1, (BODY, XH), -1, bottom='right', top='left')
+    The arm is the v's OWN, not another stroke at the same nominal lean.  _centres shifts a
+    stroke's centre-line to put its corners on the points it is given, so a line placed on the
+    descender and the x-height corner comes out at a slightly different angle from the v's arm
+    placed on the v's point and the same corner.  Here the v's arm is built first and its own
+    centre-line is then extended, so the two letters share an angle exactly."""
+    T = (HALF, POINT_Y); TL, TR = (0.0, XH), (BODY, XH)
+    c0, c1 = SD._centres(T, -1, TR, -1)                  # the v's right arm, centre-line ends
+    d = unit(sub(c0, c1))                                # down and to the left, along that line
+    # Carried down until the R5 TIP lands on the descender, not the centre-line: putting the
+    # centre-line there left the tip at -170.1, fifteen units short.
+    wf = rules.w_slash
+    def tail(depth):
+        bot = add(c1, mul(d, depth))
+        return bot, stroke(bot, c1, wf(bot[1]), wf(c1[1]),
+                           cut_for(bot, c1, 'bottom', 'right', CUT_DEG),
+                           SD._end('left', -1, 1, c1, bot))
+    lo, hi = 0.0, 2.0 * (c1[1] - DESC_LC)
+    for _ in range(40):
+        mid = (lo + hi) / 2
+        if min(p[1] for p in tail(mid)[1].flatten()) > DESC_LC: lo = mid
+        else: hi = mid
+    bot, right = tail((lo + hi) / 2)
+    cL, _cR = SD._point_cuts(ang(sub(TL, T)), ang(sub(TR, T)))
+    left = SD._placed_stroke(T, +1, TL, +1, end0=ang(sub(c1, bot)), end1='right')
     return glyph(ord('y'), [left, right], sb=(SB_ROUND, SB_ROUND), notes=_note(
-        f"Two strokes.  One runs unbroken from the x-height at x={BODY:.2f} down to the descender "
-        f"at ({tip[0]:.2f}, {DESC_LC:g}); the other drops from the left corner and is buried where "
-        f"it meets it, at ({J[0]:.2f}, {J[1]:g}), reaching one stroke width past to stay buried.",
-        vertex=f"That meeting point is the v's own, and it is not arranged: two lines at the A's "
-               f"{HALF_APEX:.2f} deg lean dropped from the x-height corners cross at "
-               f"XH - BODY/(2 tan), and BODY is 2*(XH-POINT_Y)*tan, so the crossing is POINT_Y "
-               f"exactly.  The y is the v with one arm not stopping.",
-        tail=f"straight, at the same lean the arm had -- no turn, no stem.  The tail's R5 tip is "
-             f"the only free end below the baseline.",
-        proportion=f"body {BODY:.2f}, the v's."))
+        f"The v with its right arm not stopping: that arm's own centre-line, carried from the v's "
+        f"point at ({T[0]:.2f}, {T[1]:g}) on down to ({bot[0]:.2f}, {DESC_LC:g}).",
+        angle=f"The arm is the v's own stroke extended, not a second stroke at the same nominal "
+              f"lean.  _centres moves a centre-line to put the corners where they are asked for, "
+              f"so a line placed on the descender instead of on the v's point comes out at a "
+              f"slightly different angle -- which read as the y disagreeing with the v.",
+        junction=f"The left arm is the v's left arm, its lower end cut PARALLEL to the line it "
+                 f"dies into so the face lies along that line rather than across it.  Square to "
+                 f"the arm left a 0.7-unit sliver standing out at y=-26.",
+        tail=f"straight, at the arm's own lean, ending in a free R5 cut at the descender."))
 
 
 def build_z():
