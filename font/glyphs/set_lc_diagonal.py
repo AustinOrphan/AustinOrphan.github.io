@@ -141,10 +141,22 @@ def build_y():
     T, TL, TR = V_T, V_TL, V_TR
     c0, c1 = SD._centres(T, -1, TR, -1)                  # the v's right leg, centre-line ends
     d = unit(sub(c0, c1))                                # on down the same line
-    wf = rules.w_slash
+    # R2 takes a stroke's width from its own lean, so the two arms of a vee read DIFFERENT
+    # fields: the leg rises to the right (w_slash), the arm to the left (w_backslash).  This is
+    # the choice _placed_stroke makes for itself from the sign of the run, and it is the whole
+    # of the residual that kept the y off the v -- one field for both put the arm's left edge a
+    # constant 1.1 units outside the v's, all the way up.
+    wf, wf_arm = rules.w_slash, rules.w_backslash
+    # Widths on the v's OWN ramp, extrapolated -- not wf() re-evaluated at the new end.  pen.
+    # stroke interpolates linearly between its two ends, so an end in a different place gives a
+    # different ramp: taken fresh, the leg sat a constant 0.87 units right of the v's arm all the
+    # way up, which is the whole reason the two letters would not lie on each other.
+    span_v = math.dist(c0, c1)
+    w_c0, w_c1 = wf(c0[1]), wf(c1[1])
     def leg(depth):
         bot = add(c1, mul(d, depth))
-        return bot, stroke(bot, c1, wf(bot[1]), wf(c1[1]),
+        w_bot = w_c1 + (depth / span_v) * (w_c0 - w_c1) if span_v else w_c1
+        return bot, stroke(bot, c1, w_bot, w_c1,
                            cut_for(bot, c1, 'bottom', 'right', CUT_DEG),
                            SD._end('left', -1, 1, c1, bot))
     lo, hi = 0.0, 2.0 * (c1[1] - DESC_LC)                # solved so the R5 TIP lands on -185
@@ -153,13 +165,29 @@ def build_y():
         if min(p[1] for p in leg(mid)[1].flatten()) > DESC_LC: lo = mid
         else: hi = mid
     bot, right = leg((lo + hi) / 2)
-    # The left arm is the v's OWN -- placed on the v's point and the v's corner, so _centres
-    # solves the v's centre-line and the two letters lean alike.  Placing it on anything else
-    # (the crossing of the two outer edges, say) solves a different line: measured, that put the
-    # y's left edge at 28.68 deg against the v's 21.29, and the two drifted 38.6 units apart by
-    # mid-arm.  Only the END CUT differs from the v's, and it is taken along the leg so the arm
-    # dies into it instead of mitring against an arm that is no longer there.
-    left = SD._placed_stroke(T, +1, TL, +1, end0=ang(sub(c1, bot)), end1='right')
+    # The left arm is the v's OWN.  _centres solves a centre-line from the points it is given, so
+    # the arm has to be placed on the v's point and the v's corner or it leans differently --
+    # measured, placing it on the crossing of the outer edges instead put the y's left edge at
+    # 28.68 deg against the v's 21.29 and drifted them 38.6 units apart by mid-arm.
+    a0, a1 = SD._centres(T, +1, TL, +1)                  # the v's left arm, centre-line ends
+    u = unit(sub(a0, a1))
+    # Its end is cut ALONG the leg, and slid down its own centre-line until that cut sits on the
+    # leg's FAR edge.  Sliding along the centre-line cannot change the lean.  Cut on the leg's
+    # near edge or through its centre the arm still reached past the far edge: a 108-unit spur
+    # below the junction, and a +0.23 reversal in an edge that otherwise falls 2.34 a step.
+    lw = wf(T[1]) / 2.0
+    far = line_2pt(add(bot, mul(perp(d), lw)), add(c1, mul(perp(d), lw)))
+    p0 = isect(line_2pt(a0, a1), far)
+    leg_ang = ang(sub(c1, bot))
+    # The width at that new end is the v's own ramp extrapolated, not wf(p0) freshly evaluated:
+    # pen.stroke interpolates linearly between its two ends, so an end in a different place makes
+    # a different ramp and the arm stops being the v's.  Taken fresh it drifted 0.87 units from
+    # the v at mid-arm; on the v's ramp it is exact.
+    span = math.dist(a0, a1)
+    sp = math.dist(p0, a1) / span if span else 0.0
+    w_a0, w_a1 = wf_arm(a0[1]), wf_arm(a1[1])
+    left = stroke(p0, a1, w_a1 + sp * (w_a0 - w_a1), w_a1, ('cut', leg_ang, 'R'),
+                  SD._end('right', +1, 1, a1, a0))
     # The y is SPACED like the v, not by its own leftmost ink.  rules.glyph puts the left extreme
     # on the sidebearing, and the y's left extreme is the tail's tip below the baseline -- so
     # placed that way the whole letter shifted right and the arm no longer sat where the v's arm
@@ -173,8 +201,9 @@ def build_y():
                  sb=(SB_ROUND - (arm_x0 - ink[0]), SB_ROUND), notes=_note(
         f"The v with its right leg longer: the same two strokes, mitred at the same point "
         f"({T[0]:.2f}, {T[1]:g}), with the right one carried on to ({bot[0]:.2f}, {DESC_LC:g}).",
-        junction=f"The arm is the v's, placed exactly as the v places it; only its end cut "
-                 f"differs, taken along the leg so it dies into it.  The v's own mitre cannot "
+        junction=f"The arm is the v's, placed exactly as the v places it; only its end differs, "
+                 f"cut along the leg and slid down its own centre-line until that cut lands on "
+                 f"the leg's far edge, so nothing of it reaches past.  The v's own mitre cannot "
                  f"serve, since it assumes both arms stop at the point.",
         angle=f"The leg is the v's stroke extended along its own centre-line, so the two letters "
               f"share the line and not merely a nominal lean: measured, the y's right edge is the "
