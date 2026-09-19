@@ -120,17 +120,28 @@ def build_x():
 
 
 def build_y():
-    """The capital Y with a lowercase descender."""
-    J = (BODY / 2.0, MID)
-    st = rules.stem(J[0], DESC_LC, J[1] + w_stem(J[1]) / 2.0, bottom='right', top=None)
-    return glyph(ord('y'), [SD._diag(J, 0, (0.0, XH), +1, top='right'),
-                            SD._diag(J, 0, (BODY, XH), -1, top='left'), st],
-                 sb=(SB_ROUND, SB_ROUND), notes=_note(
-        f"The capital Y at the x-height: two R2 arms whose centre-lines meet on the stem's own "
-        f"centre at ({J[0]:.2f}, {MID:.2f}), buried there, and an R3 stem from the junction down.",
-        descender=f"straight to {DESC_LC:g}, as the p's and the q's are.  The g is the only "
-                  f"lowercase tail in this face that turns.",
-        stem_top="buried half a stem width above the junction, as the capital Y's is."))
+    """TWO lines, not three: the v with its right arm carried on through to the descender.
+
+    The v's own point is where they cross, and that is not arranged -- it falls out.  Two strokes
+    at the A's lean dropped from the x-height corners meet at XH - BODY/(2 tan HALF_APEX), and
+    since BODY is itself 2 * (XH - POINT_Y) * tan HALF_APEX, that is exactly POINT_Y.  So the y
+    and the v share a vertex by construction, and the y is the v with one arm not stopping."""
+    t = math.tan(math.radians(HALF_APEX))
+    J = (HALF, POINT_Y)                                  # the v's point, where the two lines cross
+    tip = (J[0] - (J[1] - DESC_LC) * t, DESC_LC)         # carry on at the same lean to the descender
+    left = SD._diag(J, 0, (0.0, XH), +1, top='right')    # buried where it meets the other line
+    right = SD._diag(tip, +1, (BODY, XH), -1, bottom='right', top='left')
+    return glyph(ord('y'), [left, right], sb=(SB_ROUND, SB_ROUND), notes=_note(
+        f"Two strokes.  One runs unbroken from the x-height at x={BODY:.2f} down to the descender "
+        f"at ({tip[0]:.2f}, {DESC_LC:g}); the other drops from the left corner and is buried where "
+        f"it meets it, at ({J[0]:.2f}, {J[1]:g}).",
+        vertex=f"That meeting point is the v's own, and it is not arranged: two lines at the A's "
+               f"{HALF_APEX:.2f} deg lean dropped from the x-height corners cross at "
+               f"XH - BODY/(2 tan), and BODY is 2*(XH-POINT_Y)*tan, so the crossing is POINT_Y "
+               f"exactly.  The y is the v with one arm not stopping.",
+        tail=f"straight, at the same lean the arm had -- no turn, no stem.  The tail's R5 tip is "
+             f"the only free end below the baseline.",
+        proportion=f"body {BODY:.2f}, the v's."))
 
 
 def build_z():
