@@ -424,21 +424,10 @@ def _hn_spine(y0, wf, ring_w, ring_off, y1=0.0):
     return pts, (xl, xr)
 
 
-def _hn_edges(y0, wf, ring_w, ring_off, y1=0.0, crown=False):
+def _hn_edges(y0, wf, ring_w, ring_off, y1=0.0):
     """Both offset edges.  The legs carry R3's field and the apex carries R1's own top band,
     blended by the SPINE'S OWN TANGENT -- vertical while the stroke is a leg, horizontal at the
-    apex.  (The radial direction reads the opposite way round and inverts the blend.)
-
-    With crown=True the OUTER edge of the springing leg is held out to the stem's own edge for as
-    long as that edge is the further out of the two.  That is the a's crown joint, and it is the
-    same joint: the leg sits at exactly the x the a's stem sits at -- 378.4164, the same tangency
-    on the same circle at the same GRAZE -- so where the stem stops being a stem and the bowl
-    takes over is the same height in both letters.  The a shows that corner because its stem and
-    its bowl are separate strokes; the arch letters hide it because their leg and their arch are
-    one, and the arch's edge has already curved in by up to 13 units at y=288.
-
-    Taken point by point on the edge rather than as a boolean with a drawn stem: same silhouette,
-    one contour, the same sample count, and none of the 258 slivers that the r's union produced."""
+    apex.  (The radial direction reads the opposite way round and inverts the blend.)"""
     pts, (xl, xr) = _hn_spine(y0, wf, ring_w, ring_off, y1)
     apex_w = _band_at(90.0, ring_w, ring_off)
     ts = [unit(sub(pts[min(i+1, len(pts)-1)], pts[max(i-1, 0)])) for i in range(len(pts))]
@@ -448,11 +437,6 @@ def _hn_edges(y0, wf, ring_w, ring_off, y1=0.0, crown=False):
         w = wf(p[1]) * (1 - k) + apex_w * k
         nv = perp(t)
         L.append(add(p, mul(nv, w/2))); Rt.append(sub(p, mul(nv, w/2)))
-    if crown:
-        for i in range(min(2 * HN_SAMP + 1, len(L))):      # the leg and the rise into the apex
-            if pts[i][0] >= BOWL_C[0]: continue            # left half only
-            xs = xl - wf(L[i][1]) / 2.0                    # the stem's own outer edge there
-            if xs < L[i][0]: L[i] = (xs, L[i][1])
     return L, Rt, (xl, xr)
 
 
@@ -472,22 +456,22 @@ def _r5_foot(L, Rt, mid, at_start):
     return L, Rt
 
 
-def _hn_profile(y0, wf, ring_w, ring_off, cut_start, y1=0.0, crown=False):
-    L, Rt, (xl, xr) = _hn_edges(y0, wf, ring_w, ring_off, y1, crown)
+def _hn_profile(y0, wf, ring_w, ring_off, cut_start, y1=0.0):
+    L, Rt, (xl, xr) = _hn_edges(y0, wf, ring_w, ring_off, y1)
     mid = (xl + xr) / 2.0
     if cut_start: L, Rt = _r5_foot(L, Rt, mid, True)
     L, Rt = _r5_foot(L, Rt, mid, False)
     return L, Rt, (xl, xr)
 
 
-def _hn_ranges(y0, cut_start, y1=0.0, crown=False):
+def _hn_ranges(y0, cut_start, y1=0.0):
     """Knots chosen once on the axis origin's shape and held, as for the g."""
-    L, Rt, _x = _hn_profile(y0, _w1, rules.RING_W_1, rules.RING_OFF_1, cut_start, y1, crown)
+    L, Rt, _x = _hn_profile(y0, _w1, rules.RING_W_1, rules.RING_OFF_1, cut_start, y1)
     return (fit_ranges(L, _g_tan(L), HN_NSEG),
             fit_ranges(Rt[::-1], [mul(t, -1) for t in _g_tan(Rt)[::-1]], HN_NSEG))
 
 
-_N_RANGES = _hn_ranges(0.0, True, crown=True)
+_N_RANGES = _hn_ranges(0.0, True)
 _H_RANGES = _hn_ranges(H_BURY, False)
 
 # Where the m's middle leg stops.  The m is a two-counter letter like the capital M, whose vee
@@ -496,15 +480,11 @@ _H_RANGES = _hn_ranges(H_BURY, False)
 # at 0.40 (y=154) the two counters are open but the middle barely exists, and above that -- 0.49
 # and up -- the two counters merge into one 651-unit space and the letter stops reading as an m.
 M_MID_Y   = 115.0
-_M_RANGES = _hn_ranges(0.0, True, M_MID_Y, crown=True)
-# The m's second arch springs from the middle leg, so that leg is a springing leg too and takes
-# the same crown.  Its own knots, because the h's shoulder must stay exactly as it is: the h's
-# leg is a real stem already and needs no crown at all.
-_HM_RANGES = _hn_ranges(H_BURY, False, crown=True)
+_M_RANGES = _hn_ranges(0.0, True, M_MID_Y)
 
 
-def _hn_stroke(y0, cut_start, ranges, y1=0.0, crown=False):
-    L, Rt, (xl, xr) = _hn_profile(y0, w_stem, RING_W, RING_OFF, cut_start, y1, crown)
+def _hn_stroke(y0, cut_start, ranges, y1=0.0):
+    L, Rt, (xl, xr) = _hn_profile(y0, w_stem, RING_W, RING_OFF, cut_start, y1)
     rg_out, rg_in = ranges
     so, eo = fit_cubics(L, _g_tan(L), tol=9e9, ranges=[tuple(r) for r in rg_out])
     si, ei = fit_cubics(Rt[::-1], [mul(x, -1) for x in _g_tan(Rt)[::-1]], tol=9e9,
@@ -621,7 +601,7 @@ def _arch_note(xl, xr, err, nseg=HN_NSEG):
 
 def build_n():
     """One stroke, up and over and down."""
-    k, err, (xl, xr) = _hn_stroke(0.0, True, _N_RANGES, crown=True)
+    k, err, (xl, xr) = _hn_stroke(0.0, True, _N_RANGES)
     return glyph(ord('n'), [k], sb=(SB_STRAIGHT, SB_STRAIGHT), notes=_arch_note(xl, xr, err))
 
 
@@ -865,8 +845,8 @@ def build_m():
     leg -- with a second shoulder springing from that middle leg exactly as the h's springs from
     its ascender, buried at H_BURY so the leg alone makes the foot.  Both shoulders are the same
     stroke, so the two arches are identical rather than merely similar."""
-    first, e1, (xl, xr) = _hn_stroke(0.0, True, _M_RANGES, M_MID_Y, crown=True)
-    second, e2, _x = _hn_stroke(H_BURY, False, _HM_RANGES, crown=True)
+    first, e1, (xl, xr) = _hn_stroke(0.0, True, _M_RANGES, M_MID_Y)
+    second, e2, _x = _hn_stroke(H_BURY, False, _H_RANGES)
     span = xr - xl
     n = _arch_note(xl, xr + span, max(e1, e2))
     n['construction'] = (f"The n's stroke, then the h's shoulder shifted right by {span:.2f} -- the "
@@ -907,7 +887,7 @@ def _r_profile(wf, ring_w, ring_off):
 
     The truncation index comes off HN_SAMP, a constant, so the same sample ends the stroke in every
     master and the knots below stay comparable."""
-    L, Rt, (xl, xr) = _hn_edges(0.0, wf, ring_w, ring_off, crown=True)
+    L, Rt, (xl, xr) = _hn_edges(0.0, wf, ring_w, ring_off)
     mid = (xl + xr) / 2.0
     L, Rt = _r5_foot(L, Rt, mid, True)            # the foot, cut as the n's left foot is
     keep = int(len(L) * R_STOP)
