@@ -8,11 +8,13 @@ each stem is, and the lowercase metrics have already said that.
 import math, os, sys
 HERE = os.path.dirname(os.path.abspath(__file__)); FONT = os.path.dirname(HERE)
 sys.path.insert(0, os.path.join(FONT, 'lib'))
-from metrics import ASC_LC, CAP, OVER_ROUND, SB_ROUND, SB_STRAIGHT, XH
+from metrics import ASC_LC, CAP, DESC_LC, OVER_ROUND, SB_ROUND, SB_STRAIGHT, XH
+from pen import add, arc_band, from_ang, mul, norm, sub
 import rules
 from rules import glyph, w_stem, RING_W
 from glyphs import set_punct as SP
 from glyphs import set_straight as SS
+from glyphs import set_round as SR
 
 # The dot is the face's own: a circle of the undirected R2 weight at the baseline, which is what
 # the period, the colon, the exclamation and the question mark are all built from.  Taking any
@@ -135,4 +137,52 @@ def build_f():
         deviations="none from R1-R9."))
 
 
-GLYPHS = {'f': build_f, 'i': build_i, 'l': build_l, 't': build_t}
+# ---- j ------------------------------------------------------------------------------
+# The i's stem and the i's dot, with the capital J's hook under it at the lowercase factor.  Every
+# number below is the capital's scaled by S_K except the depth, which is the g's: a lowercase
+# descender goes as deep as the lowercase descender line, not as deep as the capital J's baseline.
+J_R         = SS.BODY_NARROW / 2.0 * S_K        # 118.12, the capital J's bowl scaled
+J_BOT       = DESC_LC - OVER_ROUND              # -195, the g's own depth
+J_C         = (J_R, J_BOT + J_R)
+J_END       = SR.J_END                          # 165 deg: where the bowl ends and the curl begins
+J_CURL_R    = SR.J_CURL_R * S_K                 # 61.88
+J_CURL_TURN = SR.J_CURL_TURN                    # 45 deg of turn past J_END
+
+
+def build_j():
+    """The i, with the capital J's hook."""
+    x_s, a1, y0 = SR._light_junction(J_C, J_R, +1)
+    arc = rules.round_arc(J_C, J_R, J_END, a1 + 360.0)
+    st = rules.stem(x_s, y0, XH, bottom=None, top='right')
+    c2 = add(J_C, mul(from_ang(J_END), J_R - J_CURL_R))       # internally tangent at J_END
+    # The curl's counter radius, solved so its band at J_END equals the BOWL's there.  An
+    # independent R1 round of this radius would be a different width at the join and would bite
+    # into the counter; the curl is the same stroke continuing, so it carries the bowl's band.
+    d = J_CURL_R - SR._band_depth(J_C, J_R, J_R - RING_W, J_END)
+    ri2 = norm(sub(mul(from_ang(J_END), d), rules.RING_OFF))
+    curl = arc_band(c2, J_CURL_R, ri2, rules.RING_OFF, J_END, J_END - J_CURL_TURN)
+    fill = SR._fill_in(x_s, J_C, J_R)
+    tip = add(c2, mul(from_ang(J_END - J_CURL_TURN), J_CURL_R))
+    return glyph(ord('j'), [arc, curl, st, fill, SP._dot(x_s, DOT_CY)],
+                 sb=(SB_ROUND, SB_STRAIGHT), notes=dict(
+        construction=f"The i's stem and the i's dot over the capital J's hook at the lowercase "
+                     f"factor {S_K:.4f}: an R1 arc of radius {J_R:.2f} centred {tuple(round(v,2) for v in J_C)} "
+                     f"from {J_END:g} deg round the bottom to the stem.",
+        depth=f"The bowl sits on {J_BOT:g}, the descender line with the round's own overshoot -- "
+              f"the g's depth, not the capital J's baseline.  A lowercase descender goes where the "
+              f"lowercase descender line is.",
+        curl=f"The bowl ends at {J_END:g} deg and the band is carried round a circle of radius "
+             f"{J_CURL_R:.2f} internally tangent there, through {J_CURL_TURN:g} deg, ending on R1's "
+             f"radial cut.  Its counter radius is solved ({ri2:.2f}) so the band at the join equals "
+             f"the bowl's: the curl is the same stroke continuing, not an independent round, and an "
+             f"independent one would bite into the counter.  The capital's own note argues the "
+             f"{J_CURL_TURN:g} deg -- more curls the tip back and closes the letter into a 9.  Free "
+             f"tip at {tuple(round(v,1) for v in tip)}.",
+        dot=f"The i's, at the i's height: centre {DOT_CY:.2f}, the exclamation mark's clearance "
+            f"above the x-height, held at the origin.",
+        stem_top=f"a free R5 cut with the body to the right, as the i's and the l's are.",
+        spacing=f"{SB_ROUND}/{SB_STRAIGHT}: the curl on the left, the stem on the right.",
+        deviations="none from R1-R9."))
+
+
+GLYPHS = {'f': build_f, 'i': build_i, 'j': build_j, 'l': build_l, 't': build_t}
