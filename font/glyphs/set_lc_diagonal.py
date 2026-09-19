@@ -18,6 +18,7 @@ from pen import (add, ang, ccw, from_poly, isect, line, line_ang, line_2pt, cut_
                  mul, perp, stroke, sub, unit)
 import rules
 from rules import glyph, w_stem, w_horizontal, CUT_DEG
+from pen import bbox
 from glyphs import set_diagonal as SD
 from glyphs import set_round as SR
 from glyphs import set_lc_round as LR
@@ -57,12 +58,20 @@ def _note(what, **kw):
     n.update(kw); return n
 
 
+V_T, V_TL, V_TR = (HALF, POINT_Y), (0.0, XH), (BODY, XH)
+
+
+def _v_strokes():
+    """The v's two arms, in nominal coordinates, for the v and for the y to extend."""
+    cL, cR = SD._point_cuts(ang(sub(V_TL, V_T)), ang(sub(V_TR, V_T)))
+    return (SD._placed_stroke(V_T, +1, V_TL, +1, end0=cL, end1='right'),
+            SD._placed_stroke(V_T, -1, V_TR, -1, end0=cR, end1='left'))
+
+
 def build_v():
     """The capital V at the x-height -- and its width is derived there too, not scaled."""
-    T = (HALF, POINT_Y); TL, TR = (0.0, XH), (BODY, XH)
-    cL, cR = SD._point_cuts(ang(sub(TL, T)), ang(sub(TR, T)))
-    left = SD._placed_stroke(T, +1, TL, +1, end0=cL, end1='right')
-    right = SD._placed_stroke(T, -1, TR, -1, end0=cR, end1='left')
+    T, TL, TR = V_T, V_TL, V_TR
+    left, right = _v_strokes()
     return glyph(ord('v'), [left, right], sb=(SB_ROUND, SB_ROUND), notes=_note(
         f"The A's legs inverted at the x-height: two R2 diagonals leaning {HALF_APEX:.2f} deg off "
         f"the vertical, meeting in a mitred point at ({HALF:.2f}, {POINT_Y:g}).",
@@ -129,7 +138,7 @@ def build_y():
     carried on past that point, down to the descender.  The left arm's mitre then sits inside the
     leg that continues, which is what keeps the junction clean -- cutting it parallel to the leg
     instead left it ending in a long wedge that hung out past the leg's left edge."""
-    T = (HALF, POINT_Y); TL, TR = (0.0, XH), (BODY, XH)
+    T, TL, TR = V_T, V_TL, V_TR
     c0, c1 = SD._centres(T, -1, TR, -1)                  # the v's right leg, centre-line ends
     d = unit(sub(c0, c1))                                # on down the same line
     wf = rules.w_slash
@@ -144,31 +153,37 @@ def build_y():
         if min(p[1] for p in leg(mid)[1].flatten()) > DESC_LC: lo = mid
         else: hi = mid
     bot, right = leg((lo + hi) / 2)
-    # The left arm ends FLUSH with the leg's own left edge: its outer edge is carried down to
-    # where the leg's outer edge crosses it, and cut along that edge.  Anything else leaves a
-    # tooth -- a square end is too long to fit across the leg at this angle (63 units of end over
-    # a 70-unit leg crossed at 42 deg needs 94), and the v's mitre assumes BOTH arms stop.
-    lw = wf(T[1]) / 2.0
-    leg_l = line_2pt(add(bot, mul(perp(d), -lw)), add(c1, mul(perp(d), -lw)))
-    da = unit(sub(T, TL))
-    arm_l = line_2pt(add(TL, mul(perp(da), lw)), add(T, mul(perp(da), lw)))
-    # The cut sits at the leg's near edge, nudged NUDGE units in so the contours share area
-    # rather than only an edge.  It cannot go much further: the end face is parallel to the leg
-    # and therefore longer than the leg is wide, so past a point the arm starts out the far side.
-    P = add(isect(leg_l, arm_l), mul(perp(d), Y_NUDGE))
-    left = SD._placed_stroke(P, +1, TL, +1, end0=ang(sub(c1, bot)), end1='right')
-    return glyph(ord('y'), [left, right], sb=(SB_ROUND, SB_ROUND), notes=_note(
+    # The left arm is the v's OWN -- placed on the v's point and the v's corner, so _centres
+    # solves the v's centre-line and the two letters lean alike.  Placing it on anything else
+    # (the crossing of the two outer edges, say) solves a different line: measured, that put the
+    # y's left edge at 28.68 deg against the v's 21.29, and the two drifted 38.6 units apart by
+    # mid-arm.  Only the END CUT differs from the v's, and it is taken along the leg so the arm
+    # dies into it instead of mitring against an arm that is no longer there.
+    left = SD._placed_stroke(T, +1, TL, +1, end0=ang(sub(c1, bot)), end1='right')
+    # The y is SPACED like the v, not by its own leftmost ink.  rules.glyph puts the left extreme
+    # on the sidebearing, and the y's left extreme is the tail's tip below the baseline -- so
+    # placed that way the whole letter shifted right and the arm no longer sat where the v's arm
+    # sits: measured, up to 38.6 units adrift at mid-arm.  The arm is registered instead and the
+    # tail hangs into the bearing, exactly as the g's tail projects past its advance.
+    v_l, v_r = _v_strokes()
+    v_glyph = glyph(ord('v'), [v_l, v_r], sb=(SB_ROUND, SB_ROUND))
+    ink = bbox([c.flatten() for c in [left, right]])
+    arm_x0 = bbox([left.flatten()])[0]
+    return glyph(ord('y'), [left, right], adv=v_glyph['adv'],
+                 sb=(SB_ROUND - (arm_x0 - ink[0]), SB_ROUND), notes=_note(
         f"The v with its right leg longer: the same two strokes, mitred at the same point "
         f"({T[0]:.2f}, {T[1]:g}), with the right one carried on to ({bot[0]:.2f}, {DESC_LC:g}).",
-        junction=f"The left arm ends flush with the leg's own left edge, at "
-                 f"({P[0]:.2f}, {P[1]:.2f}), cut along it.  The v's mitre cannot serve here: it "
-                 f"assumes both arms stop at the point, and when one carries on the other's "
-                 f"mitred end stands out past it as a tooth.",
+        junction=f"The arm is the v's, placed exactly as the v places it; only its end cut "
+                 f"differs, taken along the leg so it dies into it.  The v's own mitre cannot "
+                 f"serve, since it assumes both arms stop at the point.",
         angle=f"The leg is the v's stroke extended along its own centre-line, so the two letters "
               f"share the line and not merely a nominal lean: measured, the y's right edge is the "
               f"v's to 0.00 units at every height from 120 to 360.",
         tail=f"solved so the R5 tip lands on {DESC_LC:g}; putting the centre-line there left the "
-             f"tip fifteen units short."))
+             f"tip fifteen units short.",
+        spacing=f"the v's advance and the v's left bearing measured on the ARM, so the two letters "
+                f"register above the junction.  The tail hangs into the left bearing as the g's "
+                f"hangs past its advance."))
 
 
 def build_z():
