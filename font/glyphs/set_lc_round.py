@@ -424,7 +424,92 @@ def _hn_spine(y0, wf, ring_w, ring_off, y1=0.0):
     return pts, (xl, xr)
 
 
-def _hn_edges(y0, wf, ring_w, ring_off, y1=0.0):
+def _crown_at(wf):
+    """The a's crown joint rebuilt from an injected width field: where the stem's inner edge meets
+    the bowl's outer circle, and the bowl's own angle there."""
+    x = _tangent_x(wf, +1)
+    e0 = (x - wf(0.0) / 2.0, 0.0); e1 = (x - wf(XH) / 2.0, XH)
+    p = line_circle(line_2pt(e0, e1), BOWL_C, BOWL_R, pick='max')
+    d = sub(p, BOWL_C)
+    return p, math.degrees(math.atan2(abs(d[0]), d[1]))
+
+
+def _a_edge_out(wf, y, cj):
+    """How far the a's own outer edge stands out from its stem's centre-line at height y.
+
+    Three pieces, which is what the a's silhouette is: the stem's edge while the stem is outside
+    the bowl, the bowl's outer circle once it is outside the stem, and between them the cut that
+    bridges the two.  Leaving the bridge out lets the stem's line run on to the apex."""
+    p, cdeg = cj
+    x = _tangent_x(wf, +1)
+    bowl = BOWL_C[0] + math.sqrt(max(BOWL_R ** 2 - (y - BOWL_C[1]) ** 2, 0.0))
+    stem = x + wf(y) / 2.0
+    cut = p[0] - (y - p[1]) / math.tan(math.radians(cdeg))
+    return max(bowl, min(stem, cut)) - x
+
+
+CROWN_SUB = 4                   # knots per interval between the crown's piece transitions
+
+
+def _crown_piece(wf, y, cj):
+    """Which of the a's three pieces is the outer edge at height y: the stem, the cut that bridges
+    it to the bowl, or the bowl."""
+    p, cdeg = cj
+    x = _tangent_x(wf, +1)
+    bowl = BOWL_C[0] + math.sqrt(max(BOWL_R ** 2 - (y - BOWL_C[1]) ** 2, 0.0))
+    stem = x + wf(y) / 2.0
+    cut = p[0] - (y - p[1]) / math.tan(math.radians(cdeg))
+    inner = 'stem' if stem <= cut else 'cut'
+    return 'bowl' if bowl >= min(stem, cut) else inner
+
+
+def _crown_knots(y0, wf, ring_w, ring_off, y1=0.0):
+    """Every sample where the crowned edge turns a corner: each switch between the a's three
+    pieces, and the sample where the crown gives way to the arch again.
+
+    One knot at the end was not enough.  The edge follows max(bowl, min(stem, cut)) and the live
+    piece changes twice more on the way up, each change a curvature break; a cubic spanning one
+    of them fitted no better than 1.210 whatever else was done to the knots."""
+    L0, _r0, _x0 = _hn_edges(y0, wf, ring_w, ring_off, y1, False)
+    L1, _r1, _x1 = _hn_edges(y0, wf, ring_w, ring_off, y1, True)
+    moved = [i for i in range(len(L0)) if abs(L0[i][0] - L1[i][0]) > 1e-9]
+    if not moved: return []
+    cj = _crown_at(wf)
+    out, prev = [], _crown_piece(wf, L1[moved[0]][1], cj)
+    for i in moved:
+        now = _crown_piece(wf, L1[i][1], cj)
+        if now != prev: out.append(i); prev = now
+    out.append(moved[-1])
+    out = sorted(set(out))
+    # One knot per transition still left a cubic spanning 20 samples of hard curve at WEIGHT 1.45
+    # (0.705).  A midpoint between each consecutive pair fixes that and keeps the count fixed --
+    # always 2n-1 knots for n transitions, whatever the masters do.
+    # Transitions alone still left a cubic spanning 20 samples of hard curve at WEIGHT 1.45
+    # (0.705), because the piece next to a transition was being cut by an ORIGIN knot that does
+    # not move with it.  So every knot inside the crown is derived from the transitions: each
+    # interval between them is divided into CROWN_SUB equal parts.  The count is then fixed by
+    # the number of transitions alone, which is 4 in every master.
+    full = []
+    for i, k in enumerate(out):
+        if i:
+            a = out[i-1]
+            full += [a + int(round((k - a) * j / float(CROWN_SUB))) for j in range(1, CROWN_SUB)]
+        full.append(k)
+    return sorted(set(full))
+
+
+def _crown_end(y0, wf, ring_w, ring_off, y1=0.0):
+    """The sample the crown stops at -- the corner -- read off the edge itself by building it both
+    ways and taking the last sample that moved.  Asking the question a second time in its own
+    words got a different answer: the crown is applied against the SPINE's tangents, and the
+    edge's own tangent at the cut foot already fails that test, which returned 0."""
+    L0, _r0, _x0 = _hn_edges(y0, wf, ring_w, ring_off, y1, False)
+    L1, _r1, _x1 = _hn_edges(y0, wf, ring_w, ring_off, y1, True)
+    moved = [i for i in range(len(L0)) if abs(L0[i][0] - L1[i][0]) > 1e-9]
+    return moved[-1] if moved else 0
+
+
+def _hn_edges(y0, wf, ring_w, ring_off, y1=0.0, crown=False):
     """Both offset edges.  The legs carry R3's field and the apex carries R1's own top band,
     blended by the SPINE'S OWN TANGENT -- vertical while the stroke is a leg, horizontal at the
     apex.  (The radial direction reads the opposite way round and inverts the blend.)"""
@@ -437,6 +522,17 @@ def _hn_edges(y0, wf, ring_w, ring_off, y1=0.0):
         w = wf(p[1]) * (1 - k) + apex_w * k
         nv = perp(t)
         L.append(add(p, mul(nv, w/2))); Rt.append(sub(p, mul(nv, w/2)))
+    if crown:
+        # The a's crown joint, on the springing leg.  Same joint, not an imitation: this leg sits
+        # at exactly the x the a's stem sits at, the same tangency on the same circle at the same
+        # GRAZE.  The a's edge converges back onto the arch's by itself, so the band ends on its
+        # own -- y=183 to about 340 at the origin, pushing out by at most 13.2 units.  Points are
+        # moved on the edge rather than a stem being unioned on, so this stays one contour.
+        cj = _crown_at(wf)
+        for i in range(min(2 * HN_SAMP + 1, len(L))):
+            if ts[i][1] <= abs(ts[i][0]): break     # L is the TOP edge past the turn, not the left
+            tgt = _a_edge_out(wf, L[i][1], cj)
+            if tgt > xl - L[i][0]: L[i] = (xl - tgt, L[i][1])
     return L, Rt, (xl, xr)
 
 
@@ -456,22 +552,53 @@ def _r5_foot(L, Rt, mid, at_start):
     return L, Rt
 
 
-def _hn_profile(y0, wf, ring_w, ring_off, cut_start, y1=0.0):
-    L, Rt, (xl, xr) = _hn_edges(y0, wf, ring_w, ring_off, y1)
+def _hn_profile(y0, wf, ring_w, ring_off, cut_start, y1=0.0, crown=False):
+    L, Rt, (xl, xr) = _hn_edges(y0, wf, ring_w, ring_off, y1, crown)
     mid = (xl + xr) / 2.0
     if cut_start: L, Rt = _r5_foot(L, Rt, mid, True)
     L, Rt = _r5_foot(L, Rt, mid, False)
     return L, Rt, (xl, xr)
 
 
-def _hn_ranges(y0, cut_start, y1=0.0):
+def _expand_ranges(spec, ks, npts):
+    """A frozen spec plus this master's crown knots -> the index ranges to fit with."""
+    if spec[0] == 'plain': return spec[1]
+    rg0, slots = spec[1], spec[2]
+    cuts = [rg0[0][0]] + [b for _a, b in rg0]
+    for slot, k in zip(slots, ks):
+        if slot < len(cuts): cuts[slot] = k
+    for i in range(1, len(cuts)): cuts[i] = max(cuts[i], cuts[i-1] + 1)
+    cuts[-1] = npts - 1
+    for i in range(len(cuts) - 2, 0, -1): cuts[i] = min(cuts[i], cuts[i+1] - 1)
+    return [(cuts[i], cuts[i+1]) for i in range(len(cuts) - 1)]
+
+
+def _crown_spec(L, rg, ks):
+    """The origin's knots with this crown's knots merged in, and where each landed."""
+    ks = [k for k in ks if 0 < k < len(L) - 1]
+    if not ks: return ('plain', rg)
+    cuts = sorted(set([rg[0][0]] + [b for _a, b in rg] + ks))
+    return ('split', [(cuts[i], cuts[i+1]) for i in range(len(cuts)-1)],
+            [cuts.index(k) for k in ks])
+
+
+def _hn_ranges(y0, cut_start, y1=0.0, crown=False):
     """Knots chosen once on the axis origin's shape and held, as for the g."""
-    L, Rt, _x = _hn_profile(y0, _w1, rules.RING_W_1, rules.RING_OFF_1, cut_start, y1)
-    return (fit_ranges(L, _g_tan(L), HN_NSEG),
-            fit_ranges(Rt[::-1], [mul(t, -1) for t in _g_tan(Rt)[::-1]], HN_NSEG))
+    L, Rt, (xl, _xr) = _hn_profile(y0, _w1, rules.RING_W_1, rules.RING_OFF_1, cut_start, y1, crown)
+    rg_in = fit_ranges(Rt[::-1], [mul(t, -1) for t in _g_tan(Rt)[::-1]], HN_NSEG)
+    rg = fit_ranges(L, _g_tan(L), HN_NSEG)
+    if crown:
+        # The crown is piecewise and which piece is live moves with weight, so the edge is not
+        # affine in the knobs the way the S's construction is: plain frozen indices describe a
+        # different place in each master and the fit stalls at 1.210 however many there are (38
+        # cubics and 72 both give exactly that).  The a does not suffer this because its crown is
+        # an explicit VERTEX.  So keep the origin's knots and insert ONE at the corner; per master
+        # only that knot slides.
+        return _crown_spec(L, rg, _crown_knots(y0, _w1, rules.RING_W_1, rules.RING_OFF_1, y1)), rg_in
+    return ('plain', rg), rg_in
 
 
-_N_RANGES = _hn_ranges(0.0, True)
+_N_RANGES = _hn_ranges(0.0, True, crown=True)
 _H_RANGES = _hn_ranges(H_BURY, False)
 
 # Where the m's middle leg stops.  The m is a two-counter letter like the capital M, whose vee
@@ -480,12 +607,14 @@ _H_RANGES = _hn_ranges(H_BURY, False)
 # at 0.40 (y=154) the two counters are open but the middle barely exists, and above that -- 0.49
 # and up -- the two counters merge into one 651-unit space and the letter stops reading as an m.
 M_MID_Y   = 115.0
-_M_RANGES = _hn_ranges(0.0, True, M_MID_Y)
+_M_RANGES = _hn_ranges(0.0, True, M_MID_Y, crown=True)
 
 
-def _hn_stroke(y0, cut_start, ranges, y1=0.0):
-    L, Rt, (xl, xr) = _hn_profile(y0, w_stem, RING_W, RING_OFF, cut_start, y1)
-    rg_out, rg_in = ranges
+def _hn_stroke(y0, cut_start, ranges, y1=0.0, crown=False):
+    L, Rt, (xl, xr) = _hn_profile(y0, w_stem, RING_W, RING_OFF, cut_start, y1, crown)
+    spec, rg_in = ranges
+    ks = _crown_knots(y0, w_stem, RING_W, RING_OFF, y1) if crown else []
+    rg_out = _expand_ranges(spec, ks, len(L))
     so, eo = fit_cubics(L, _g_tan(L), tol=9e9, ranges=[tuple(r) for r in rg_out])
     si, ei = fit_cubics(Rt[::-1], [mul(x, -1) for x in _g_tan(Rt)[::-1]], tol=9e9,
                         ranges=[tuple(r) for r in rg_in])
@@ -601,7 +730,7 @@ def _arch_note(xl, xr, err, nseg=HN_NSEG):
 
 def build_n():
     """One stroke, up and over and down."""
-    k, err, (xl, xr) = _hn_stroke(0.0, True, _N_RANGES)
+    k, err, (xl, xr) = _hn_stroke(0.0, True, _N_RANGES, crown=True)
     return glyph(ord('n'), [k], sb=(SB_STRAIGHT, SB_STRAIGHT), notes=_arch_note(xl, xr, err))
 
 
@@ -845,7 +974,7 @@ def build_m():
     leg -- with a second shoulder springing from that middle leg exactly as the h's springs from
     its ascender, buried at H_BURY so the leg alone makes the foot.  Both shoulders are the same
     stroke, so the two arches are identical rather than merely similar."""
-    first, e1, (xl, xr) = _hn_stroke(0.0, True, _M_RANGES, M_MID_Y)
+    first, e1, (xl, xr) = _hn_stroke(0.0, True, _M_RANGES, M_MID_Y, crown=True)
     second, e2, _x = _hn_stroke(H_BURY, False, _H_RANGES)
     span = xr - xl
     n = _arch_note(xl, xr + span, max(e1, e2))
@@ -887,7 +1016,7 @@ def _r_profile(wf, ring_w, ring_off):
 
     The truncation index comes off HN_SAMP, a constant, so the same sample ends the stroke in every
     master and the knots below stay comparable."""
-    L, Rt, (xl, xr) = _hn_edges(0.0, wf, ring_w, ring_off)
+    L, Rt, (xl, xr) = _hn_edges(0.0, wf, ring_w, ring_off, crown=True)
     mid = (xl + xr) / 2.0
     L, Rt = _r5_foot(L, Rt, mid, True)            # the foot, cut as the n's left foot is
     keep = int(len(L) * R_STOP)
@@ -896,9 +1025,15 @@ def _r_profile(wf, ring_w, ring_off):
     return L, Rt, (xl, xr)
 
 
-_R_RANGES = (lambda L, Rt: (fit_ranges(L, _g_tan(L), HN_NSEG),
-                            fit_ranges(Rt[::-1], [mul(t, -1) for t in _g_tan(Rt)[::-1]], HN_NSEG))
-             )(*_r_profile(_w1, rules.RING_W_1, rules.RING_OFF_1)[:2])
+def _r_ranges():
+    """As _hn_ranges, for the r's truncated copy of the same crowned edge."""
+    L, Rt, _x = _r_profile(_w1, rules.RING_W_1, rules.RING_OFF_1)
+    rg_in = fit_ranges(Rt[::-1], [mul(t, -1) for t in _g_tan(Rt)[::-1]], HN_NSEG)
+    rg = fit_ranges(L, _g_tan(L), HN_NSEG)
+    return _crown_spec(L, rg, _crown_knots(0.0, _w1, rules.RING_W_1, rules.RING_OFF_1)), rg_in
+
+
+_R_RANGES = _r_ranges()
 
 
 def build_r():
@@ -908,7 +1043,8 @@ def build_r():
     round instead of coming down into a second leg.  Where it ends is the letter's one decision;
     the rest is the n's."""
     L, Rt, (xl, xr) = _r_profile(w_stem, RING_W, RING_OFF)
-    rg_out, rg_in = _R_RANGES
+    spec, rg_in = _R_RANGES
+    rg_out = _expand_ranges(spec, _crown_knots(0.0, w_stem, RING_W, RING_OFF), len(L))
     so, eo = fit_cubics(L, _g_tan(L), tol=9e9, ranges=[tuple(r) for r in rg_out])
     si, ei = fit_cubics(Rt[::-1], [mul(x, -1) for x in _g_tan(Rt)[::-1]], tol=9e9,
                         ranges=[tuple(r) for r in rg_in])
