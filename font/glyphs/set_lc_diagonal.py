@@ -239,8 +239,14 @@ def build_z():
     """The capital Z at the x-height: two arms with the diagonal buried in both."""
     top, top_inner = _arm_at(0.0, BODY, XH, -1, left='cut', right='flat')
     bot, bot_inner = _arm_at(0.0, BODY, 0.0, +1, left='flat', right='cut')
-    tw0, tw1 = wh_at(BODY, 0, None, (0.0, 0.0)), wh_at(BODY, 1, None, (BODY, 0.0))
-    bi = ((0.0, tw0), (BODY, tw1)); ti = ((0.0, XH - tw0), (BODY, XH - tw1))
+    # Each arm's inner edge has to be read at the height that arm actually sits at, because
+    # _arm_at reads it there.  One pair of widths taken at the baseline and used for both was
+    # right while a width was a function of height alone and wrong the moment it stopped being
+    # one: under R2s the top arm's inner line then sat where the arm was not, the diagonal's
+    # buried top end missed it, and a fifth of the letter came away as a separate piece.
+    bw0, bw1 = wh_at(BODY, 0, None, (0.0, 0.0)), wh_at(BODY, 1, None, (BODY, 0.0))
+    tw0, tw1 = wh_at(BODY, 0, None, (0.0, XH)), wh_at(BODY, 1, None, (BODY, XH))
+    bi = ((0.0, bw0), (BODY, bw1)); ti = ((0.0, XH - tw0), (BODY, XH - tw1))
     c0 = SD._bisect(270.0, ang(sub(bi[1], bi[0])))
     c1 = SD._bisect(90.0, ang(sub(ti[0], ti[1])))
     diag = SD._placed_stroke(bi[0], +1, ti[1], -1, end0=c0, end1=c1)
