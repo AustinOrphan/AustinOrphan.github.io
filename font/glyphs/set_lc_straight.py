@@ -12,7 +12,7 @@ from metrics import ASC_LC, CAP, DESC_LC, OVER_ROUND, SB_ROUND, SB_STRAIGHT, XH
 from pen import (add, arc_band, Contour, fit_cubics, fit_ranges, from_ang, mul, norm,
                  perp, sub, unit)
 import rules
-from rules import glyph, w_stem, RING_W
+from rules import glyph, w_stem, w_at, w_ck, RING_W
 from glyphs import set_punct as SP
 from glyphs import set_straight as SS
 from glyphs import set_round as SR
@@ -133,7 +133,10 @@ def _hook_spine(wf, ring_w, ring_off):
     vertical, so the hook starts at exactly the stem's width; at the top it is horizontal, so it
     ends at exactly the band the o has there."""
     apex_w = LR._band_at(90.0, ring_w, ring_off)
-    y_turn = ASC_LC - HOOK_R - apex_w / 2.0
+    # The apex takes OVER_ROUND like every other round top in the face.  The hook IS the n's
+    # shoulder, and the n's shoulder apex sits at XH + OVER_ROUND, not on the x-height; without
+    # this the f was the one round extremum in the lowercase resting exactly on its line.
+    y_turn = ASC_LC + OVER_ROUND - HOOK_R - apex_w / 2.0
     cx, cy = HOOK_R, y_turn
     pts = []
     for i in range(HOOK_SAMP + 1):
@@ -141,7 +144,7 @@ def _hook_spine(wf, ring_w, ring_off):
         p = (cx + HOOK_R * math.cos(th), cy + HOOK_R * math.sin(th))
         t = unit((math.sin(th), -math.cos(th)))          # travelling 180 -> 90, i.e. up and over
         turn = abs(t[0]); k = turn * turn * (3 - 2 * turn)
-        pts.append((p, t, wf(p[1]) * (1 - k) + apex_w * k))
+        pts.append((p, t, w_ck(w_at(wf, p) * (1 - k) + apex_w * k, p)))
     return pts, y_turn
 
 
@@ -196,7 +199,7 @@ def build_f():
              f"tangent, exactly as the n's shoulder does: vertical at the junction, so the hook "
              f"starts at the stem's width; horizontal at the top, so it ends at the o's band.",
         radius=f"{HOOK_R:g}, half the ascender gap, so the quarter fills it: the hook's top edge "
-               f"lands on the ascender line and its left edge is the stem's own line.",
+               f"clears the ascender by {OVER_ROUND:g}, the round overshoot, and its left edge is the stem's own line.",
         terminal=f"A free R5 cut, {rules.CUT_DEG:g} deg, the r's own -- the tip on the corner away "
                  f"from the body, which here is the UPPER corner -- the body is below.  It ended square to the spine before, "
                  f"and since the spine is horizontal there that was a flat vertical wall: the only "

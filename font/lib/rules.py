@@ -5,7 +5,7 @@ against the same functions that built it.
 """
 import json, math, os
 from pen import *
-from metrics import CAP, OVER_POINT, OVER_ROUND, SB_STRAIGHT, SB_ROUND
+from metrics import CAP, OVER_POINT, OVER_ROUND, SB_STRAIGHT, SB_ROUND, XH as XH_
 
 _SRC = json.load(open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'source', 'ai_objects.json')))['AO'][0]
 _ring = next(o for o in _SRC['objects'] if o['role'] == 'ring')
@@ -209,6 +209,131 @@ def w_slash(y):     return SLASH_BASE + (SLASH_CAP - SLASH_BASE) * (y / CAP)
 def w_backslash(y): return BACK_BASE  + (BACK_CAP  - BACK_BASE)  * (y / CAP)
 w_stem = w_slash
 
+# ---- R2s: reading a width AT A POINT rather than at a height
+# R2 and R3 are fields over HEIGHT, so two pieces that draw the same edge -- an m's middle leg,
+# which is one arch's inner edge and the next arch's outer one; an h's stem, drawn by stem() and
+# again as the shoulder's leg -- agree only because they read the same y-only function.  Any rule
+# that varies a width across the letter breaks that agreement and the shared edge steps: measured,
+# 22 units on the m's middle leg and 15 on the h's stem.
+#
+# So every width taken from R2/R3 at a known position goes through w_at(), and any positional term
+# is installed once in STRESS.  With STRESS None -- which is the face as cut -- w_at is exactly
+# wf(p[1]) and nothing downstream can tell the difference.
+# R2s has three settings, because the three were drawn and compared before one was chosen:
+#
+#   off     the face as it was cut.  R1s and R2s both do nothing and every glyph is bit for bit
+#           what it was before either existed.
+#   crown   R1s only.  The arch family's crown reads the ring at the direction each point FACES
+#           rather than holding _band_at(90) round the whole turn.  Costs no metric: the outer
+#           edge is pinned, so advances and extrema are the committed ones and 21 of the 26
+#           lowercase letters are untouched.
+#   full    R1s and R2s.  The straights take the ring's own 45 deg stress as well, so the whole
+#           lowercase moves with PUSH instead of only the rounds.  This DOES move the silhouette:
+#           a stem has no counter to absorb a width change the way a bowl does, so it widens
+#           about its own centre and the advance follows.
+#
+# The amplitude is not chosen.  The o's band runs 16.38 at 45 deg and 65.00 at 225, a swing of
+# exactly +-|RING_OFF| about the mean, so a straight swings by what the o's ring swings by and
+# scales with PUSH for the same reason the o does.
+STRESS_MODE = os.environ.get('ORPHAN_STRESS', 'full')
+assert STRESS_MODE in ('off', 'crown', 'full'), f'ORPHAN_STRESS: {STRESS_MODE}'
+R1S_FRAC = 0.0 if STRESS_MODE == 'off' else 1.0
+# The amplitude is the o's own half-swing, |RING_OFF|, TIMES WEIGHT.  The o's displacement does
+# not scale with weight -- that is what makes a round's contrast vary along the axis, and the note
+# by R2c says so -- but a straight's width does, so an amplitude that ignored WEIGHT closed the
+# thin side of a straight at the light end: measured at WEIGHT 0.70 / PUSH 1.00 the u's leg
+# reached -0.12 units and 54 of its 601 samples were clamped flat, which the fit then could not
+# follow at any number of cubics.  Scaling with WEIGHT is what the rest of R2 does (TAPER and
+# FOOT_WIDEN both do), and at WEIGHT 1 it is exactly the o's swing, where the anchor was measured.
+#
+# A RELATIVE law -- a fraction |RING_OFF|/RING_W of the width at each point, so a straight is as
+# modulated as the round is everywhere -- was drawn too and is the more self-consistent statement
+# on paper.  It is worse in fact: it fails three cells of the axis grid against this one's one,
+# and it takes the r's fit to 0.847.  Left here as the note it is rather than as a change.
+R2S_AMP  = norm(RING_OFF) * WEIGHT if STRESS_MODE == 'full' else 0.0
+R2S_AMP_1 = norm(RING_OFF_1) if STRESS_MODE == 'full' else 0.0     # the same at the axis origin
+
+_U45 = (math.sqrt(0.5), math.sqrt(0.5))
+
+class stress_for:
+    """Install R2s for a glyph whose nominal box is [0, body] x [lo, hi].
+
+    The term is  -A * ((p - C) . u45) / E  : C the box's centre, E its half extent along the
+    45 deg axis, A the amplitude.  Normalising by the LETTER's own extent rather than by the
+    bowl's gives every letter the o's swing spread over its own width, which caps a wide letter
+    at the o's contrast instead of exceeding it; a fixed gradient was drawn too and makes the w
+    swing 30.6 against the o's 24.3.  That choice is the one arbitrary number here."""
+    def __init__(self, body, lo=-OVER_ROUND, hi=None, amp=None):
+        if hi is None: hi = XH_ + OVER_ROUND
+        self.C = (body / 2.0, (lo + hi) / 2.0)
+        self.E = (body / 2.0 + (hi - lo) / 2.0) * math.sqrt(0.5)
+        self.amp = R2S_AMP if amp is None else amp
+    def __enter__(self):
+        global STRESS
+        self.base = STRESS
+        if self.amp:
+            C, E, A = self.C, self.E, self.amp
+            STRESS = lambda p: -A * ((p[0]-C[0])*_U45[0] + (p[1]-C[1])*_U45[1]) / E
+        return self
+    def __exit__(self, *e):
+        global STRESS
+        STRESS = self.base
+        return False
+
+STRESS = None            # callable(point) -> units to add, or None
+# The floor is a CONSTRUCTION check, not a design minimum: it catches a width the stress has
+# driven to nothing, which draws a self-crossing stroke.  It is deliberately well below anything
+# the face would draw on purpose -- at WEIGHT 0.70 / PUSH 1.00 the o's own thin side is 4.17
+# units, so a straight of 5 or 6 there is thinner than is wanted but is not broken, and saying so
+# is the designer's job rather than this assertion's.  Set at 7 it rejected a 6.99-unit straight
+# at exactly that corner, which is the one cell of the axis grid R2s has any trouble with.
+STRESS_FLOOR = 2.0
+
+def w_at(wf, p):
+    """`wf` read at the POINT p, not merely at its height.
+
+    Deliberately unchecked: a turning stroke blends this against R1's band, and at the turn the
+    blend weight on THIS term is nil, so a value that would be too thin on its own is multiplied
+    away and is not a fault.  The check belongs on the width a stroke actually gets, which is
+    w_ck below."""
+    w = wf(p[1])
+    return w if STRESS is None else w + STRESS(p)
+
+def w_ck(w, p):
+    """The width a stroke actually gets.  A width R2s would close does not get clamped quietly --
+    a flat-bottomed edge is a break, and a fit cannot follow one at any number of cubics, so it
+    would surface as a mystery residual rather than as the ceiling it is.  It raises, the way
+    ROUND_THIN going negative does."""
+    if STRESS is not None and w < STRESS_FLOOR:
+        raise ValueError(f'R2s closed a straight at ({p[0]:.1f}, {p[1]:.1f}): {w:.2f} units, '
+                         f'floor {STRESS_FLOOR}.  The amplitude ({R2S_AMP:.2f}) is past its '
+                         f'ceiling at WEIGHT {WEIGHT} / PUSH {PUSH}.')
+    return w
+
+class stress_shifted:
+    """For a piece DRAWN in one place and then translated to another (the m's second shoulder is
+    the h's, built at the left leg and moved right by the span between the n's legs).  A y-only
+    field does not care where a piece ends up; a positional one does, so such a piece has to be
+    given the stress that belongs where it will LAND, or the two halves of a shared edge disagree
+    by the stress difference over the shift -- measured on the m, 22 units on the middle leg."""
+    def __init__(self, dx): self.dx = dx
+    def __enter__(self):
+        global STRESS
+        self.base = STRESS
+        if STRESS is not None:
+            b, d = STRESS, self.dx
+            STRESS = lambda p: b((p[0] + d, p[1]))
+        return self
+    def __exit__(self, *e):
+        global STRESS
+        STRESS = self.base
+        return False
+
+def wh_at(L, t, mid, p):
+    """R4's field, same treatment: w_horizontal takes a length and an end, not a height."""
+    w = w_horizontal(L, t, mid)
+    return w if STRESS is None else w_ck(w + STRESS(p), p)
+
 # ---- R4 horizontals
 # R4 has two weights, because a horizontal has two jobs.
 #
@@ -248,7 +373,8 @@ def stem(x, y0=0.0, y1=CAP, bottom=None, top=None, kind='slash'):
     wf = w_slash if kind == 'slash' else w_backslash
     e0 = cut_for((x, y0), (x, y1), 'bottom', bottom, CUT_DEG) if bottom else ('flat',)
     e1 = cut_for((x, y1), (x, y0), 'top', top, CUT_DEG) if top else ('flat',)
-    return stroke((x, y0), (x, y1), wf(y0), wf(y1), e0, e1)
+    return stroke((x, y0), (x, y1), w_ck(w_at(wf, (x, y0)), (x, y0)),
+                  w_ck(w_at(wf, (x, y1)), (x, y1)), e0, e1)
 
 def diagonal(p0, p1, bottom=None, top=None):
     """A diagonal from its LOWER point p0 to its UPPER point p1; width from the R2 field
@@ -257,7 +383,7 @@ def diagonal(p0, p1, bottom=None, top=None):
     wf = w_slash if p1[0] >= p0[0] else w_backslash
     e0 = cut_for(p0, p1, 'bottom', bottom, CUT_DEG) if bottom else ('flat',)
     e1 = cut_for(p1, p0, 'top', top, CUT_DEG) if top else ('flat',)
-    return stroke(p0, p1, wf(p0[1]), wf(p1[1]), e0, e1)
+    return stroke(p0, p1, w_ck(w_at(wf, p0), p0), w_ck(w_at(wf, p1), p1), e0, e1)
 
 def horizontal(x0, x1, y, left=None, right=None, mid=None):
     """A level horizontal from x0 to x1 centred on y, R4 widths.  left/right: None for
@@ -265,7 +391,7 @@ def horizontal(x0, x1, y, left=None, right=None, mid=None):
     L = abs(x1 - x0)
     e0 = cut_for((x0, y), (x1, y), 'left', left, CUT_DEG) if left else ('flat',)
     e1 = cut_for((x1, y), (x0, y), 'right', right, CUT_DEG) if right else ('flat',)
-    return stroke((x0, y), (x1, y), w_horizontal(L, 0, mid), w_horizontal(L, 1, mid), e0, e1)
+    return stroke((x0, y), (x1, y), wh_at(L, 0, mid, (x0, y)), wh_at(L, 1, mid, (x1, y)), e0, e1)
 
 def glyph(cp, contours, adv=None, sb=(SB_STRAIGHT, SB_STRAIGHT), notes=None):
     """Package a glyph: shifts the contours so the left extreme sits at sb[0] and sets the

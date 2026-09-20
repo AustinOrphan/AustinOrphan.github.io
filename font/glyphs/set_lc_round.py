@@ -37,8 +37,14 @@ from pen import (add, ang, arc_segments, cut_for, fit_cubics, fit_ranges, from_a
                  Contour, from_poly, ccw)
 from metrics import ASC_LC, DESC_LC, OVER_ROUND, SB_ROUND, SB_STRAIGHT, XH
 import rules
-from rules import RING_OFF, RING_W, CUT_DEG, glyph, round_ring, w_stem
+from rules import RING_OFF, RING_W, CUT_DEG, glyph, round_ring, w_stem, w_at, w_ck
 from glyphs import set_round as SR
+from glyphs import set_diagonal as SD
+
+# The lowercase's nominal body -- the v's, which is the A's own lean run over the x-height.  R2s
+# normalises its 45 deg gradient on a box this wide (rules.stress_for), so every lowercase letter
+# is stressed on one frame rather than on its own advance.
+LC_BODY = 2 * SD._spread(XH - SD.POINT_Y, SD.HALF_APEX)
 
 # The bowl: R1's ring, sized so the x-height is its flat height and it overshoots as a round
 # does.  This is the o, and every other bowl in this file is the same circle, not a variant.
@@ -390,6 +396,10 @@ N_HANDLE = 120.0
 H_BURY   = 165.0                # where the h's shoulder starts, inside the leg
 HN_NSEG  = 38                   # cubics per edge, frozen at the axis origin.  30 holds the n
                                 # (0.165 worst) but not the h, whose buried start moves further
+                                # across the axis: 0.909 at Black against MAX_ERR 0.6.  R2s does
+                                # not need more: swept 38/46/54/62 it is flat, because what R2s
+                                # costs the fit is a transition moving, not a curve undersampled.
+                                # (0.165 worst) but not the h, whose buried start moves further
                                 # across the axis: 0.909 at Black against MAX_ERR 0.6.
 HN_SAMP  = 150                  # spine samples per span
 
@@ -509,6 +519,44 @@ def _crown_end(y0, wf, ring_w, ring_off, y1=0.0):
     return moved[-1] if moved else 0
 
 
+def _offset(pts, ts, wf, ring_w, ring_off, apex_w, flip):
+    """Both offset edges of a turning stroke.
+
+    The legs carry R3's field and the turn carries R1's band, blended by the spine's own tangent.
+    R1s changes WHICH band.  The committed letter holds _band_at at a single direction round the
+    whole turn, so both flanks come out the same; the o reads the band at the direction each point
+    FACES -- 57.86 at 180 deg, 40.66 at 135, 23.48 at 90, 16.38 at 45 -- and perp(t) on this spine
+    IS that direction.  It points outward going up and over and inward going down and under,
+    because the traversal reverses, which is what `flip` corrects: at the turn the angle must come
+    out as the committed apex_deg, 90 for the n and 270 for the u.  Without it the u's turn rose
+    17 units off the baseline and lost a third of its ink.
+
+    Where the change is carried matters as much as how big it is.  A turn is a band round a
+    counter, like the o, whose outer circle does not move at any PUSH, so at the turn the OUTER
+    edge is pinned and the whole change is taken inward.  A leg is a stem: it has no counter, and
+    rules.stem can only widen about its own centre, so on the leg the change is symmetric.  The
+    centre shifts between the two by the same blend that mixes the widths, which is what lets the
+    leg agree with the stem drawn over it -- the h unions rules.stem with this edge, and before
+    the two were reconciled that join stepped by 15 units.
+    """
+    L, Rt, meta = [], [], []
+    for p, t in zip(pts, ts):
+        turn = abs(t[0]); k = turn * turn * (3 - 2 * turn)
+        nv = perp(t)
+        th = (math.degrees(math.atan2(nv[1], nv[0])) + flip) % 360.0
+        band = apex_w * (1 - rules.R1S_FRAC) + _band_at(th, ring_w, ring_off) * rules.R1S_FRAC
+        w  = w_ck(w_at(wf, p) * (1 - k) + band * k, p)
+        w0 = wf(p[1]) * (1 - k) + apex_w * k          # what the committed letter has here
+        half = w / 2.0 - k * (w - w0) / 2.0           # symmetric on the leg, pinned at the turn
+        # written as two offsets from the spine rather than as outer-minus-w, so that with the
+        # stress off both reduce to the committed expression exactly and not merely to within
+        # float noise -- reassociated, the 8e-14 the two forms differ by came out of the cubic
+        # fit as 9e-4 on the u's nadir.
+        L.append(add(p, mul(nv, half))); Rt.append(sub(p, mul(nv, w - half)))
+        meta.append((p, nv, w, w0))
+    return L, Rt, meta
+
+
 def _hn_edges(y0, wf, ring_w, ring_off, y1=0.0, crown=False):
     """Both offset edges.  The legs carry R3's field and the apex carries R1's own top band,
     blended by the SPINE'S OWN TANGENT -- vertical while the stroke is a leg, horizontal at the
@@ -516,12 +564,7 @@ def _hn_edges(y0, wf, ring_w, ring_off, y1=0.0, crown=False):
     pts, (xl, xr) = _hn_spine(y0, wf, ring_w, ring_off, y1)
     apex_w = _band_at(90.0, ring_w, ring_off)
     ts = [unit(sub(pts[min(i+1, len(pts)-1)], pts[max(i-1, 0)])) for i in range(len(pts))]
-    L, Rt = [], []
-    for p, t in zip(pts, ts):
-        turn = abs(t[0]); k = turn * turn * (3 - 2 * turn)
-        w = wf(p[1]) * (1 - k) + apex_w * k
-        nv = perp(t)
-        L.append(add(p, mul(nv, w/2))); Rt.append(sub(p, mul(nv, w/2)))
+    L, Rt, meta = _offset(pts, ts, wf, ring_w, ring_off, apex_w, 0.0)
     if crown:
         # The a's crown joint, on the springing leg.  Same joint, not an imitation: this leg sits
         # at exactly the x the a's stem sits at, the same tangency on the same circle at the same
@@ -531,6 +574,19 @@ def _hn_edges(y0, wf, ring_w, ring_off, y1=0.0, crown=False):
         cj = _crown_at(wf)
         for i in range(min(2 * HN_SAMP + 1, len(L))):
             if ts[i][1] <= abs(ts[i][0]): break     # L is the TOP edge past the turn, not the left
+            # The crown is a construction on the a's SILHOUETTE -- max(bowl, min(stem, cut)) --
+            # and the bowl and the cut are geometric, so they do not move with R2s.  The leg's
+            # outer edge must therefore not move either wherever the crown is live, or the three
+            # pieces stop meeting where the knots were placed and the transition sharpens from
+            # 54 deg spread over two samples to 52 on one; the fit then sticks at 1.28 however
+            # finely it is subdivided, which is the signature of a break rather than of
+            # undersampling.  So here the outer edge is pinned and the counter takes the whole
+            # change, exactly as it does at the apex.  Nothing unions a rules.stem onto a crowned
+            # leg -- the h's shoulder is built without one -- so this cannot desynchronise a
+            # shared edge.
+            p_i, nv_i, w_i, w0_i = meta[i]
+            L[i] = add(p_i, mul(nv_i, w0_i / 2.0))
+            Rt[i] = sub(L[i], mul(nv_i, w_i))
             tgt = _a_edge_out(wf, L[i][1], cj)
             if tgt > xl - L[i][0]: L[i] = (xl - tgt, L[i][1])
     return L, Rt, (xl, xr)
@@ -582,6 +638,18 @@ def _crown_spec(L, rg, ks):
             [cuts.index(k) for k in ks])
 
 
+def _stressed(hi=None, amp=None):
+    """Run a build inside this letter's R2s frame (rules.stress_for).  With ORPHAN_STRESS off or
+    crown the amplitude is zero and the context does nothing."""
+    def deco(fn):
+        def wrapper(*a, **k):
+            with rules.stress_for(LC_BODY, hi=hi, amp=amp):
+                return fn(*a, **k)
+        wrapper.__name__, wrapper.__doc__ = fn.__name__, fn.__doc__
+        return wrapper
+    return deco
+
+
 def _hn_ranges(y0, cut_start, y1=0.0, crown=False):
     """Knots chosen once on the axis origin's shape and held, as for the g."""
     L, Rt, (xl, _xr) = _hn_profile(y0, _w1, rules.RING_W_1, rules.RING_OFF_1, cut_start, y1, crown)
@@ -598,8 +666,10 @@ def _hn_ranges(y0, cut_start, y1=0.0, crown=False):
     return ('plain', rg), rg_in
 
 
-_N_RANGES = _hn_ranges(0.0, True, crown=True)
-_H_RANGES = _hn_ranges(H_BURY, False)
+with rules.stress_for(LC_BODY, amp=rules.R2S_AMP_1):
+    _N_RANGES = _hn_ranges(0.0, True, crown=True)
+with rules.stress_for(LC_BODY, hi=ASC_LC, amp=rules.R2S_AMP_1):
+    _H_RANGES = _hn_ranges(H_BURY, False)
 
 # Where the m's middle leg stops.  The m is a two-counter letter like the capital M, whose vee
 # sits at 0.40 of the cap and whose notes argue that a middle carried to the baseline reads as a
@@ -607,7 +677,8 @@ _H_RANGES = _hn_ranges(H_BURY, False)
 # at 0.40 (y=154) the two counters are open but the middle barely exists, and above that -- 0.49
 # and up -- the two counters merge into one 651-unit space and the letter stops reading as an m.
 M_MID_Y   = 115.0
-_M_RANGES = _hn_ranges(0.0, True, M_MID_Y, crown=True)
+with rules.stress_for(LC_BODY, amp=rules.R2S_AMP_1):
+    _M_RANGES = _hn_ranges(0.0, True, M_MID_Y, crown=True)
 
 
 def _hn_stroke(y0, cut_start, ranges, y1=0.0, crown=False):
@@ -657,12 +728,7 @@ def _turn_edges(spine_fn, y0, wf, ring_w, ring_off, apex_deg):
     pts, (xl, xr) = spine_fn(y0, wf, ring_w, ring_off)
     apex_w = _band_at(apex_deg, ring_w, ring_off)
     ts = [unit(sub(pts[min(i+1, len(pts)-1)], pts[max(i-1, 0)])) for i in range(len(pts))]
-    L, Rt = [], []
-    for p, t in zip(pts, ts):
-        turn = abs(t[0]); k = turn * turn * (3 - 2 * turn)
-        w = wf(p[1]) * (1 - k) + apex_w * k
-        nv = perp(t)
-        L.append(add(p, mul(nv, w/2))); Rt.append(sub(p, mul(nv, w/2)))
+    L, Rt, _m = _offset(pts, ts, wf, ring_w, ring_off, apex_w, 180.0)
     return L, Rt, (xl, xr)
 
 
@@ -680,11 +746,13 @@ def _u_profile(y0, wf, ring_w, ring_off, cut_start):
 # knee of the curve, not the first count that merely passes.
 U_NSEG = 54
 
-_U_RANGES = (lambda L, Rt: (fit_ranges(L, _g_tan(L), U_NSEG),
-                            fit_ranges(Rt[::-1], [mul(t, -1) for t in _g_tan(Rt)[::-1]], U_NSEG))
-             )(*_u_profile(XH, _w1, rules.RING_W_1, rules.RING_OFF_1, True)[:2])
+with rules.stress_for(LC_BODY, amp=rules.R2S_AMP_1):
+    _U_RANGES = (lambda L, Rt: (fit_ranges(L, _g_tan(L), U_NSEG),
+                                fit_ranges(Rt[::-1], [mul(t, -1) for t in _g_tan(Rt)[::-1]], U_NSEG))
+                 )(*_u_profile(XH, _w1, rules.RING_W_1, rules.RING_OFF_1, True)[:2])
 
 
+@_stressed()
 def build_u():
     """The n's stroke turned upside down."""
     L, Rt, (xl, xr) = _u_profile(XH, w_stem, RING_W, RING_OFF, True)
@@ -728,12 +796,14 @@ def _arch_note(xl, xr, err, nseg=HN_NSEG):
         deviations="none from R1-R9.")
 
 
+@_stressed()
 def build_n():
     """One stroke, up and over and down."""
     k, err, (xl, xr) = _hn_stroke(0.0, True, _N_RANGES, crown=True)
     return glyph(ord('n'), [k], sb=(SB_STRAIGHT, SB_STRAIGHT), notes=_arch_note(xl, xr, err))
 
 
+@_stressed(hi=ASC_LC)
 def build_h():
     """The n's stroke with the left leg carried on to the ascender.
 
@@ -967,6 +1037,7 @@ def _shift(k, dx):
     return k.map(lambda p: (p[0] + dx, p[1]))
 
 
+@_stressed()
 def build_m():
     """The n's stroke, plus a SECOND shoulder off the middle leg.
 
@@ -975,8 +1046,12 @@ def build_m():
     its ascender, buried at H_BURY so the leg alone makes the foot.  Both shoulders are the same
     stroke, so the two arches are identical rather than merely similar."""
     first, e1, (xl, xr) = _hn_stroke(0.0, True, _M_RANGES, M_MID_Y, crown=True)
-    second, e2, _x = _hn_stroke(H_BURY, False, _H_RANGES)
     span = xr - xl
+    # The second shoulder is drawn at the left leg and moved right by `span`, so it has to be
+    # given the stress that belongs where it lands rather than where it is drawn (rules.
+    # stress_shifted).  With rules.STRESS off this is exactly the call it always was.
+    with rules.stress_shifted(span):
+        second, e2, _x = _hn_stroke(H_BURY, False, _H_RANGES)
     n = _arch_note(xl, xr + span, max(e1, e2))
     n['construction'] = (f"The n's stroke, then the h's shoulder shifted right by {span:.2f} -- the "
                          f"distance between the n's own legs -- so the m's two arches are the SAME "
@@ -1033,9 +1108,11 @@ def _r_ranges():
     return _crown_spec(L, rg, _crown_knots(0.0, _w1, rules.RING_W_1, rules.RING_OFF_1)), rg_in
 
 
-_R_RANGES = _r_ranges()
+with rules.stress_for(LC_BODY, amp=rules.R2S_AMP_1):
+    _R_RANGES = _r_ranges()
 
 
+@_stressed()
 def build_r():
     """The n's left leg and the start of its shoulder, stopped in a free R5 terminal.
 

@@ -17,7 +17,7 @@ from metrics import ASC_LC, CAP, DESC_LC, OVER_ROUND, SB_ROUND, SB_STRAIGHT, XH
 from pen import (add, ang, ccw, from_poly, isect, line, line_ang, line_2pt, cut_for,
                  mul, perp, stroke, sub, unit)
 import rules
-from rules import glyph, w_stem, w_horizontal, CUT_DEG
+from rules import glyph, w_stem, w_horizontal, w_at, wh_at, CUT_DEG
 from pen import bbox
 from glyphs import set_diagonal as SD
 from glyphs import set_round as SR
@@ -33,12 +33,27 @@ Y_NUDGE   = 10.0                               # how far the y's arm reaches int
 W_PEAK    = XH - LR.M_MID_Y                    # 270: mirrors the m's middle, as the W mirrors the M's vee
 
 
+def _stressed(hi=None, lo=None, body=None):
+    """Run a build inside this letter's R2s frame (rules.stress_for).  The w is two v's wide and
+    the k reaches the ascender; everything else takes the lowercase's own body and box."""
+    def deco(fn):
+        def wrapper(*a, **k):
+            with rules.stress_for(body if body is not None else BODY,
+                                  lo=-OVER_ROUND if lo is None else lo,
+                                  hi=hi):
+                return fn(*a, **k)
+        wrapper.__name__, wrapper.__doc__ = fn.__name__, fn.__doc__
+        return wrapper
+    return deco
+
+
 def _arm_at(x0, x1, y_out, sgn, left='cut', right='cut'):
     """rules.arm, but with its outer line given instead of taken as CAP or the baseline."""
     body = 'down' if sgn < 0 else 'up'
     L = x1 - x0
     outer_l = line((x0, y_out), (1, 0))
-    inner_l = line_2pt((x0, y_out + sgn * w_horizontal(L, 0)), (x1, y_out + sgn * w_horizontal(L, 1)))
+    inner_l = line_2pt((x0, y_out + sgn * wh_at(L, 0, None, (x0, y_out))),
+                       (x1, y_out + sgn * wh_at(L, 1, None, (x1, y_out))))
     def end(spec, x_end, face):
         if spec == 'flat': return line((x_end, y_out), (0, 1))
         other = x1 if face == 'left' else x0
@@ -68,6 +83,7 @@ def _v_strokes():
             SD._placed_stroke(V_T, -1, V_TR, -1, end0=cR, end1='left'))
 
 
+@_stressed()
 def build_v():
     """The capital V at the x-height -- and its width is derived there too, not scaled."""
     T, TL, TR = V_T, V_TL, V_TR
@@ -82,6 +98,7 @@ def build_v():
               "its own outer edge to the other's, so the two nest instead of leaving a notch."))
 
 
+@_stressed(body=2 * BODY)
 def build_w():
     """Two v's sharing a middle peak, as the capital W is two V's."""
     # The peak's x is the leg's OWN run at the A's lean over its own height, as the capital's is
@@ -109,6 +126,7 @@ def build_w():
         points="all three mitred with _point_cuts."))
 
 
+@_stressed()
 def build_x():
     """The capital X's solver: the tops are solved so the centre-lines cross on the axis."""
     xc = BODY / 2.0
@@ -131,6 +149,7 @@ def build_x():
         proportion=f"body {BODY:.2f}, the v's."))
 
 
+@_stressed(lo=DESC_LC)
 def build_y():
     """The v, with its right leg longer.  Nothing else differs.
 
@@ -152,7 +171,7 @@ def build_y():
     # different ramp: taken fresh, the leg sat a constant 0.87 units right of the v's arm all the
     # way up, which is the whole reason the two letters would not lie on each other.
     span_v = math.dist(c0, c1)
-    w_c0, w_c1 = wf(c0[1]), wf(c1[1])
+    w_c0, w_c1 = w_at(wf, c0), w_at(wf, c1)
     def leg(depth):
         bot = add(c1, mul(d, depth))
         w_bot = w_c1 + (depth / span_v) * (w_c0 - w_c1) if span_v else w_c1
@@ -175,7 +194,7 @@ def build_y():
     # leg's FAR edge.  Sliding along the centre-line cannot change the lean.  Cut on the leg's
     # near edge or through its centre the arm still reached past the far edge: a 108-unit spur
     # below the junction, and a +0.23 reversal in an edge that otherwise falls 2.34 a step.
-    lw = wf(T[1]) / 2.0
+    lw = w_at(wf, T) / 2.0
     far = line_2pt(add(bot, mul(perp(d), lw)), add(c1, mul(perp(d), lw)))
     p0 = isect(line_2pt(a0, a1), far)
     leg_ang = ang(sub(c1, bot))
@@ -215,11 +234,12 @@ def build_y():
                 f"hangs past its advance."))
 
 
+@_stressed()
 def build_z():
     """The capital Z at the x-height: two arms with the diagonal buried in both."""
     top, top_inner = _arm_at(0.0, BODY, XH, -1, left='cut', right='flat')
     bot, bot_inner = _arm_at(0.0, BODY, 0.0, +1, left='flat', right='cut')
-    tw0, tw1 = w_horizontal(BODY, 0), w_horizontal(BODY, 1)
+    tw0, tw1 = wh_at(BODY, 0, None, (0.0, 0.0)), wh_at(BODY, 1, None, (BODY, 0.0))
     bi = ((0.0, tw0), (BODY, tw1)); ti = ((0.0, XH - tw0), (BODY, XH - tw1))
     c0 = SD._bisect(270.0, ang(sub(bi[1], bi[0])))
     c1 = SD._bisect(90.0, ang(sub(ti[0], ti[1])))
@@ -234,6 +254,7 @@ def build_z():
         proportion=f"body {BODY:.2f}, the v's."))
 
 
+@_stressed(hi=ASC_LC)
 def build_k():
     """The l's stem with the capital K's arm and leg."""
     xL = w_stem(0.0) / 2.0

@@ -714,6 +714,101 @@ The counters are **not** derived from that silhouette. An 8's ink is two rings,
 so its two counters are the two ring-holes; eroding the outer contour gives one
 connected region, not two.
 
+## 5d. R1s and R2s: putting the lowercase on the ring's stress
+
+R1 displaces the O's counter toward 45 deg, and that displacement is where all of the face's
+stress comes from. PUSH scales it. Measured across the axis it does exactly one thing: the O's
+outer circle never moves -- radius 202.50 at every angle and every PUSH, extents and advance and
+ink area identical to the unit -- while the band swings from 35.5/33.4/45.8 round the ring at
+PUSH 0.30 to 23.5/16.4/57.9 at 1.00. PUSH adds no weight and no height. It moves weight around
+the ring.
+
+Two families of the lowercase were outside that system, for two different reasons.
+
+**R1s. The arch reads the band at the direction it faces.** `_hn_edges` and `_turn_edges` blend
+R3's field on the legs into R1's band at the turn, but they took the band at ONE direction --
+`_band_at(90)` for the n, `_band_at(270)` for the u -- and held that single number across the
+whole crown, so both flanks came out at 23.48. The o does not do that: it reads the band at the
+direction each point faces, and `perp(t)` on this spine IS that direction. Reading it there gives
+the crown 57.86 at 180 deg, 40.66 at 135, 23.48 at 90 and 16.38 at 45.
+
+Measured against the o's band at the same facing, the committed n's crown ran 0.74x at 135 deg
+and 1.83x at 45: light where the o is heavy and heavy where the o is light, because a symmetric
+crown is exactly wrong where the o is stressed. Under R1s it is 0.91-1.08x from 180 deg round to
+67, and 1.54x at 45. What is left below about 30 deg is the crown handing over to a stem, which
+the o has no counterpart for; asking the leg to reach 17 units would make it a hairline.
+
+Two details are load-bearing. `perp(t)` is the OUTWARD normal going up and over and the INWARD
+one going down and under, because the traversal reverses; the flip is checked by requiring the
+angle at the turn to come out as the committed apex direction. Without it the u read its band at
+90 instead of 270, its turn rose 17 units off the baseline and it lost a third of its ink. And
+the change is carried INWARD at the turn and symmetrically on the leg: a turn is a band round a
+counter, like the o, whose outer circle does not move at any PUSH, while a leg is a stem with no
+counter that `rules.stem` can only widen about its own centre. The centre shifts between the two
+by the same blend that mixes the widths. Offsetting symmetrically everywhere instead bulged the
+n's outer edge 7.54 units past the o's circle at 135 deg and pulled it 8.04 short at 30, and
+moved every advance in the family.
+
+**R2s. A straight takes the ring's 45 deg stress.** R2 gives a straight a VERTICAL taper -- 65.00
+at the foot to 20.89 at the cap -- plus a fixed 2.36-unit difference between "/" and "\\" that is
+the same at PUSH 0.30 and at PUSH 1.00. So the rounds are stressed on a diagonal, the straights on
+the upright, and PUSH moves the first and not the second. Measured as the ink's centroid along the
+45 deg axis from PUSH 0.30 to 1.00, the o moves -0.1050 and v, w, y and z move +0.0000 exactly.
+They are not merely lightly coupled to the contrast axis; they are outside it.
+
+R2s adds one term to a straight's width:
+
+    w(p) = w_R2(y)  -  A * ((p - C) . u45) / E
+
+C is the letter's nominal centre, u45 the unit vector toward 45 deg, E the box's half extent along
+that axis. The amplitude is not chosen: the o's band swings +-|RING_OFF| about its mean, so at
+A = |RING_OFF| a straight swings by what the o's ring swings by, and it follows PUSH for the same
+reason the o does. It is multiplied by WEIGHT because a straight's width scales with weight and
+RING_OFF does not -- absolute, the u's leg reached -0.12 units at WEIGHT 0.70 and 54 of its 601
+samples were clamped flat, which no number of cubics can fit. Every letter then moves -0.031 to
+-0.079 along the axis, against the o's -0.105.
+
+A RELATIVE law -- a fraction |RING_OFF|/RING_W of the width at each point, so a straight is as
+modulated as the round everywhere -- is the better statement on paper and was drawn. It is worse
+in fact, measured against this one at the same floor: three of the twelve axis cells fail to build
+at all because a straight closes to 2.0 units, and of the nine that do build the m reaches 1.150
+against MAX_ERR's 0.6. The additive law fails none and its worst is 0.531. The reason is the same
+one that decides the amplitude: a relative swing is largest where the stroke is already widest,
+which is the lower left, which is exactly where R2's own taper has put the most material.
+
+**One field, or shared edges come apart.** R2 and R3 are fields over HEIGHT, so two pieces that
+draw the same edge agree only because they read the same y-only function. An m's middle leg is one
+arch's inner edge and the next arch's outer one; an h's stem is drawn by `rules.stem` and again as
+the shoulder's leg. Any rule that varies a width ACROSS a letter breaks that agreement: measured,
+22 units on the m's middle leg and 15 on the h's stem. So every width taken from R2/R3 at a known
+position goes through `rules.w_at(wf, p)`, the positional term is installed once in
+`rules.STRESS`, and a piece drawn in one place and translated to another (the m's second shoulder
+is the h's, moved right by the span between the n's legs) is given the stress that belongs where
+it LANDS, via `rules.stress_shifted`.
+
+The crown is the exception, and it is not a tuning detail. The a's crown joint is a construction
+on the a's SILHOUETTE -- `max(bowl, min(stem, cut))` -- and the bowl and the cut are geometric, so
+they do not move with R2s. Where the crown is live the leg's outer edge is therefore pinned too.
+Without that the three pieces stop meeting where the knots were placed, the transition sharpens
+from 54 deg spread over two samples to 52 on one, and the fit sticks at 1.280 however finely it is
+subdivided -- flat under subdivision, which is the signature of a break rather than of
+undersampling. Nothing unions a `rules.stem` onto a crowned leg, so pinning there cannot
+desynchronise a shared edge.
+
+**The setting.** `ORPHAN_STRESS` selects three cuts, because three were drawn and compared:
+
+| | R1s | R2s | what it costs |
+| --- | --- | --- | --- |
+| `off` | - | - | nothing; every glyph is bit for bit what it was before either existed |
+| `crown` | yes | - | nothing; the outer edge is pinned, so every advance and extremum is unchanged and 21 of the 26 lowercase letters are untouched |
+| `full` | yes | yes | the silhouette moves: a stem has no counter to absorb a width change, so it widens about its own centre and the advance follows |
+
+`full` is the default. Under it every one of the twelve axis cells builds, the worst fit over the
+grid is 0.531 against MAX_ERR's 0.6, and every glyph keeps one point structure across the grid.
+Advances move: n 537 to 547, h 537 to 551, r 447 to 457, m 889 to 887, u 524 to 521, k 413 to 424.
+The thinnest straight anywhere is 2.34 units at WEIGHT 0.70 / PUSH 1.00, where the o's own thin
+side is 4.17 -- thinner, at that one corner, than the thinnest round in the face.
+
 ## 6. What is deliberately not in the face
 
 - the white swash and the two eyes (need the ring or the animation);

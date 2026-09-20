@@ -75,7 +75,7 @@ HERE = os.path.dirname(os.path.abspath(__file__)); FONT = os.path.dirname(HERE)
 sys.path.insert(0, os.path.join(FONT, 'lib')); sys.path.insert(0, FONT)
 from pen import stroke, cut_for, ang, perp, unit, sub, mul, dot
 from metrics import CAP, OVER_POINT, OVER_ROUND, SB_STRAIGHT, SB_ROUND, UPM
-from rules import glyph, stem, diagonal, arm, w_slash, w_backslash, w_stem, w_horizontal, CUT_DEG, HORIZ_MID, HORIZ_TAPER
+from rules import glyph, stem, diagonal, arm, w_slash, w_backslash, w_stem, w_horizontal, w_at, w_ck, CUT_DEG, HORIZ_MID, HORIZ_TAPER
 from glyphs import core
 
 # ---- the exemplars, read off core.py ------------------------------------------
@@ -99,7 +99,7 @@ def _centres(E0, s0, E1, s1, wf=None, iters=16):
     c0, c1 = E0, E1
     for _ in range(iters):
         n = perp(unit(sub(c1, c0)))
-        c0, c1 = sub(E0, mul(n, s0 * wf(c0[1]) / 2)), sub(E1, mul(n, s1 * wf(c1[1]) / 2))
+        c0, c1 = sub(E0, mul(n, s0 * w_at(wf, c0) / 2)), sub(E1, mul(n, s1 * w_at(wf, c1) / 2))
     return c0, c1
 
 def _tip_side(s, at):
@@ -159,7 +159,8 @@ def _placed_stroke(E0, s0, E1, s1, end0=None, end1=None, wf=None):
     if E0[1] > E1[1]: E0, s0, E1, s1, end0, end1 = E1, s1, E0, s0, end1, end0
     if wf is None: wf = w_slash if E1[0] >= E0[0] - 1e-9 else w_backslash
     c0, c1 = _centres(E0, s0, E1, s1, wf)
-    return stroke(c0, c1, wf(c0[1]), wf(c1[1]), _end(end0, s0, 0, c0, c1), _end(end1, s1, 1, c1, c0))
+    return stroke(c0, c1, w_ck(w_at(wf, c0), c0), w_ck(w_at(wf, c1), c1),
+                  _end(end0, s0, 0, c0, c1), _end(end1, s1, 1, c1, c0))
 
 def _diag(E0, s0, E1, s1, bottom=None, top=None):
     """rules.diagonal with its centre-line ends solved (_centres) so the corner on side s0
