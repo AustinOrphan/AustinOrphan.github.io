@@ -68,6 +68,11 @@ interface Props {
   cut?: boolean;
   /** A field with the letterform punched out of it. */
   knock?: boolean;
+  /** Ship the cut and knockout masks even when those layers are off, so they can be
+   *  switched on later by swapping classes. Only the bench needs that. Every other instance
+   *  would be carrying two more copies of the mark path -- about 10KB -- for masks it never
+   *  references, which on the write-up's twenty-odd marks came to a fifth of the page. */
+  treatable?: boolean;
 }
 const {
   variant = 'hero',
@@ -82,7 +87,10 @@ const {
   shadow,
   cut = false,
   knock = false,
+  treatable = false,
 } = Astro.props;
+// Only ship the cut and knockout masks where they can actually be used; see Logo.astro.
+const masks = cut || knock || treatable;
 const px = typeof size === 'number' ? `${size}px` : size;
 // Merged into the ONE style attribute below, not added as a second: two style
 // attributes on a tag are not combined, the first wins and the rest are dropped,
@@ -224,14 +232,18 @@ const easeTail = `linear(${dash(0)}, ${at(TAIL_STOPS)}, 1)`;
     <!-- The finished mark's own two, matching Logo.astro element for element: the band cut
          out of the stroke, and the field with the letterform punched out. These belong to
          the resting render, not the write-on, so they carry no la- class. -->
-    <mask id={`${uid}-cut`} maskUnits="userSpaceOnUse" x="-1000" y="-1000" width="14000" height="14000">
-      <path d={LOGO_MARK_D} fill="#fff" stroke="#fff" stroke-linejoin="round" class="site-logo-cut-mask" />
-      <path d={LOGO_MARK_D} fill="#000" />
-    </mask>
-    <mask id={`${uid}-knock`} maskUnits="userSpaceOnUse" x="-1000" y="-1000" width="14000" height="14000">
-      <rect x="-1000" y="-1000" width="14000" height="14000" fill="#fff" />
-      <path d={LOGO_MARK_D} fill="#000" />
-    </mask>
+    {masks && (
+      <mask id={`${uid}-cut`} maskUnits="userSpaceOnUse" x="-1000" y="-1000" width="14000" height="14000">
+        <path d={LOGO_MARK_D} fill="#fff" stroke="#fff" stroke-linejoin="round" class="site-logo-cut-mask" />
+        <path d={LOGO_MARK_D} fill="#000" />
+      </mask>
+    )}
+    {masks && (
+      <mask id={`${uid}-knock`} maskUnits="userSpaceOnUse" x="-1000" y="-1000" width="14000" height="14000">
+        <rect x="-1000" y="-1000" width="14000" height="14000" fill="#fff" />
+        <path d={LOGO_MARK_D} fill="#000" />
+      </mask>
+    )}
   </defs>
 
   <g class="la-trail-layer" transform="translate(0,1084) scale(0.1,-0.1)">
@@ -257,17 +269,21 @@ const easeTail = `linear(${dash(0)}, ${at(TAIL_STOPS)}, 1)`;
        resting render is the same raster as Logo's (a nested <svg> would go
        through its own viewport and anti-alias a few edge pixels differently). -->
   <g class="la-final">
-    <g transform="translate(0.000000,1084.000000) scale(0.100000,-0.100000)" class="site-logo-knock-holder">
-      <rect x="-1000" y="-1000" width="14000" height="14000" class="site-logo-knock" mask={`url(#${uid}-knock)`} />
-    </g>
+    {masks && (
+      <g transform="translate(0.000000,1084.000000) scale(0.100000,-0.100000)" class="site-logo-knock-holder">
+        <rect x="-1000" y="-1000" width="14000" height="14000" class="site-logo-knock" mask={`url(#${uid}-knock)`} />
+      </g>
+    )}
     <g class="la-final-shadow site-logo-shadow-holder">
       <g transform="translate(0.000000,1084.000000) scale(0.100000,-0.100000)" class="site-logo-shadow"><path d={LOGO_MARK_D} /></g>
     </g>
-    <g
-      transform="translate(0.000000,1084.000000) scale(0.100000,-0.100000)"
-      class="site-logo-cut-holder"
-      stroke-linejoin="round"
-    ><path d={LOGO_MARK_D} mask={`url(#${uid}-cut)`} /></g>
+    {masks && (
+      <g
+        transform="translate(0.000000,1084.000000) scale(0.100000,-0.100000)"
+        class="site-logo-cut-holder"
+        stroke-linejoin="round"
+      ><path d={LOGO_MARK_D} mask={`url(#${uid}-cut)`} /></g>
+    )}
     <g
       transform="translate(0.000000,1084.000000) scale(0.100000,-0.100000)"
       class="site-logo-mark la-final-mark"

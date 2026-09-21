@@ -12,7 +12,9 @@ export default defineConfig({
   redirects: {
     '/orphan-display': '/design/ao/typeface/',
     '/logo-animation': '/design/ao/logo/',
-    '/logo-lab': '/design/ao/logo/',
+    // Honest again after the split: /logo-lab WAS the lab, and the lab is the bench.
+    // It had been pointing at the merged page, which was only half right.
+    '/logo-lab': '/design/ao/logo-bench/',
   },
   markdown: {
     remarkPlugins: [remarkGfm],

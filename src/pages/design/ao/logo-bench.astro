@@ -1,0 +1,718 @@
+---
+// The bench: where a mark is configured and exported. An instrument, not a publication,
+// which is why it lives at its own permanent URL and why /design/ao/logo/ no longer holds it.
+//
+// Only `trail` is still a build-time prop, because the two modes draw different markup and
+// cannot be switched with a property. Everything else -- the layers, the band, the shadow's
+// placement, size, speed and the three colours -- is a class or a custom property set live on
+// the chosen instance, so what is on screen is the real component's own output.
+//
+// Custom properties go on the SVG itself, never on a wrapper: LogoAnimated declares
+// --la-speed on .site-logo-anim, and a declaration on the element beats a value inherited
+// from an ancestor, so setting it on a parent would do nothing.
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import Logo from '../../../components/Logo.astro';
+import LogoAnimated from '../../../components/LogoAnimated.astro';
+import WipBanner from '../../../components/WipBanner.astro';
+import DesignShell from '../../../components/DesignShell.astro';
+import { entryFor, robotsFor } from '../../../data/design-index';
+import { endMs } from '../../../components/logo-timing';
+import { LOGO_LAYERS, LOGO_VARIANTS } from '../../../components/logo-layers';
+
+const entry = entryFor('logo-bench');
+
+const TRAILS = ['swash', 'stroke'] as const;
+
+// Derived, never typed in. Every duration here comes from logo-choreography.ts by way of
+// logo-timing.ts, because the choreography is generated and moves whenever the mark does.
+const HERO_MS = endMs('hero');
+const secs = (ms: number) => (ms / 1000).toFixed(2);
+
+// What each named variant turns on, written from the layer table rather than restated, so a
+// variant added to logo-layers.ts cannot go undescribed here.
+const VARIANT_RECIPE: Record<string, string> = Object.fromEntries(
+  LOGO_VARIANTS.map((v) => {
+    const { outline, shadow } = LOGO_LAYERS[v];
+    return [v, ['ink', outline && 'outline', shadow && 'shadow'].filter(Boolean).join(' + ')];
+  }),
+);
+---
+
+<BaseLayout title={entry.title} description={entry.blurb}
+            bodyClass="logo-lab" robots={robotsFor(entry.status)}>
+  <DesignShell />
+  {entry.status === 'wip' && <WipBanner />}
+  <h1 class="la-title">{entry.title}</h1>
+  <main class="lab">
+    <section class="lab-stage-wrap">
+      <!-- One instance per TRAIL, and only per trail: the two draw different markup and
+           cannot be switched with a property. Everything else, layers included, is now a
+           class or a custom property set live, so this used to be eight slots and is two. -->
+      <div class="lab-stage" data-stage data-bg="site">
+        {TRAILS.map((t) => (
+          <div class="lab-slot" data-trail={t} hidden>
+            <LogoAnimated trail={t} size={280} autoplay={false} treatable id={`lab-${t}`} />
+          </div>
+        ))}
+      </div>
+
+      <div class="lab-controls">
+        <!-- Layers, not variants. Two booleans are four combinations and all four are named,
+             so a row of variant radios would be a second control over the same two bits and
+             the two would drift. The toggles are the state; the name is derived from them. -->
+        <fieldset>
+          <legend>layers</legend>
+          <label><input type="checkbox" name="layer" value="outline" checked /> outline</label>
+          <label><input type="checkbox" name="layer" value="shadow" checked /> shadow</label>
+          <label><input type="checkbox" name="layer" value="knock" /> knock out</label>
+          <p class="lab-hint" data-variant-hint></p>
+        </fieldset>
+
+        <fieldset>
+          <legend>trail</legend>
+          {TRAILS.map((t, i) => (
+            <label><input type="radio" name="trail" value={t} checked={i === 0} /> {t}</label>
+          ))}
+        </fieldset>
+
+        <fieldset>
+          <legend>size</legend>
+          <label class="lab-range">
+            <input type="range" name="size" aria-label="size" min="16" max="520" step="1" value="280" />
+            <output data-out="size">280px</output>
+          </label>
+          <div class="lab-presets">
+            <button type="button" data-lab-size="26">26 blog nav</button>
+            <button type="button" data-lab-size="44">44 footer</button>
+            <button type="button" data-lab-size="120">120</button>
+            <button type="button" data-lab-size="280">280</button>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>speed</legend>
+          <label class="lab-range">
+            <input type="range" name="speed" aria-label="speed" min="0.25" max="4" step="0.05" value="1" />
+            <output data-out="speed">1.00× · {secs(HERO_MS)}s</output>
+          </label>
+          <div class="lab-presets">
+            <button type="button" data-speed="0.5">0.5</button>
+            <button type="button" data-speed="1">1</button>
+            <button type="button" data-speed="2">2</button>
+            <button type="button" data-speed="3">3</button>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>colour</legend>
+          <label class="lab-colour"><span>ink</span><input type="color" name="ink" value="#EEE5E9" /></label>
+          <label class="lab-colour"><span>outline</span><input type="color" name="outline" value="#D16666" /></label>
+          <label class="lab-colour"><span>shadow</span><input type="color" name="shadow" value="#2892D7" /></label>
+          <div class="lab-presets">
+            <button type="button" data-colours="theme">theme</button>
+            <button type="button" data-colours="swap">swap red/blue</button>
+            <button type="button" data-colours="mono">mono</button>
+          </div>
+        </fieldset>
+
+        <!-- The outline's weight. Reported as the VISIBLE band, which is half the stroke
+             width, because the stroke straddles the silhouette and its inner half is covered
+             by the fill. 300 is what hero has always drawn. -->
+        <fieldset data-when-layer="outline">
+          <legend>band</legend>
+          <!-- Cut lives here because it is a mode of the outline, not a layer of its own:
+               the same paint, standing alone instead of sitting under the fill. -->
+          <label><input type="checkbox" name="layer" value="cut" /> cut out the glyph</label>
+          <label class="lab-range">
+            <input type="range" name="band" aria-label="band" min="0" max="1200" step="10" value="300" />
+            <output data-out="band"></output>
+          </label>
+          <div class="lab-presets">
+            <button type="button" data-band="150">150</button>
+            <button type="button" data-band="300">300</button>
+            <button type="button" data-band="600">600</button>
+            <button type="button" data-band="1000">1000</button>
+          </div>
+          <p class="lab-hint">
+            The visible band. The stroke is twice this and straddles the silhouette; its
+            inner half is covered by the fill.
+          </p>
+        </fieldset>
+
+        <!-- Polar, so the offset reads as a direction and a throw rather than two numbers.
+             step="any" on the distance so the exact default survives being rendered into a
+             slider: 30*sqrt(2) is not a multiple of any sane step. -->
+        <fieldset data-when-layer="shadow">
+          <legend>shadow offset</legend>
+          <label class="lab-range">
+            <span class="lab-tick">dist</span>
+            <input type="range" name="sdist" aria-label="shadow distance" min="0" max="200" step="any" value="42.4264069" />
+            <output data-out="sdist"></output>
+          </label>
+          <label class="lab-range">
+            <span class="lab-tick">angle</span>
+            <input type="range" name="sangle" aria-label="shadow angle" min="0" max="360" step="1" value="45" />
+            <output data-out="sangle"></output>
+          </label>
+          <label class="lab-range">
+            <span class="lab-tick">scale</span>
+            <input type="range" name="sscale" aria-label="shadow scale" min="0.4" max="2" step="0.01" value="1" />
+            <output data-out="sscale"></output>
+          </label>
+          <p class="lab-hint" data-shadow-hint></p>
+        </fieldset>
+
+        <fieldset>
+          <legend>ground</legend>
+          <div class="lab-presets">
+            <button type="button" data-bg="site">site</button>
+            <button type="button" data-bg="ink">near-black</button>
+            <button type="button" data-bg="light">light</button>
+            <button type="button" data-bg="accent">accent</button>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>play</legend>
+          <div class="lab-presets">
+            <button type="button" data-play>replay</button>
+            <button type="button" data-pause>pause</button>
+          </div>
+          <label><input type="checkbox" data-loop /> loop</label>
+          <label class="lab-range">
+            <input type="range" name="scrub" aria-label="scrub" min="0" max={HERO_MS} step="1" value={HERO_MS} />
+            <output data-out="scrub">{(HERO_MS / 1000).toFixed(3)}s</output>
+          </label>
+          <p class="lab-hint">Scrubbing pauses. Replay resumes from the top.</p>
+        </fieldset>
+      </div>
+    </section>
+
+
+    <section class="la-dl" aria-labelledby="la-dl-h">
+      <h2 id="la-dl-h">Download</h2>
+
+      <div class="la-dl-controls">
+        <label>treatment
+          <select data-dl-treat>
+            {LOGO_VARIANTS.map((v) => (
+              <option value={v} selected={v === 'hero'}>{v} — {VARIANT_RECIPE[v]}</option>
+            ))}
+          </select>
+        </label>
+        <label>ink <input type="color" data-dl-var="ink" value="#EEE5E9"></label>
+        <!-- Each colour control is shown only while its LAYER is on, so it cannot be set to
+             something that has no effect. Keyed on the layer, not on the variant name, which
+             is what let outline and shadow hide on the two combinations that now have names. -->
+        <label data-dl-layer="outline">outline <input type="color" data-dl-var="outline" value="#D16666"></label>
+        <label data-dl-layer="shadow">shadow <input type="color" data-dl-var="shadow" value="#2892D7"></label>
+        <label>size
+          <select data-dl-size>
+            <option value="256">256</option>
+            <option value="512" selected>512</option>
+            <option value="1024">1024</option>
+            <option value="2048">2048</option>
+          </select>
+        </label>
+        <label>speed <input type="number" data-dl-speed min="0.25" max="4" step="0.25" value="1"></label>
+        <button type="button" data-dl-reset>reset</button>
+      </div>
+
+      <div class="la-dl-row">
+        <figure class="la-dl-cell">
+          <Logo variant="hero" size={132} treatable id="la-dl-still" />
+          <figcaption>still</figcaption>
+          <div class="la-dl-btns">
+            <button type="button" data-dl="svg" data-sel="#la-dl-still" data-name="ao-mark">SVG</button>
+            <button type="button" data-dl="png" data-sel="#la-dl-still" data-name="ao-mark">PNG</button>
+          </div>
+        </figure>
+        <figure class="la-dl-cell">
+          <LogoAnimated variant="hero" size={132} treatable id="la-dl-sw" class="la-dl-live" />
+          <figcaption>animated</figcaption>
+          <div class="la-dl-btns">
+            <button type="button" data-dl="anim" data-name="ao-mark-animated">SVG</button>
+            <button type="button" data-dl="video" data-name="ao-mark" data-slow="1">video</button>
+            <button type="button" data-dl="video" data-name="ao-mark-slow" data-slow="4">&frac14;&times;</button>
+            <button type="button" data-dl-replay>replay</button>
+          </div>
+        </figure>
+      </div>
+
+      <p class="la-dl-note">
+        One vector, three treatments. <em>plain</em> and <em>flat</em> are the same drawing and
+        differ only in fill, so <em>ink</em> follows the treatment until you set it yourself;
+        set them alike and the two files are identical. <em>size</em> drives every download
+        (the video caps at 1024); <em>speed</em> reaches the animated SVG and the video, which
+        the still has no use for. SVG files carry their paint on the elements themselves and
+        need no stylesheet, and hero's outline is saved as its own shape rather than leaning on
+        a <code>paint-order</code> that design tools ignore; the animated file carries the
+        write-on's own CSS and plays when opened. All are transparent, so a light ink wants a
+        dark background &mdash; the video is given one.
+      </p>
+    </section>
+  </main>
+</BaseLayout>
+
+<style is:global>
+  .logo-lab { background: var(--color-background); color: var(--color-primary); }
+  .lab-stage-wrap { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 28px; align-items: start; }
+  @media (max-width: 900px) { .lab-stage-wrap { grid-template-columns: 1fr; } }
+  .lab-stage {
+    display: grid; place-items: center; min-height: 560px; border-radius: 10px;
+    border: 1px solid rgba(var(--color-primary-rgb), 0.12); overflow: hidden;
+  }
+  .lab-stage[data-bg="site"]   { background: var(--color-background); }
+  .lab-stage[data-bg="ink"]    { background: #0b1116; }
+  .lab-stage[data-bg="light"]  { background: #EEE5E9; }
+  .lab-stage[data-bg="accent"] { background: var(--color-accent); }
+  .lab-slot[hidden] { display: none; }
+  .lab-controls { display: grid; gap: 14px; }
+  .lab-controls fieldset {
+    border: 1px solid rgba(var(--color-primary-rgb), 0.14); border-radius: 8px;
+    padding: 10px 12px 12px; margin: 0; display: grid; gap: 8px;
+  }
+  .lab-controls legend { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em;
+    color: rgba(var(--color-primary-rgb), 0.55); padding: 0 4px; }
+  .lab-controls label { display: flex; align-items: center; gap: 8px; font-size: 0.86rem; }
+  .lab-range { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; }
+  /* The shadow rows carry a name as well as a slider and a readout, so they need a third
+     track; without this the readout wraps onto a line of its own. */
+  .lab-range:has(.lab-tick) { grid-template-columns: 2.8rem 1fr auto; }
+  .lab-tick { font-size: 0.72rem; opacity: 0.7; }
+  .lab-range input[type="range"] { width: 100%; }
+  .lab-range output { font-family: ui-monospace, monospace; font-size: 0.76rem;
+    color: rgba(var(--color-primary-rgb), 0.7); min-width: 8ch; text-align: right; }
+  .lab-colour { justify-content: space-between; }
+  .lab-colour input[type="color"] { width: 46px; height: 24px; padding: 0; border: 0; background: none; }
+  .lab-presets { display: flex; flex-wrap: wrap; gap: 6px; }
+  .lab-presets button {
+    font: inherit; font-size: 0.76rem; padding: 3px 9px; border-radius: 999px; cursor: pointer;
+    color: var(--color-primary); background: transparent;
+    border: 1px solid rgba(var(--color-primary-rgb), 0.28);
+  }
+  .lab-presets button:hover { border-color: var(--color-accent); color: var(--color-accent); }
+</style>
+
+<style is:global>
+  .la-dl {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgb(238 229 233 / 0.15);
+    width: min(100%, 60rem);
+  }
+  .la-dl h2 {
+    margin: 0;
+    font-size: 1rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    opacity: 0.7;
+  }
+  .la-dl-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 2.5rem;
+  }
+  .la-dl-cell {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.6rem;
+  }
+  .la-dl-cell figcaption { font-size: 0.8rem; opacity: 0.75; text-align: center; line-height: 1.4; }
+  .la-dl-cell figcaption small { font-size: 0.72rem; opacity: 0.75; }
+  .la-dl-btns { display: flex; gap: 0.4rem; }
+  .la-dl-btns button {
+    font: inherit;
+    font-size: 0.78rem;
+    padding: 0.35rem 0.7rem;
+    border-radius: 999px;
+    border: 1px solid var(--color-accent);
+    background: transparent;
+    color: var(--color-primary);
+    cursor: pointer;
+    min-width: 3.4rem;
+  }
+  .la-dl-btns button:hover:not(:disabled) { background: var(--color-accent); }
+  .la-dl-btns button:disabled { opacity: 0.6; cursor: default; }
+  .la-dl-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem 1.4rem;
+    font-size: 0.8rem;
+  }
+  .la-dl-controls label { display: flex; align-items: center; gap: 0.45rem; opacity: 0.85; }
+  .la-dl-controls select,
+  .la-dl-controls input[type="number"] {
+    font: inherit;
+    font-size: 0.78rem;
+    padding: 0.28rem 0.45rem;
+    border-radius: 0.4rem;
+    border: 1px solid rgb(238 229 233 / 0.3);
+    background: var(--color-background);
+    color: var(--color-primary);
+  }
+  .la-dl-controls input[type="number"] { width: 4.2rem; }
+  .la-dl-controls input[type="color"] {
+    width: 2rem; height: 1.6rem; padding: 0; cursor: pointer;
+    border: 1px solid rgb(238 229 233 / 0.3); border-radius: 0.3rem; background: transparent;
+  }
+  .la-dl-controls [data-dl-reset] {
+    font: inherit; font-size: 0.78rem; padding: 0.3rem 0.8rem; border-radius: 999px;
+    border: 1px solid rgb(238 229 233 / 0.3); background: transparent;
+    color: var(--color-primary); cursor: pointer;
+  }
+  .la-dl-anim {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+  }
+  .la-dl-anim label { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; opacity: 0.8; }
+  .la-dl-anim select {
+    font: inherit;
+    font-size: 0.78rem;
+    padding: 0.3rem 0.5rem;
+    border-radius: 0.4rem;
+    border: 1px solid rgb(238 229 233 / 0.3);
+    background: var(--color-background);
+    color: var(--color-primary);
+  }
+  .la-dl-note {
+    margin: 0;
+    /* the page's global paragraph rule paints this accent blue otherwise */
+    color: var(--color-primary);
+    max-width: 44rem;
+    text-align: center;
+    font-size: 0.8rem;
+    opacity: 0.6;
+    line-height: 1.5;
+  }
+</style>
+
+<script>
+  // The stage holds one rendered instance per (variant, trail); the controls reveal one.
+  // Size, speed and the three colours are set on the SVG itself, not on a wrapper:
+  // LogoAnimated declares --la-speed on .site-logo-anim, and a declaration on the element
+  // beats a value inherited from an ancestor, so setting it on a parent would do nothing.
+  import { endMs } from '../../../components/logo-timing';
+import { LOGO_LAYERS, LOGO_VARIANTS } from '../../../components/logo-layers';
+
+  const stage = document.querySelector<HTMLElement>('[data-stage]')!;
+  const slots = [...stage.querySelectorAll<HTMLElement>('.lab-slot')];
+  const svgs = slots.map((s) => s.querySelector<SVGSVGElement>('svg')!);
+  const $ = <T extends Element>(sel: string) => document.querySelector<T>(sel)!;
+  const out = (name: string) => $<HTMLOutputElement>(`[data-out="${name}"]`);
+
+  // What each combination is FOR, keyed by the name the layers resolve to. The duration is
+  // appended at render time rather than written into the prose, so these cannot fall out of
+  // step with the choreography the way the old "(1.30s)" had.
+  const HINT: Record<string, string> = {
+    hero: 'off-white ink, red outline, blue offset — the site h1, and the nav and footer marks',
+    plain: 'ink alone, and what the hero backdrop asks for',
+    outlined: 'the red edge without the offset copy',
+    shadowed: 'the offset copy without the red edge',
+  };
+
+  const state = {
+    outline: true, shadow: true, cut: false, knock: false,
+    trail: 'swash', size: 280, speed: 1,
+    ink: '', outlineCol: '', shadowCol: '', loop: false,
+    band: 300, sdist: 42.4264069, sangle: 45, sscale: 1,
+  };
+
+  /** The name for the layers currently on. All four combinations have one. */
+  const variantName = (): string =>
+    LOGO_VARIANTS.find((v) => LOGO_LAYERS[v].outline === state.outline
+                           && LOGO_LAYERS[v].shadow === state.shadow) ?? 'plain';
+
+  const currentSvg = () => svgs[slots.findIndex((s) => s.dataset.trail === state.trail)];
+  const totalMs = () => endMs(variantName(), state.speed);
+
+  function apply() {
+    slots.forEach((s) => { s.hidden = s.dataset.trail !== state.trail; });
+    for (const svg of svgs) {
+      svg.style.width = `${state.size}px`;
+      svg.style.height = `${state.size}px`;
+      svg.style.setProperty('--la-speed', String(state.speed));
+      svg.classList.toggle('logo-layer-outline', state.outline);
+      svg.classList.toggle('logo-layer-shadow', state.shadow);
+      svg.classList.toggle('logo-layer-cut', state.cut);
+      svg.classList.toggle('logo-layer-knock', state.knock);
+      svg.style.setProperty('--logo-band', String(state.band));
+      svg.style.setProperty('--logo-shadow-dist', String(state.sdist));
+      svg.style.setProperty('--logo-shadow-angle', `${state.sangle}deg`);
+      svg.style.setProperty('--logo-shadow-scale', String(state.sscale));
+      for (const [k, v] of Object.entries({ ink: state.ink, outline: state.outlineCol, shadow: state.shadowCol })) {
+        if (v) svg.style.setProperty(`--logo-${k}`, v);
+        else svg.style.removeProperty(`--logo-${k}`);
+      }
+    }
+    // A parameter's fieldset is hidden while its layer is off, so nothing on screen is a
+    // control that would do nothing.
+    document.querySelectorAll<HTMLElement>('[data-when-layer]').forEach((el) => {
+      el.hidden = !state[el.dataset.whenLayer as 'outline' | 'shadow'];
+    });
+    out('size').value = `${state.size}px`;
+    out('speed').value = `${state.speed.toFixed(2)}× · ${(totalMs() / 1000).toFixed(2)}s`;
+    // Half the stroke width: the stroke straddles the silhouette and the fill covers its
+    // inner half, so this is the red you can actually see.
+    out('band').value = state.band === 0 ? 'none' : String(state.band / 2);
+    out('sdist').value = `${state.sdist.toFixed(1)}`;
+    out('sangle').value = `${state.sangle}°`;
+    out('sscale').value = `${state.sscale.toFixed(2)}×`;
+    const rad = (state.sangle * Math.PI) / 180;
+    // `+ 0` folds -0 into 0: cos(270deg) is -1.8e-16, which toFixed renders as "-0.0".
+    const axis = (n: number) => (Number(n.toFixed(1)) + 0).toFixed(1);
+    $<HTMLElement>('[data-shadow-hint]').textContent =
+      `offset (${axis(state.sdist * Math.cos(rad))}, ${axis(state.sdist * Math.sin(rad))}) ` +
+      `in viewBox units, y down`;
+    const name = variantName();
+    // The hint describes the combination, so it carries its own length at speed 1; the speed
+    // readout above is the one that tracks the slider.
+    // cut and knock are not in the variant table -- they are export treatments, not site
+    // ones -- so the name covers outline and shadow and they are named after it.
+    const modes = [state.cut && 'cut out', state.knock && 'knocked out'].filter(Boolean);
+    $<HTMLElement>('[data-variant-hint]').textContent =
+      `${name} — ${HINT[name]} (${(endMs(name) / 1000).toFixed(2)}s)`
+      + (modes.length ? `, ${modes.join(' and ')}` : '');
+    const scrub = $<HTMLInputElement>('input[name="scrub"]');
+    scrub.max = String(totalMs());
+    scrub.value = scrub.max;
+    out('scrub').value = `${(totalMs() / 1000).toFixed(3)}s`;
+  }
+
+  function play(svg: SVGSVGElement) {
+    svg.classList.remove('la-play');
+    void svg.getBoundingClientRect();                       // force the restart
+    svg.classList.add('la-play');
+  }
+
+  function pause() {
+    for (const a of currentSvg().getAnimations({ subtree: true })) a.pause();
+  }
+
+  $<HTMLElement>('[data-play]').addEventListener('click', () => play(currentSvg()));
+  $<HTMLElement>('[data-pause]').addEventListener('click', pause);
+  $<HTMLInputElement>('[data-loop]').addEventListener('change', (e) => {
+    state.loop = (e.target as HTMLInputElement).checked;
+    if (state.loop) play(currentSvg());
+  });
+
+  // Looping: the component drops la-play once every animation has finished, which is
+  // exactly the moment to start again.
+  for (const svg of svgs) {
+    svg.addEventListener('animationend', () => {
+      if (!state.loop || svg !== currentSvg()) return;
+      if (svg.getAnimations({ subtree: true }).every((a) => a.playState === 'finished')) {
+        setTimeout(() => { if (state.loop) play(svg); }, 260);
+      }
+    });
+  }
+
+  for (const c of document.querySelectorAll<HTMLInputElement>('input[name="layer"]')) {
+    c.addEventListener('change', () => {
+      state[c.value as 'outline' | 'shadow' | 'cut' | 'knock'] = c.checked;
+      apply();
+      play(currentSvg());
+    });
+  }
+  for (const r of document.querySelectorAll<HTMLInputElement>('input[name="trail"]')) {
+    r.addEventListener('change', () => { state.trail = r.value; apply(); play(currentSvg()); });
+  }
+  $<HTMLInputElement>('input[name="size"]').addEventListener('input', (e) => {
+    state.size = Number((e.target as HTMLInputElement).value); apply();
+  });
+  $<HTMLInputElement>('input[name="speed"]').addEventListener('input', (e) => {
+    state.speed = Number((e.target as HTMLInputElement).value); apply();
+  });
+  $<HTMLInputElement>('input[name="scrub"]').addEventListener('input', (e) => {
+    const svg = currentSvg();
+    if (!svg.classList.contains('la-play')) play(svg);
+    const ms = Number((e.target as HTMLInputElement).value);
+    for (const a of svg.getAnimations({ subtree: true })) { a.pause(); a.currentTime = ms; }
+    out('scrub').value = `${(ms / 1000).toFixed(3)}s`;
+  });
+  // The colour inputs are named for the layer they paint; state keys them with a Col suffix
+  // so they do not collide with the booleans of the same name.
+  for (const [input, key] of [['ink', 'ink'], ['outline', 'outlineCol'], ['shadow', 'shadowCol']] as const) {
+    $<HTMLInputElement>(`input[name="${input}"]`).addEventListener('input', (e) => {
+      state[key] = (e.target as HTMLInputElement).value; apply();
+    });
+  }
+  // The treatment parameters. Each replays, because what they change only settles in after
+  // the draw lands and is otherwise invisible until the next run.
+  for (const [input, key] of [['band', 'band'], ['sdist', 'sdist'], ['sangle', 'sangle'],
+                              ['sscale', 'sscale']] as const) {
+    $<HTMLInputElement>(`input[name="${input}"]`).addEventListener('input', (e) => {
+      state[key] = Number((e.target as HTMLInputElement).value); apply();
+    });
+  }
+  for (const b of document.querySelectorAll<HTMLButtonElement>('[data-band]')) {
+    b.addEventListener('click', () => {
+      state.band = Number(b.dataset.band);
+      $<HTMLInputElement>('input[name="band"]').value = String(state.band);
+      apply(); play(currentSvg());
+    });
+  }
+  for (const b of document.querySelectorAll<HTMLButtonElement>('[data-lab-size]')) {
+    b.addEventListener('click', () => {
+      state.size = Number(b.dataset.labSize);
+      $<HTMLInputElement>('input[name="size"]').value = String(state.size); apply();
+    });
+  }
+  for (const b of document.querySelectorAll<HTMLButtonElement>('[data-speed]')) {
+    b.addEventListener('click', () => {
+      state.speed = Number(b.dataset.speed);
+      $<HTMLInputElement>('input[name="speed"]').value = String(state.speed);
+      apply(); play(currentSvg());
+    });
+  }
+  const PALETTES: Record<string, [string, string, string]> = {
+    theme: ['', '', ''],
+    swap: ['#EEE5E9', '#2892D7', '#D16666'],
+    mono: ['#EEE5E9', '#8fa0ad', '#4a5c6a'],
+  };
+  for (const b of document.querySelectorAll<HTMLButtonElement>('[data-colours]')) {
+    b.addEventListener('click', () => {
+      const [i, o, s] = PALETTES[b.dataset.colours!];
+      state.ink = i; state.outlineCol = o; state.shadowCol = s;
+      if (i) $<HTMLInputElement>('input[name="ink"]').value = i;
+      if (o) $<HTMLInputElement>('input[name="outline"]').value = o;
+      if (s) $<HTMLInputElement>('input[name="shadow"]').value = s;
+      apply();
+    });
+  }
+  for (const b of document.querySelectorAll<HTMLButtonElement>('[data-bg]')) {
+    b.addEventListener('click', () => { stage.dataset.bg = b.dataset.bg!; });
+  }
+
+  // The in-situ panels replay on click, at their own real sizes.
+  for (const holder of document.querySelectorAll<HTMLElement>('[data-situ]')) {
+    const svg = holder.querySelector<SVGSVGElement>('svg')!;
+    const frame = holder.closest('.situ-frame') ?? holder;
+    frame.addEventListener('click', (e) => { e.preventDefault(); play(svg); });
+  }
+
+  apply();
+  play(currentSvg());
+</script>
+
+<script>
+  // ---- Downloads -----------------------------------------------------------------
+  // The controls write to the two previews, and the export reads whatever is on them, so
+  // there is one source of truth: treatment is a class swap, colours and speed are custom
+  // properties, and trail is a choice between two instances because the two draw different
+  // markup and cannot be switched with a property.
+  import { LOGO_LAYERS, LOGO_VARIANTS, type LogoVariant } from '../../../components/logo-layers';
+
+  const still = document.querySelector<SVGSVGElement>('#la-dl-still');
+  const live = document.querySelector<SVGSVGElement>('#la-dl-sw');
+  const treatSel = document.querySelector<HTMLSelectElement>('[data-dl-treat]');
+  const speedIn = document.querySelector<HTMLInputElement>('[data-dl-speed]');
+  const sizeSel = document.querySelector<HTMLSelectElement>('[data-dl-size]');
+  const colourIns = Array.from(document.querySelectorAll<HTMLInputElement>('[data-dl-var]'));
+  const liveMark = (): SVGSVGElement | null => live;
+  const size = (): number => Number(sizeSel?.value || 512);
+
+  const treatment = (): LogoVariant => {
+    const v = treatSel?.value as LogoVariant | undefined;
+    return v && LOGO_VARIANTS.includes(v) ? v : 'hero';
+  };
+
+  function apply(): void {
+    const layers = LOGO_LAYERS[treatment()];
+    const marks: (SVGSVGElement | null)[] = [still, live];
+    for (const el of marks) {
+      if (!el) continue;
+      // The layer classes ARE the mechanism; the variant name is only a preset over them.
+      // This used to swap `site-logo-<variant>` classes, which stopped meaning anything when
+      // the rules moved onto the layers. Both components resolve a variant the same way, so
+      // the still and the animated preview stay in step with no second mapping here.
+      el.classList.toggle('logo-layer-outline', layers.outline);
+      el.classList.toggle('logo-layer-shadow', layers.shadow);
+      for (const input of colourIns) el.style.setProperty(`--logo-${input.dataset.dlVar}`, input.value);
+      if (el !== still) el.style.setProperty('--la-speed', String(speedIn?.value || 1));
+    }
+    // A colour control is shown only while its layer is on, so nothing can be set to no effect
+    document.querySelectorAll<HTMLElement>('[data-dl-layer]').forEach((el) => {
+      const layer = el.dataset.dlLayer as keyof typeof layers;
+      el.hidden = !layers[layer];
+    });
+  }
+
+  const replayLive = (): void => {
+    const m = liveMark();
+    if (!m) return;
+    m.classList.remove('la-play');
+    void m.getBoundingClientRect();
+    m.classList.add('la-play');
+  };
+
+  [treatSel, speedIn, sizeSel, ...colourIns].forEach((el) =>
+    el?.addEventListener('input', () => { apply(); replayLive(); }));
+  document.querySelector('[data-dl-reset]')?.addEventListener('click', () => {
+    if (treatSel) treatSel.value = 'hero';
+    if (speedIn) speedIn.value = '1';
+    if (sizeSel) sizeSel.value = '512';
+    colourIns.forEach((i) => { i.value = i.defaultValue; });
+    apply(); replayLive();
+  });
+  document.querySelector('[data-dl-replay]')?.addEventListener('click', replayLive);
+  apply();
+
+  // Safari has only recently been able to record at all; say so rather than fail on click.
+  if (!videoMimeType()) {
+    document.querySelectorAll<HTMLButtonElement>('[data-dl="video"]').forEach((b) => {
+      b.disabled = true;
+      b.title = 'this browser cannot record video';
+    });
+  }
+
+  document.querySelectorAll<HTMLButtonElement>('[data-dl]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const src = btn.dataset.sel ? document.querySelector(btn.dataset.sel) : liveMark();
+      if (!(src instanceof SVGSVGElement)) { console.error('no mark for', btn.dataset.sel); return; }
+      const name = `${btn.dataset.name || 'ao-mark'}-${treatment()}`;
+      const kind = btn.dataset.dl;
+      const was = btn.textContent;
+      const done = (label: string) => {
+        btn.textContent = label;
+        btn.disabled = true;
+        setTimeout(() => { btn.textContent = was; btn.disabled = false; }, 1200);
+      };
+      const px = size();
+      try {
+        if (kind === 'svg') { downloadSvg(src, `${name}.svg`, { size: px }); done('saved'); }
+        else if (kind === 'anim') { downloadSvg(src, `${name}.svg`, { animated: true, size: px }); done('saved'); }
+        else if (kind === 'png') {
+          btn.disabled = true;
+          await downloadPng(src, `${name}-${px}.png`, px);
+          done('saved');
+        } else if (kind === 'video') {
+          btn.disabled = true;
+          btn.textContent = 'baking';
+          // Capped: every frame is baked and rasterised up front, so 2048 turns a 1.3s clip
+          // into a minute of work for a size no one plays a logo animation at.
+          await downloadVideo(src, name, {
+            slow: Number(btn.dataset.slow || 1), size: Math.min(px, 1024), fps: 30,
+            background: '#1D2B35',
+            onProgress: (d, t) => { btn.textContent = `${Math.round((d / t) * 100)}%`; },
+          });
+          done('saved');
+        }
+      } catch (err) {
+        console.error(err);
+        done('failed');
+      }
+    });
+  });
+</script>

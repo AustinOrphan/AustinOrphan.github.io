@@ -1,0 +1,25 @@
+---
+// The chrome both /design/ao/ pages wear: the ground, the column, the h1 and the small
+// print. Split out of the merged logo page rather than duplicated into each half, because
+// `<style is:global>` in a page ships only on that page and these rules are the one thing
+// the write-up and the bench genuinely share.
+//
+// Not in global.css: that stylesheet ships on every route, including the blog and the home
+// page, and none of this belongs there.
+---
+<style is:global>
+  .lab { max-width: 1180px; margin: 0 auto; padding: 84px 24px 96px; }
+  /* The page title sits above the demo rather than inside .lab, so that the document's
+     first heading is this h1 and not the demo's "Download" h2. Styled by its own class,
+     never by a descendant selector: the in-situ panel renders the real hero, whose own
+     h1 must keep the bare `h1` rule in global.css. A `.lab h1` here outranked it and
+     shrank the wordmark to 24px. The stroke and shadow resets are that same global rule
+     in the other direction -- at 1400px it puts a 2.8px stroke on 24px text. */
+  .la-title {
+    max-width: 1180px; margin: 0 auto; padding: 84px 24px 0;
+    font-size: 1.5rem; letter-spacing: 0.02em;
+    -webkit-text-stroke: 0; text-shadow: none;
+  }
+  .lab > section > h2, .lab > h2 { font-size: 1.1rem; margin: 56px 0 8px; }
+  .lab-hint { color: rgba(var(--color-primary-rgb), 0.55); font-size: 0.82rem; margin: 6px 0 0; }
+</style>
