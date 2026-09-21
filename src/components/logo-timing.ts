@@ -48,6 +48,24 @@ export function endSeconds(variant: string, speed = 1): number {
   return (treated ? CHOREOGRAPHY_END.treated : CHOREOGRAPHY_END.untreated) / speed;
 }
 
+/**
+ * The same question asked by LAYER rather than by variant name.
+ *
+ * Any layer that settles in after the draw runs the treatment beat: the outline's width, the
+ * shadow's offset, and now the cut and knockout cross-fades, which land the solid mark and
+ * then take the treatment over that same window. `cut` and `knock` are not in the variant
+ * table -- they are export treatments -- so a caller holding raw layer state has to ask this
+ * way or it reports 1160ms for a mark that runs to 1360.
+ */
+export function endMsForLayers(
+  layers: { outline?: boolean; shadow?: boolean; cut?: boolean; knock?: boolean },
+  speed = 1,
+): number {
+  const treated = !!(layers.outline || layers.shadow || layers.cut || layers.knock);
+  const end = treated ? CHOREOGRAPHY_END.treated : CHOREOGRAPHY_END.untreated;
+  return Math.round((end / speed) * 1000);
+}
+
 /** The same, in whole milliseconds, which is what a range input wants. */
 export function endMs(variant: string, speed = 1): number {
   return Math.round(endSeconds(variant, speed) * 1000);
