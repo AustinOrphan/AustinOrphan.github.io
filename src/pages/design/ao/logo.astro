@@ -175,20 +175,25 @@ const VARIANT_RECIPE: Record<string, string> = Object.fromEntries(
   </section>
   <main class="lab">
     <section class="lab-stage-wrap">
+      <!-- One instance per TRAIL, and only per trail: the two draw different markup and
+           cannot be switched with a property. Everything else, layers included, is now a
+           class or a custom property set live, so this used to be eight slots and is two. -->
       <div class="lab-stage" data-stage data-bg="site">
-        {VARIANTS.map((v) => TRAILS.map((t) => (
-          <div class="lab-slot" data-variant={v} data-trail={t} hidden>
-            <LogoAnimated variant={v} trail={t} size={280} autoplay={false} id={`lab-${v}-${t}`} />
+        {TRAILS.map((t) => (
+          <div class="lab-slot" data-trail={t} hidden>
+            <LogoAnimated trail={t} size={280} autoplay={false} id={`lab-${t}`} />
           </div>
-        )))}
+        ))}
       </div>
 
       <div class="lab-controls">
+        <!-- Layers, not variants. Two booleans are four combinations and all four are named,
+             so a row of variant radios would be a second control over the same two bits and
+             the two would drift. The toggles are the state; the name is derived from them. -->
         <fieldset>
-          <legend>variant</legend>
-          {VARIANTS.map((v, i) => (
-            <label><input type="radio" name="variant" value={v} checked={i === 0} /> {v}</label>
-          ))}
+          <legend>layers</legend>
+          <label><input type="checkbox" name="layer" value="outline" checked /> outline</label>
+          <label><input type="checkbox" name="layer" value="shadow" checked /> shadow</label>
           <p class="lab-hint" data-variant-hint></p>
         </fieldset>
 
@@ -237,6 +242,50 @@ const VARIANT_RECIPE: Record<string, string> = Object.fromEntries(
             <button type="button" data-colours="swap">swap red/blue</button>
             <button type="button" data-colours="mono">mono</button>
           </div>
+        </fieldset>
+
+        <!-- The outline's weight. Reported as the VISIBLE band, which is half the stroke
+             width, because the stroke straddles the silhouette and its inner half is covered
+             by the fill. 300 is what hero has always drawn. -->
+        <fieldset data-when-layer="outline">
+          <legend>band</legend>
+          <label class="lab-range">
+            <input type="range" name="band" aria-label="band" min="0" max="1200" step="10" value="300" />
+            <output data-out="band"></output>
+          </label>
+          <div class="lab-presets">
+            <button type="button" data-band="150">150</button>
+            <button type="button" data-band="300">300</button>
+            <button type="button" data-band="600">600</button>
+            <button type="button" data-band="1000">1000</button>
+          </div>
+          <p class="lab-hint">
+            The visible band. The stroke is twice this and straddles the silhouette; its
+            inner half is covered by the fill.
+          </p>
+        </fieldset>
+
+        <!-- Polar, so the offset reads as a direction and a throw rather than two numbers.
+             step="any" on the distance so the exact default survives being rendered into a
+             slider: 30*sqrt(2) is not a multiple of any sane step. -->
+        <fieldset data-when-layer="shadow">
+          <legend>shadow offset</legend>
+          <label class="lab-range">
+            <span class="lab-tick">dist</span>
+            <input type="range" name="sdist" aria-label="shadow distance" min="0" max="200" step="any" value="42.4264069" />
+            <output data-out="sdist"></output>
+          </label>
+          <label class="lab-range">
+            <span class="lab-tick">angle</span>
+            <input type="range" name="sangle" aria-label="shadow angle" min="0" max="360" step="1" value="45" />
+            <output data-out="sangle"></output>
+          </label>
+          <label class="lab-range">
+            <span class="lab-tick">scale</span>
+            <input type="range" name="sscale" aria-label="shadow scale" min="0.4" max="2" step="0.01" value="1" />
+            <output data-out="sscale"></output>
+          </label>
+          <p class="lab-hint" data-shadow-hint></p>
         </fieldset>
 
         <fieldset>
@@ -354,6 +403,10 @@ const VARIANT_RECIPE: Record<string, string> = Object.fromEntries(
     color: rgba(var(--color-primary-rgb), 0.55); padding: 0 4px; }
   .lab-controls label { display: flex; align-items: center; gap: 8px; font-size: 0.86rem; }
   .lab-range { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; }
+  /* The shadow rows carry a name as well as a slider and a readout, so they need a third
+     track; without this the readout wraps onto a line of its own. */
+  .lab-range:has(.lab-tick) { grid-template-columns: 2.8rem 1fr auto; }
+  .lab-tick { font-size: 0.72rem; opacity: 0.7; }
   .lab-range input[type="range"] { width: 100%; }
   .lab-range output { font-family: ui-monospace, monospace; font-size: 0.76rem;
     color: rgba(var(--color-primary-rgb), 0.7); min-width: 8ch; text-align: right; }
@@ -589,44 +642,71 @@ import { LOGO_LAYERS, LOGO_VARIANTS } from '../../../components/logo-layers';
   const $ = <T extends Element>(sel: string) => document.querySelector<T>(sel)!;
   const out = (name: string) => $<HTMLOutputElement>(`[data-out="${name}"]`);
 
-  // The duration is appended at render time rather than written into the prose, so these
-  // cannot fall out of step with the choreography the way the old "(1.30s)" had.
+  // What each combination is FOR, keyed by the name the layers resolve to. The duration is
+  // appended at render time rather than written into the prose, so these cannot fall out of
+  // step with the choreography the way the old "(1.30s)" had.
   const HINT: Record<string, string> = {
-    hero: 'off-white ink, red outline, blue offset — the treatment settles in after the draw',
-    plain: 'the same ink, neither extra pass',
-    flat: 'a single accent fill, for sizes where an outline goes sub-pixel',
+    hero: 'off-white ink, red outline, blue offset — the site h1, and the nav and footer marks',
+    plain: 'ink alone, and what the hero backdrop asks for',
+    outlined: 'the red edge without the offset copy',
+    shadowed: 'the offset copy without the red edge',
   };
 
   const state = {
-    variant: 'hero', trail: 'swash', size: 280, speed: 1,
-    ink: '', outline: '', shadow: '', loop: false,
+    outline: true, shadow: true, trail: 'swash', size: 280, speed: 1,
+    ink: '', outlineCol: '', shadowCol: '', loop: false,
+    band: 300, sdist: 42.4264069, sangle: 45, sscale: 1,
   };
 
-  const currentSvg = () => {
-    const i = slots.findIndex((s) => s.dataset.variant === state.variant && s.dataset.trail === state.trail);
-    return svgs[i];
-  };
-  const totalMs = () => endMs(state.variant, state.speed);
+  /** The name for the layers currently on. All four combinations have one. */
+  const variantName = (): string =>
+    LOGO_VARIANTS.find((v) => LOGO_LAYERS[v].outline === state.outline
+                           && LOGO_LAYERS[v].shadow === state.shadow) ?? 'plain';
+
+  const currentSvg = () => svgs[slots.findIndex((s) => s.dataset.trail === state.trail)];
+  const totalMs = () => endMs(variantName(), state.speed);
 
   function apply() {
-    slots.forEach((s) => {
-      s.hidden = !(s.dataset.variant === state.variant && s.dataset.trail === state.trail);
-    });
+    slots.forEach((s) => { s.hidden = s.dataset.trail !== state.trail; });
     for (const svg of svgs) {
       svg.style.width = `${state.size}px`;
       svg.style.height = `${state.size}px`;
       svg.style.setProperty('--la-speed', String(state.speed));
-      for (const [k, v] of Object.entries({ ink: state.ink, outline: state.outline, shadow: state.shadow })) {
+      svg.classList.toggle('logo-layer-outline', state.outline);
+      svg.classList.toggle('logo-layer-shadow', state.shadow);
+      svg.style.setProperty('--logo-band', String(state.band));
+      svg.style.setProperty('--logo-shadow-dist', String(state.sdist));
+      svg.style.setProperty('--logo-shadow-angle', `${state.sangle}deg`);
+      svg.style.setProperty('--logo-shadow-scale', String(state.sscale));
+      for (const [k, v] of Object.entries({ ink: state.ink, outline: state.outlineCol, shadow: state.shadowCol })) {
         if (v) svg.style.setProperty(`--logo-${k}`, v);
         else svg.style.removeProperty(`--logo-${k}`);
       }
     }
+    // A parameter's fieldset is hidden while its layer is off, so nothing on screen is a
+    // control that would do nothing.
+    document.querySelectorAll<HTMLElement>('[data-when-layer]').forEach((el) => {
+      el.hidden = !state[el.dataset.whenLayer as 'outline' | 'shadow'];
+    });
     out('size').value = `${state.size}px`;
     out('speed').value = `${state.speed.toFixed(2)}× · ${(totalMs() / 1000).toFixed(2)}s`;
-    // The hint describes the variant, so it carries the variant's own length at speed 1;
-    // the speed readout above is the one that tracks the slider.
+    // Half the stroke width: the stroke straddles the silhouette and the fill covers its
+    // inner half, so this is the red you can actually see.
+    out('band').value = state.band === 0 ? 'none' : String(state.band / 2);
+    out('sdist').value = `${state.sdist.toFixed(1)}`;
+    out('sangle').value = `${state.sangle}°`;
+    out('sscale').value = `${state.sscale.toFixed(2)}×`;
+    const rad = (state.sangle * Math.PI) / 180;
+    // `+ 0` folds -0 into 0: cos(270deg) is -1.8e-16, which toFixed renders as "-0.0".
+    const axis = (n: number) => (Number(n.toFixed(1)) + 0).toFixed(1);
+    $<HTMLElement>('[data-shadow-hint]').textContent =
+      `offset (${axis(state.sdist * Math.cos(rad))}, ${axis(state.sdist * Math.sin(rad))}) ` +
+      `in viewBox units, y down`;
+    const name = variantName();
+    // The hint describes the combination, so it carries its own length at speed 1; the speed
+    // readout above is the one that tracks the slider.
     $<HTMLElement>('[data-variant-hint]').textContent =
-      `${HINT[state.variant]} (${(endMs(state.variant) / 1000).toFixed(2)}s)`;
+      `${name} — ${HINT[name]} (${(endMs(name) / 1000).toFixed(2)}s)`;
     const scrub = $<HTMLInputElement>('input[name="scrub"]');
     scrub.max = String(totalMs());
     scrub.value = scrub.max;
@@ -661,8 +741,12 @@ import { LOGO_LAYERS, LOGO_VARIANTS } from '../../../components/logo-layers';
     });
   }
 
-  for (const r of document.querySelectorAll<HTMLInputElement>('input[name="variant"]')) {
-    r.addEventListener('change', () => { state.variant = r.value; apply(); play(currentSvg()); });
+  for (const c of document.querySelectorAll<HTMLInputElement>('input[name="layer"]')) {
+    c.addEventListener('change', () => {
+      state[c.value as 'outline' | 'shadow'] = c.checked;
+      apply();
+      play(currentSvg());
+    });
   }
   for (const r of document.querySelectorAll<HTMLInputElement>('input[name="trail"]')) {
     r.addEventListener('change', () => { state.trail = r.value; apply(); play(currentSvg()); });
@@ -680,9 +764,26 @@ import { LOGO_LAYERS, LOGO_VARIANTS } from '../../../components/logo-layers';
     for (const a of svg.getAnimations({ subtree: true })) { a.pause(); a.currentTime = ms; }
     out('scrub').value = `${(ms / 1000).toFixed(3)}s`;
   });
-  for (const name of ['ink', 'outline', 'shadow'] as const) {
-    $<HTMLInputElement>(`input[name="${name}"]`).addEventListener('input', (e) => {
-      state[name] = (e.target as HTMLInputElement).value; apply();
+  // The colour inputs are named for the layer they paint; state keys them with a Col suffix
+  // so they do not collide with the booleans of the same name.
+  for (const [input, key] of [['ink', 'ink'], ['outline', 'outlineCol'], ['shadow', 'shadowCol']] as const) {
+    $<HTMLInputElement>(`input[name="${input}"]`).addEventListener('input', (e) => {
+      state[key] = (e.target as HTMLInputElement).value; apply();
+    });
+  }
+  // The treatment parameters. Each replays, because what they change only settles in after
+  // the draw lands and is otherwise invisible until the next run.
+  for (const [input, key] of [['band', 'band'], ['sdist', 'sdist'], ['sangle', 'sangle'],
+                              ['sscale', 'sscale']] as const) {
+    $<HTMLInputElement>(`input[name="${input}"]`).addEventListener('input', (e) => {
+      state[key] = Number((e.target as HTMLInputElement).value); apply();
+    });
+  }
+  for (const b of document.querySelectorAll<HTMLButtonElement>('[data-band]')) {
+    b.addEventListener('click', () => {
+      state.band = Number(b.dataset.band);
+      $<HTMLInputElement>('input[name="band"]').value = String(state.band);
+      apply(); play(currentSvg());
     });
   }
   for (const b of document.querySelectorAll<HTMLButtonElement>('[data-lab-size]')) {
@@ -706,7 +807,7 @@ import { LOGO_LAYERS, LOGO_VARIANTS } from '../../../components/logo-layers';
   for (const b of document.querySelectorAll<HTMLButtonElement>('[data-colours]')) {
     b.addEventListener('click', () => {
       const [i, o, s] = PALETTES[b.dataset.colours!];
-      state.ink = i; state.outline = o; state.shadow = s;
+      state.ink = i; state.outlineCol = o; state.shadowCol = s;
       if (i) $<HTMLInputElement>('input[name="ink"]').value = i;
       if (o) $<HTMLInputElement>('input[name="outline"]').value = o;
       if (s) $<HTMLInputElement>('input[name="shadow"]').value = s;
