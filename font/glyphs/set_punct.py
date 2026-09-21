@@ -63,19 +63,18 @@ Decisions that the rules leave open, taken once here and used throughout:
   chord instead: its two corners are put on the counter circle it meets, so
   the end is buried in the band.  _stem_on_circle() does this.
 
-  ARMS MEETING A STEM AT A CORNER (the brackets, the at's tail) follow
+  ARMS MEETING A STEM AT A CORNER (the brackets) follow
   set_straight: the stem alone supplies the outer edge, its end cut with the
   tip at the corner; the arm is rules.arm(), whose outer edge is level and
   starts at that corner and whose buried end is an R5 cut running from the
   corner into the stem's interior, so the union never resolves a coincident
   edge.  rules.arm() is written against the cap line and the baseline; where
-  an arm's outer edge is level somewhere else (the brackets on 800 / -100,
-  the at's tail on its bowl's baseline) _arm_at() builds it there and
-  translates it, which changes nothing about it.
+  an arm's outer edge is level somewhere else (the brackets on 800 / -100)
+  _arm_at() builds it there and translates it, which changes nothing about it.
 
   ARCS BURIED IN A STROKE.  An R1 arc's radial end has to disappear inside the
-  stroke it runs into (the question's bowl into its stem, the at's bowl into
-  its stem, both ends of the ampersand's bowl into its leg).  In every case
+  stroke it runs into (the question's bowl into its stem, both ends of the
+  ampersand's bowl into its leg).  In every case
   the angle is SOLVED, not chosen: _band_end() gives the end's two corners and
   the glyph scans for the middle of the window of angles at which both corners
   are inside the stroke.  The ampersand also runs the test the other way --
@@ -93,7 +92,10 @@ constructor (lib/ is not edited here):
   constructor takes centre-line ends and R5 puts the tip off the centre-line,
   so the slash's and percent's tips are landed exactly on 0 and CAP by solving
   the centre-line ends for them (six fixpoint steps).
-  _arm_at(), _a_form(): above and at build_at.
+  _arm_at(): above.
+  _at_ring(), _at_stem(), _at_edges(): the at.  Its ring, the a's stem inside
+  it, and the single spine the two are joined by -- see that glyph's own
+  comment, which is where the construction is argued out.
   _inside(), _dist_to_poly(), _cut_corners(), _cut_samples(): the ampersand's
   burial tests -- is this radial end inside that leg, is this leg's whole R5
   cut inside that band, does this leg keep clear of that counter.
@@ -114,7 +116,8 @@ HERE = os.path.dirname(os.path.abspath(__file__)); FONT = os.path.dirname(HERE)
 sys.path.insert(0, os.path.join(FONT, 'lib')); sys.path.insert(0, FONT)
 from pen import *
 from metrics import *
-from rules import (WEIGHT, WEIGHT_TOP, RING_W, RING_OFF, ROUND_THICK, ROUND_THIN, ROUND_THICK_1,
+from rules import (WEIGHT, WEIGHT_TOP, RING_W, RING_OFF, RING_W_1, RING_OFF_1,
+                   ROUND_THICK, ROUND_THIN, ROUND_THICK_1,
                    round_ring, round_arc,
                    w_slash, w_backslash, w_stem, w_horizontal, HORIZ_MID, HORIZ_TAPER, CUT_DEG,
                    glyph, stem, diagonal, horizontal, arm)
@@ -677,61 +680,238 @@ def build_percent():
         rings=(c1, c2), r=PCT_R, gap=PCT_GAP, slash_extent=slash.bbox(),
         ring_extents=((c1[1] + PCT_R, c1[1] - PCT_R), (c2[1] + PCT_R, c2[1] - PCT_R))))
 
-AT_BOWL_R = 168.0                   # the inner a's bowl: outer radius
-AT_TAIL   = 135.0                   # the a's tail, from the stem's centre to the tip
-AT_MARGIN = 1.5                     # how far inside the stem an arc end has to sit to count as buried
+# ==================================================================================
+# at
+# ==================================================================================
+# THE @ IS THE LOWERCASE a INSIDE THE CAPITAL O, drawn the way those two letters are drawn,
+# with one arc added to carry the a's stem out onto the ring.  Four constructions, all of
+# them already in the face:
+#
+#   * THE RING is round_ring(AT_C, AT_R) -- the O's own construction at the O's own size,
+#     spanning -10..710, heavy at the lower left and light at the upper right.
+#   * THE a is set_lc_round's bowl, set_round's section-4 tangency placing its stem, and the
+#     crown-wedge joint burying that stem's top on the bowl's own tangent.  It sits in the
+#     hole the ring leaves, so it is centred on the COUNTER, which R1 displaces toward 45 deg,
+#     and the channel between the two is even the whole way round.
+#   * THE FILLET is not chosen.  The stem runs straight to the a's OWN BASELINE -- OVER_ROUND
+#     above its bowl's lowest point, exactly where the letter a's stem stops -- and the fillet
+#     is then the ONE arc tangent to the stem there and to the ring.  Its radius falls out
+#     (42.0 at the axis origin), and with it the angle the leg meets the ring at (-36.1).
+#   * THE TAIL exists because a stroke that has come the whole way round cannot close on
+#     itself: the letter's channel has to get out past the leg that made it.  So the ring
+#     leaves its own circle at its LOWEST point and stands off by the CHANNEL's own width --
+#     the same distance the a's bowl stands inside it -- which makes the aperture the channel
+#     less the band, and holds at every weight because channel + band is AT_R - the bowl.  It
+#     ends where it reaches the O's rightmost point, solved rather than chosen:
+#     cos(term) = AT_R / (AT_R + channel).  So the @ is exactly the O's width, and R9's round
+#     bearings apply to it unchanged.
+#
+# ONE STROKE AND ONE BOWL, not four pieces.  Stem, fillet, ring and tail are a single spine
+# offset once, so the joints in it are places where a width field hands over, not places where
+# two outlines are unioned: nothing in this glyph resolves a shared edge, which is the fault
+# that put 258 slivers in the r and took the z apart at Black.  The bowl crosses the stem
+# transversally at the crown joint, and that is the a's own union, the one the letter already
+# survives at every cell of the axis box.
+#
+# THE WIDTH ALONG IT is R3's on the stem and R1's on the ring, blended across the fillet by
+# one smoothstep -- the same hand-off set_lc_round._offset makes at the n's shoulder and the
+# u's nadir.  On the ring the two edges are placed on R1's OWN CIRCLES rather than at half the
+# band either side: the counter's radius along a ray is solved exactly (_at_ring.t_at), because
+# _band_at is only the first-order answer and the second order is 1.85 units here -- three
+# times MAX_ERR.
+#
+# WHY THE a SHRINKS WITH WEIGHT.  AT_FRAC is the a's share of the ring's counter, fixed at the
+# fraction that makes the bowl exactly the lowercase a's own (202.5) at the axis origin.  The
+# band is absolute, so the counter shrinks as the face gets heavier, and bowl and channel give
+# way to it together.  Holding the bowl at 202.5 instead was built and fails: at WEIGHT 2.00
+# the channel (76.1) is narrower than the band that has to cross it, the tail closes the
+# aperture, and the glyph comes out with four counters instead of one.
+AT_R       = WIDE / 2.0                                  # 360: the O's own outer radius (R8 wide)
+AT_C       = (AT_R, MID)                                 # centred on the cap: the ring spans -10..710
+AT_A_BOWL  = (XH + 2 * OVER_ROUND) / 2.0                 # 202.5: set_lc_round.BOWL_R, the a's own
+AT_FRAC    = AT_A_BOWL / (AT_R - RING_W_1)               # 0.634174: the a's share of the counter
+AT_GRAZE   = 0.25                                        # set_round.GRAZE, for the stem's tangency
+AT_FLARE_AT = 270.0                                      # the ring's lowest point: where the tail leaves it
+AT_N_STEM  = 150                                         # spine samples: the stem ...
+AT_N_FILL  = 60                                          # ... the fillet ...
+AT_N_RING  = 1000                                        # ... and the ring, fixed so the knots mean
+AT_NSEG    = 30                                          # cubics per edge, frozen at the axis origin
 
-def _a_form(cb, rb, tail_len):
-    """A single-storey 'a', built from an R1 bowl and an R3 stem, for the inside of the at.
 
-    The bowl is an R1 arc open on the right; the stem's right edge is flush with the bowl's
-    rightmost point.  Three joins, each solved rather than eyeballed:
-      * the bowl's two radial ends are carried round until BOTH corners of each lie inside the
-        stem (scanned, AT_MARGIN clear of its left edge), so neither end shows;
-      * the stem's top is an R5 cut whose tip is at the upper LEFT, placed at the height where
-        the stem's left edge meets the bowl's outer circle -- the tip therefore sits exactly ON
-        that circle and the shoulder is one shared point, no notch and no beak.  R5's own
-        'corner farther from the centre' does not apply: this end is a junction, not a free
-        end, and takes the shared-corner cut set_straight uses where an arm meets a stem;
-      * the foot is set_straight's L: the stem's R5 foot tip and the tail's outer edge share
-        the bottom-left corner, the tail is rules.arm (via _arm_at) with its bottom edge level
-        on the bowl's own baseline, and its buried end is an R5 cut running from that corner
-        into the stem.
-    Returns (contours, info)."""
-    xr = cb[0] + rb                                     # the bowl's rightmost point = the stem's right edge
-    xs = xr - w_stem(cb[1]) / 2                         # the stem's centre
-    def left_edge(y): return xs - w_stem(y) / 2
-    def buried(a): return all(left_edge(p[1]) + AT_MARGIN <= p[0] <= xr for p in _band_end(cb, rb, a))
-    a_hi = max(a for a in [i * 0.25 for i in range(0, 260)] if buried(a))
-    a_lo = min(a for a in [-i * 0.25 for i in range(0, 260)] if buried(a))
-    bowl = round_arc(cb, rb, a_hi, 360 + a_lo)
-    y_top = cb[1] + rb * 0.6                            # solve: left edge meets the bowl's outer circle
-    for _ in range(40):
-        y_top = cb[1] + math.sqrt(max(1.0, rb * rb - (left_edge(y_top) - cb[0]) ** 2))
-    y_arm = cb[1] - rb                                  # the tail's outer edge, level with the bowl's bottom
-    st = stem(xs, y_arm, y_top, bottom='right', top='right')
-    tail = _arm_at(left_edge(y_arm), xs + tail_len, 'bottom', y_arm)
-    return [bowl, st, tail], dict(a_hi=a_hi, a_lo=a_lo, stem_x=xs, y_top=y_top, y_arm=y_arm, xr=xr)
+def _check_at_bowl():
+    """AT_A_BOWL must be the bowl set_lc_round draws the o and the a on."""
+    import importlib
+    try: lr = importlib.import_module('glyphs.set_lc_round')
+    except ImportError as e:
+        if e.name != 'glyphs.set_lc_round': raise
+        return 'set_lc_round not present; cross-check skipped'
+    if abs(lr.BOWL_R - AT_A_BOWL) > 1e-9:
+        raise RuntimeError(f'set_punct.AT_A_BOWL ({AT_A_BOWL}) != set_lc_round.BOWL_R ({lr.BOWL_R})')
+    return 'equals set_lc_round.BOWL_R (checked at import)'
+_AT_BOWL_CHECK = _check_at_bowl()
+
+
+def _at_tan(P):
+    """Unit tangents by central difference, as set_lc_round._g_tan takes them."""
+    return [unit(sub(P[min(i + 1, len(P) - 1)], P[max(i - 1, 0)])) for i in range(len(P))]
+
+
+def _at_ring(ring_w, ring_off):
+    """The ring's spine -- a plain circle of radius AT_R - ring_w/2 -- and the EXACT radius of
+    R1's displaced counter along a ray, so that offsetting that spine reproduces round_ring's
+    two circles instead of approximating them."""
+    r_s, r_in, off = AT_R - ring_w / 2.0, AT_R - ring_w, norm(ring_off)
+    def t_at(th):
+        d = dot(from_ang(th), ring_off)
+        return d + math.sqrt(r_in * r_in - off * off + d * d)
+    return r_s, r_in, t_at
+
+
+def _at_stem(wf, cb, r_a):
+    """The a's stem inside the at: section-4 tangency and the crown-wedge joint, rebuilt from an
+    injected width field so the origin's placement can be had from inside any master (the same
+    reason set_lc_round carries _tangent_x and _crown beside the module-level constants).
+
+    Returns the stem's centre x, the joint's tip on the bowl, and the bowl's tangent there."""
+    y0, y1 = cb[1] - r_a, cb[1] + r_a
+    e0, e1 = (wf(y0) / 2.0, y0), (wf(y1) / 2.0, y1)
+    n = perp(unit(sub(e1, e0)))
+    d0 = n[0] * (cb[0] - e0[0]) + n[1] * (cb[1] - e0[1])
+    x = (d0 - (r_a - AT_GRAZE)) / n[0]                   # right edge tangent GRAZE inside the bowl
+    inner = line_2pt((x - wf(y0) / 2.0, y0), (x - wf(y1) / 2.0, y1))
+    p = line_circle(inner, cb, r_a, pick='max')
+    d = sub(p, cb)
+    return x, p, math.degrees(math.atan2(abs(d[0]), d[1]))
+
+
+def _at_edges(wf, ring_w, ring_off):
+    """Both edges of the at's single stroke, crown joint to tail, as sampled polylines.
+
+    They are sampled separately over the stem because the crown joint's two corners are at
+    different heights -- the tip is on the bowl-facing edge and the far corner about 45 units
+    below it on the other -- and an edge that starts above its own corner and is then clipped
+    would have a different point count in each master.  Each edge runs from its OWN corner, so
+    sample i means the same place on the letter at every weight, which is what fit_ranges needs.
+    """
+    r_s, r_in, t_at = _at_ring(ring_w, ring_off)
+    cb  = add(AT_C, ring_off)                            # the a is centred on the COUNTER
+    r_a = r_in * AT_FRAC
+    xs, p_cr, cr_dg = _at_stem(wf, cb, r_a)
+    y_k = cb[1] - r_a + OVER_ROUND                       # the a's own baseline: where its stem stops
+    p_out = isect(line_ang(p_cr, -cr_dg),                # the joint's far corner, on the bowl's tangent
+                  line_2pt((xs + wf(y_k) / 2.0, y_k), (xs + wf(cb[1]) / 2.0, cb[1])))
+    # the fillet: tangent to the stem's line at (xs, y_k) and INSIDE the ring's spine circle.
+    # Both tangencies at once leave one equation and no free parameter.
+    a0, b0 = xs - AT_C[0], y_k - AT_C[1]
+    rho = (r_s * r_s - a0 * a0 - b0 * b0) / (2.0 * (a0 + r_s))
+    fc  = (xs + rho, y_k)
+    th1 = ang(sub(fc, AT_C))                             # where the fillet lands on the ring
+    flare = r_in - r_a                                   # AT_CHANNEL: what the a leaves the ring
+    term  = -math.degrees(math.acos(AT_R / (AT_R + flare)))
+    sweep = (term - th1) % 360.0                         # a full turn and then out to the tail
+    if sweep < 180.0: sweep += 360.0                     # the ring is most of a turn, never a stub
+    span  = (term - AT_FLARE_AT) % 360.0                 # the stretch the tail leaves the circle over
+
+    E1 = [(xs - wf(y) / 2.0, y) for y in                 # the bowl-facing edge, from the joint's tip
+          (p_cr[1] + (y_k - p_cr[1]) * i / AT_N_STEM for i in range(AT_N_STEM + 1))]
+    E2 = [(xs + wf(y) / 2.0, y) for y in                 # the far edge, from the joint's far corner
+          (p_out[1] + (y_k - p_out[1]) * i / AT_N_STEM for i in range(AT_N_STEM + 1))]
+    a1, b1 = AT_R - r_s, r_s - t_at(th1)
+    h_k = wf(y_k) / 2.0
+    for i in range(1, AT_N_FILL + 1):                    # the fillet, 180 deg -> th1 anticlockwise
+        s = i / AT_N_FILL; e = s * s * (3 - 2 * s)
+        u = from_ang(180.0 + (th1 + 360.0 - 180.0) * s)
+        p = add(fc, mul(u, rho))
+        E1.append(add(p, mul(u, h_k * (1 - e) + a1 * e)))
+        E2.append(sub(p, mul(u, h_k * (1 - e) + b1 * e)))
+    def _g(th):
+        left = th1 + sweep - th
+        if left >= span: return 0.0
+        f = 1 - left / span
+        return f * f * (3 - 2 * f)
+    def _outer(th): return add(AT_C, mul(from_ang(th), AT_R + flare * _g(th)))
+    def _inner(th): return add(AT_C, mul(from_ang(th), t_at(th) + flare * _g(th)))
+    # R5 on the tail: a free end, so the tip is the corner farther from the letter's centre --
+    # on a ring's outer edge that is E1's -- and the face runs back from it at CUT_DEG off the
+    # horizontal, up and to the left because the tail rises to the right.  The two edges are
+    # therefore carried to DIFFERENT angles: E1 to the terminal, E2 to wherever that face
+    # crosses it, solved below.  Cutting the last sample back instead leaves a hairline spike,
+    # because the face meets the inner edge behind the sample before it.
+    face = line_ang(_outer(th1 + sweep), 180.0 - CUT_DEG)
+    def _side(th):
+        q = _inner(th)
+        return (q[0] - face[0][0]) * face[1][1] - (q[1] - face[0][1]) * face[1][0]
+    lo, hi = th1 + sweep - span, th1 + sweep
+    for _ in range(60):
+        m = (lo + hi) / 2.0
+        if _side(m) * _side(lo) > 0: lo = m
+        else: hi = m
+    th2 = (lo + hi) / 2.0
+    for i in range(1, AT_N_RING + 1):                    # the ring, and then the tail
+        s = i / AT_N_RING
+        E1.append(_outer(th1 + sweep * s))
+        E2.append(_inner(th1 + (th2 - th1) * s))
+    return E1, E2, dict(cb=cb, r_a=r_a, xs=xs, crown=p_cr, crown_deg=cr_dg, crown_far=p_out,
+                        y_k=y_k, rho=rho, join=th1, flare=flare, term=term % 360.0, sweep=sweep,
+                        cut_deg=th2 % 360.0,
+                        channel=flare, stem_run=p_cr[1] - y_k, r_s=r_s, r_in=r_in)
+
+
+def _at_w1(y):
+    """The stem field at the axis origin: R3 is linear in WEIGHT, so this is the letter's own
+    width field there, and the knots have to be chosen on the origin's shape to interpolate."""
+    return w_stem(y) / WEIGHT
+
+
+_AT_RANGES = (lambda e: (fit_ranges(e[0], _at_tan(e[0]), AT_NSEG),
+                         fit_ranges(e[1][::-1], [mul(t, -1) for t in _at_tan(e[1])[::-1]], AT_NSEG))
+              )(_at_edges(_at_w1, RING_W_1, RING_OFF_1))
+
 
 def build_at():
-    R = WIDE / 2; c = (R, MID); ci = add(c, RING_OFF)    # the ring: the O's own construction
-    cb = (ci[0] - (AT_TAIL - w_stem(MID) / 2) / 2, ci[1])   # centre the a's box on the ring's counter
-    inner, k = _a_form(cb, AT_BOWL_R, AT_TAIL)
-    clear = (R - RING_W) - max(norm(sub(p, ci)) for q in inner for p in q.flatten())
-    return glyph(64, round_ring(c, R) + inner, sb=(SB_ROUND, SB_ROUND), notes=_notes(
-        "A complete R1 ring -- the O's construction at the O's size, outer radius %.0f, spanning -10..710, "
-        "heavy at the lower left and light at the upper right -- enclosing a small single-storey a: an R1 "
-        "bowl of outer radius %.0f open on the right between %.1f and %.1f deg, an R3 stem flush with the "
-        "bowl's rightmost point closing that opening, and an R4 tail (rules.arm through _arm_at) running "
-        "%.0f right from the stem's centre with its outer edge level on the bowl's baseline and an R5 tip at "
-        "the bottom-right corner.  The a's box is centred on the ring's counter, standing %.1f clear of it "
-        "at its nearest point." % (R, AT_BOWL_R, k['a_lo'], k['a_hi'], AT_TAIL, clear),
-        "none in weight, taper, cut or displacement.  Two readings the rules leave open: the a's size and "
-        "tail length (chosen so the a fills the ring and keeps a clear counter of its own), and the stem's "
-        "top cut, which is a junction cut with its tip at the shared corner on the bowl's outer circle "
-        "rather than R5's free-end corner, exactly as set_straight cuts an arm's buried end.",
-        ring=(c, R), bowl=(cb, AT_BOWL_R), bowl_arc=(k['a_hi'], 360 + k['a_lo']), stem_x=k['stem_x'],
-        stem_top_y=k['y_top'], tail_outer_y=k['y_arm'], clearance=clear))
+    E1, E2, k = _at_edges(w_stem, RING_W, RING_OFF)
+    rg1, rg2 = _AT_RANGES
+    s1, e1 = fit_cubics(E1, _at_tan(E1), tol=9e9, ranges=[tuple(r) for r in rg1])
+    s2, e2 = fit_cubics(E2[::-1], [mul(t, -1) for t in _at_tan(E2)[::-1]], tol=9e9,
+                        ranges=[tuple(r) for r in rg2])
+    c = Contour(E1[0])
+    for sg in s1: c.curve_to(*sg)
+    c.line_to(E2[-1])                                    # R5's cut face across the tail
+    for sg in s2: c.curve_to(*sg)                        # ... and back up to the joint's far corner
+    stroke_k = c.ccw()                                   # the closing edge is the crown joint's cut
+    return glyph(64, round_ring(k['cb'], k['r_a']) + [stroke_k], sb=(SB_ROUND, SB_ROUND),
+                 notes=_notes(
+        "The lowercase a inside the capital O.  The ring is round_ring((%.1f, %.1f), %.0f) -- the O's own "
+        "construction at the O's own size, -10..710.  The a is set_lc_round's bowl at r=%.1f, centred on "
+        "the ring's COUNTER (which R1 displaces toward 45 deg) so the channel between them is an even "
+        "%.1f the whole way round, with its stem on set_round's section-4 tangency at x=%.1f and its top "
+        "buried on the crown-wedge joint: the tip at (%.1f, %.1f) on the bowl's outer circle and the cut "
+        "on the bowl's own tangent there, %.2f deg below the horizontal.  The stem runs straight to the "
+        "a's OWN BASELINE, y=%.1f, OVER_ROUND above its bowl's lowest point, and the fillet is then the "
+        "one arc tangent to it there and to the ring: radius %.1f, meeting the ring at %.1f deg.  Nothing "
+        "about the fillet is chosen -- both tangencies together leave no free parameter.  The ring then "
+        "runs %.0f deg, a full turn and a little more, leaving its own circle at its lowest point and "
+        "standing off by the channel's own %.1f, and stops where it reaches the O's rightmost point "
+        "(cos(term) = AT_R / (AT_R + channel), term = %.1f deg), so the @ is exactly the O's width.  Stem, "
+        "fillet, ring and tail are ONE spine offset once, fitted %d cubics an edge on knots frozen at the "
+        "axis origin; worst deviation %.3f units."
+        % (AT_C[0], AT_C[1], AT_R, k['r_a'], k['channel'], k['xs'], k['crown'][0], k['crown'][1],
+           k['crown_deg'], k['y_k'], k['rho'], k['join'], k['sweep'], k['flare'], k['term'],
+           AT_NSEG, max(e1, e2)),
+        "none in weight, taper, cut or displacement -- R1 draws the ring and the bowl, R3 the stem, R5 the "
+        "one free end.  Three readings the rules leave open.  (1) The a's SHARE of the ring's counter, "
+        "AT_FRAC = %.6f, fixed at the fraction that makes the bowl exactly the lowercase a's own 202.5 at "
+        "the axis origin; holding 202.5 at every weight instead was built and breaks at WEIGHT 2.00, where "
+        "the channel (76.1) is narrower than the band crossing it and the glyph comes out with four "
+        "counters.  (2) The crown joint's cut is the bowl's tangent rather than R5's %.1f deg, because it "
+        "is buried in a junction -- set_lc_round argues this out for the a itself.  (3) The tail leaves the "
+        "circle at the ring's lowest point, which is what keeps the O round through the whole of the left "
+        "and the bottom; leaving at 225 or 180 was drawn and makes the O visibly oval."
+        % (AT_FRAC, CUT_DEG),
+        ring=(AT_C, AT_R), bowl=(k['cb'], k['r_a']), channel=k['channel'], stem_x=k['xs'],
+        crown=k['crown'], crown_deg=k['crown_deg'], stem_foot_y=k['y_k'], stem_run=k['stem_run'],
+        fillet_r=k['rho'], join_deg=k['join'], sweep_deg=k['sweep'], terminal_deg=k['term'],
+        fit_error=max(e1, e2), nseg=AT_NSEG))
 
 # ==================================================================================
 # ampersand
