@@ -138,13 +138,13 @@ test('the write-up holds the demo and the in-situ panels, and not the bench', as
   assert.match(doc, /data-la-replay/, 'the demo replay control is missing');
   assert.match(doc, /class="lab-situ"/, 'the in-situ section is missing');
   assert.doesNotMatch(doc, /data-stage/, 'the lab stage is still on the write-up');
-  assert.doesNotMatch(doc, /data-dl-treat/, 'the download panel is still on the write-up');
+  assert.doesNotMatch(doc, /data-dl="anim"/, 'the download panel is still on the write-up');
 });
 
 test('the bench holds the lab and the exporter, and not the demo', async () => {
   const doc = markup(await html('design/ao/logo-bench'));
   assert.match(doc, /data-stage/, 'the lab stage is missing from the bench');
-  assert.match(doc, /data-dl-treat/, 'the download panel is missing from the bench');
+  assert.match(doc, /data-dl="anim"/, 'the download panel is missing from the bench');
   assert.doesNotMatch(doc, /data-la-replay/, 'the demo followed the lab onto the bench');
   assert.doesNotMatch(doc, /class="lab-situ"/, 'the in-situ section followed the lab onto the bench');
 });

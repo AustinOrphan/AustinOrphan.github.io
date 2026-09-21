@@ -2,10 +2,9 @@
 // The bench: where a mark is configured and exported. An instrument, not a publication,
 // which is why it lives at its own permanent URL and why /design/ao/logo/ no longer holds it.
 //
-// Only `trail` is still a build-time prop, because the two modes draw different markup and
-// cannot be switched with a property. Everything else -- the layers, the band, the shadow's
-// placement, size, speed and the three colours -- is a class or a custom property set live on
-// the chosen instance, so what is on screen is the real component's own output.
+// Nothing is a build-time prop any more. The layers, the band, the shadow's placement, size,
+// speed and the three colours are all classes or custom properties set live on the one
+// instance, so what is on screen is the real component's own output.
 //
 // Custom properties go on the SVG itself, never on a wrapper: LogoAnimated declares
 // --la-speed on .site-logo-anim, and a declaration on the element beats a value inherited
@@ -20,8 +19,6 @@ import { endMs } from '../../../components/logo-timing';
 import { LOGO_LAYERS, LOGO_VARIANTS } from '../../../components/logo-layers';
 
 const entry = entryFor('logo-bench');
-
-const TRAILS = ['swash', 'stroke'] as const;
 
 // Derived, never typed in. Every duration here comes from logo-choreography.ts by way of
 // logo-timing.ts, because the choreography is generated and moves whenever the mark does.
@@ -45,15 +42,14 @@ const VARIANT_RECIPE: Record<string, string> = Object.fromEntries(
   <h1 class="la-title">{entry.title}</h1>
   <main class="lab">
     <section class="lab-stage-wrap">
-      <!-- One instance per TRAIL, and only per trail: the two draw different markup and
-           cannot be switched with a property. Everything else, layers included, is now a
-           class or a custom property set live, so this used to be eight slots and is two. -->
+      <!-- One instance, full stop. Every prop the bench drives is a class or a custom
+           property set live on it. This was eight slots when variant and trail were both
+           build-time, then two when variant became classes, and is one now that the trail
+           has only one mode. -->
       <div class="lab-stage" data-stage data-bg="site">
-        {TRAILS.map((t) => (
-          <div class="lab-slot" data-trail={t} hidden>
-            <LogoAnimated trail={t} size={280} autoplay={false} treatable id={`lab-${t}`} />
-          </div>
-        ))}
+        <div class="lab-slot">
+          <LogoAnimated size={280} autoplay={false} treatable id="lab-mark" />
+        </div>
       </div>
 
       <div class="lab-controls">
@@ -66,13 +62,6 @@ const VARIANT_RECIPE: Record<string, string> = Object.fromEntries(
           <label><input type="checkbox" name="layer" value="shadow" checked /> shadow</label>
           <label><input type="checkbox" name="layer" value="knock" /> knock out</label>
           <p class="lab-hint" data-variant-hint></p>
-        </fieldset>
-
-        <fieldset>
-          <legend>trail</legend>
-          {TRAILS.map((t, i) => (
-            <label><input type="radio" name="trail" value={t} checked={i === 0} /> {t}</label>
-          ))}
         </fieldset>
 
         <fieldset>
@@ -192,20 +181,13 @@ const VARIANT_RECIPE: Record<string, string> = Object.fromEntries(
     <section class="la-dl" aria-labelledby="la-dl-h">
       <h2 id="la-dl-h">Download</h2>
 
+      <!-- The only control here is a file property. Everything about the MARK -- its layers,
+           its band, its shadow's placement, its colours, its speed -- is set on the bench
+           above and these previews wear it, so what downloads is what is on the stage. The
+           panel used to carry its own treatment dropdown and colour pickers, which meant it
+           could not express cut, knockout, the band or the shadow offset, and disagreed with
+           the bench about everything else. -->
       <div class="la-dl-controls">
-        <label>treatment
-          <select data-dl-treat>
-            {LOGO_VARIANTS.map((v) => (
-              <option value={v} selected={v === 'hero'}>{v} — {VARIANT_RECIPE[v]}</option>
-            ))}
-          </select>
-        </label>
-        <label>ink <input type="color" data-dl-var="ink" value="#EEE5E9"></label>
-        <!-- Each colour control is shown only while its LAYER is on, so it cannot be set to
-             something that has no effect. Keyed on the layer, not on the variant name, which
-             is what let outline and shadow hide on the two combinations that now have names. -->
-        <label data-dl-layer="outline">outline <input type="color" data-dl-var="outline" value="#D16666"></label>
-        <label data-dl-layer="shadow">shadow <input type="color" data-dl-var="shadow" value="#2892D7"></label>
         <label>size
           <select data-dl-size>
             <option value="256">256</option>
@@ -214,8 +196,6 @@ const VARIANT_RECIPE: Record<string, string> = Object.fromEntries(
             <option value="2048">2048</option>
           </select>
         </label>
-        <label>speed <input type="number" data-dl-speed min="0.25" max="4" step="0.25" value="1"></label>
-        <button type="button" data-dl-reset>reset</button>
       </div>
 
       <div class="la-dl-row">
@@ -240,15 +220,12 @@ const VARIANT_RECIPE: Record<string, string> = Object.fromEntries(
       </div>
 
       <p class="la-dl-note">
-        One vector, three treatments. <em>plain</em> and <em>flat</em> are the same drawing and
-        differ only in fill, so <em>ink</em> follows the treatment until you set it yourself;
-        set them alike and the two files are identical. <em>size</em> drives every download
-        (the video caps at 1024); <em>speed</em> reaches the animated SVG and the video, which
-        the still has no use for. SVG files carry their paint on the elements themselves and
-        need no stylesheet, and hero's outline is saved as its own shape rather than leaning on
-        a <code>paint-order</code> that design tools ignore; the animated file carries the
-        write-on's own CSS and plays when opened. All are transparent, so a light ink wants a
-        dark background &mdash; the video is given one.
+        These two wear whatever the bench is set to. SVG files carry their paint on the
+        elements themselves and need no stylesheet, and the outline is saved as its own shape
+        rather than leaning on a <code>paint-order</code> that design tools ignore; the
+        animated file carries the write-on's own CSS and plays when opened. The
+        <em>size</em> control drives every download, and the video caps at 1024. All are transparent, so a light ink
+        wants a dark background &mdash; the video is given one.
       </p>
     </section>
   </main>
@@ -398,16 +375,20 @@ const VARIANT_RECIPE: Record<string, string> = Object.fromEntries(
 </style>
 
 <script>
-  // The stage holds one rendered instance per (variant, trail); the controls reveal one.
+  // One instance; every control writes to it.
   // Size, speed and the three colours are set on the SVG itself, not on a wrapper:
   // LogoAnimated declares --la-speed on .site-logo-anim, and a declaration on the element
   // beats a value inherited from an ancestor, so setting it on a parent would do nothing.
-  import { endMs } from '../../../components/logo-timing';
+  import { endMs, endMsForLayers } from '../../../components/logo-timing';
 import { LOGO_LAYERS, LOGO_VARIANTS } from '../../../components/logo-layers';
 
   const stage = document.querySelector<HTMLElement>('[data-stage]')!;
-  const slots = [...stage.querySelectorAll<HTMLElement>('.lab-slot')];
-  const svgs = slots.map((s) => s.querySelector<SVGSVGElement>('svg')!);
+  const svgs = [...stage.querySelectorAll<SVGSVGElement>('.lab-slot svg')];
+  // The Download panel's two previews. They are dressed by apply() below rather than by
+  // controls of their own, so the panel cannot disagree with the bench about a treatment.
+  const previews = ['#la-dl-still', '#la-dl-sw']
+    .map((s) => document.querySelector<SVGSVGElement>(s))
+    .filter((x): x is SVGSVGElement => !!x);
   const $ = <T extends Element>(sel: string) => document.querySelector<T>(sel)!;
   const out = (name: string) => $<HTMLOutputElement>(`[data-out="${name}"]`);
 
@@ -423,7 +404,7 @@ import { LOGO_LAYERS, LOGO_VARIANTS } from '../../../components/logo-layers';
 
   const state = {
     outline: true, shadow: true, cut: false, knock: false,
-    trail: 'swash', size: 280, speed: 1,
+    size: 280, speed: 1,
     ink: '', outlineCol: '', shadowCol: '', loop: false,
     band: 300, sdist: 42.4264069, sangle: 45, sscale: 1,
   };
@@ -433,14 +414,20 @@ import { LOGO_LAYERS, LOGO_VARIANTS } from '../../../components/logo-layers';
     LOGO_VARIANTS.find((v) => LOGO_LAYERS[v].outline === state.outline
                            && LOGO_LAYERS[v].shadow === state.shadow) ?? 'plain';
 
-  const currentSvg = () => svgs[slots.findIndex((s) => s.dataset.trail === state.trail)];
-  const totalMs = () => endMs(variantName(), state.speed);
+  const currentSvg = () => svgs[0];
+  // By layer, not by variant name: cut and knock are not in the variant table but both
+  // run the treatment beat, so asking by name would report 1160ms for a 1360ms mark.
+  const totalMs = () => endMsForLayers(state, state.speed);
 
   function apply() {
-    slots.forEach((s) => { s.hidden = s.dataset.trail !== state.trail; });
-    for (const svg of svgs) {
-      svg.style.width = `${state.size}px`;
-      svg.style.height = `${state.size}px`;
+    // The export previews wear the same treatment, so what downloads is what is on the
+    // stage. They keep their own fixed pixel size: that is a preview dimension, not part of
+    // the mark, and the file's size comes from the panel's own select.
+    for (const svg of [...svgs, ...previews]) {
+      if (svgs.includes(svg)) {
+        svg.style.width = `${state.size}px`;
+        svg.style.height = `${state.size}px`;
+      }
       svg.style.setProperty('--la-speed', String(state.speed));
       svg.classList.toggle('logo-layer-outline', state.outline);
       svg.classList.toggle('logo-layer-shadow', state.shadow);
@@ -524,9 +511,6 @@ import { LOGO_LAYERS, LOGO_VARIANTS } from '../../../components/logo-layers';
       play(currentSvg());
     });
   }
-  for (const r of document.querySelectorAll<HTMLInputElement>('input[name="trail"]')) {
-    r.addEventListener('change', () => { state.trail = r.value; apply(); play(currentSvg()); });
-  }
   $<HTMLInputElement>('input[name="size"]').addEventListener('input', (e) => {
     state.size = Number((e.target as HTMLInputElement).value); apply();
   });
@@ -608,38 +592,20 @@ import { LOGO_LAYERS, LOGO_VARIANTS } from '../../../components/logo-layers';
 
   const still = document.querySelector<SVGSVGElement>('#la-dl-still');
   const live = document.querySelector<SVGSVGElement>('#la-dl-sw');
-  const treatSel = document.querySelector<HTMLSelectElement>('[data-dl-treat]');
-  const speedIn = document.querySelector<HTMLInputElement>('[data-dl-speed]');
   const sizeSel = document.querySelector<HTMLSelectElement>('[data-dl-size]');
-  const colourIns = Array.from(document.querySelectorAll<HTMLInputElement>('[data-dl-var]'));
   const liveMark = (): SVGSVGElement | null => live;
   const size = (): number => Number(sizeSel?.value || 512);
 
-  const treatment = (): LogoVariant => {
-    const v = treatSel?.value as LogoVariant | undefined;
-    return v && LOGO_VARIANTS.includes(v) ? v : 'hero';
+  /** What the previews are currently wearing, for the filename. Read off the mark itself
+   *  rather than from a control, because the bench above is what dressed it. */
+  const treatment = (): string => {
+    const el = still ?? live;
+    if (!el) return 'mark';
+    const on = (n: string) => el.classList.contains(`logo-layer-${n}`);
+    const name = LOGO_VARIANTS.find((v) => LOGO_LAYERS[v].outline === on('outline')
+                                        && LOGO_LAYERS[v].shadow === on('shadow')) ?? 'plain';
+    return [name, on('cut') && 'cut', on('knock') && 'knock'].filter(Boolean).join('-');
   };
-
-  function apply(): void {
-    const layers = LOGO_LAYERS[treatment()];
-    const marks: (SVGSVGElement | null)[] = [still, live];
-    for (const el of marks) {
-      if (!el) continue;
-      // The layer classes ARE the mechanism; the variant name is only a preset over them.
-      // This used to swap `site-logo-<variant>` classes, which stopped meaning anything when
-      // the rules moved onto the layers. Both components resolve a variant the same way, so
-      // the still and the animated preview stay in step with no second mapping here.
-      el.classList.toggle('logo-layer-outline', layers.outline);
-      el.classList.toggle('logo-layer-shadow', layers.shadow);
-      for (const input of colourIns) el.style.setProperty(`--logo-${input.dataset.dlVar}`, input.value);
-      if (el !== still) el.style.setProperty('--la-speed', String(speedIn?.value || 1));
-    }
-    // A colour control is shown only while its layer is on, so nothing can be set to no effect
-    document.querySelectorAll<HTMLElement>('[data-dl-layer]').forEach((el) => {
-      const layer = el.dataset.dlLayer as keyof typeof layers;
-      el.hidden = !layers[layer];
-    });
-  }
 
   const replayLive = (): void => {
     const m = liveMark();
@@ -649,17 +615,7 @@ import { LOGO_LAYERS, LOGO_VARIANTS } from '../../../components/logo-layers';
     m.classList.add('la-play');
   };
 
-  [treatSel, speedIn, sizeSel, ...colourIns].forEach((el) =>
-    el?.addEventListener('input', () => { apply(); replayLive(); }));
-  document.querySelector('[data-dl-reset]')?.addEventListener('click', () => {
-    if (treatSel) treatSel.value = 'hero';
-    if (speedIn) speedIn.value = '1';
-    if (sizeSel) sizeSel.value = '512';
-    colourIns.forEach((i) => { i.value = i.defaultValue; });
-    apply(); replayLive();
-  });
   document.querySelector('[data-dl-replay]')?.addEventListener('click', replayLive);
-  apply();
 
   // Safari has only recently been able to record at all; say so rather than fail on click.
   if (!videoMimeType()) {

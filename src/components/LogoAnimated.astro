@@ -26,7 +26,7 @@
 // (y-up, tenths) inside the same translate/scale group Logo uses.
 import { LOGO_A_D, LOGO_MARK_D, nextLogoAnimId } from './logo-mark';
 import { layerClasses, type LogoVariant } from './logo-layers';
-import { TRAIL_CENTRE_D, TRAIL_MARKS, TRAIL_MASK, TRAIL_MASK_D, TRAIL_OUTLINE_D } from './logo-trail';
+import { TRAIL_MARKS, TRAIL_MASK, TRAIL_MASK_D, TRAIL_OUTLINE_D } from './logo-trail';
 import {
   AFTER, BEATS, RING_ANNULUS_D, RING_CIRCLE_D, RING_CIRCLE_WIDTH,
   RING_COIL_CENTRE_D, RING_COIL_D, RING_COIL_WIDTH,
@@ -41,19 +41,13 @@ interface Props {
   /** Start playing on load. Off, the mark sits in its final state until
    *  something adds the `la-play` class. */
   autoplay?: boolean;
-  /** The element's DOM id, AND the prefix for its mask ids (`<id>-l`, `-r`, `-b`, and `-t`
-   *  in the swash mode). It used to be the prefix only, which meant passing `id` gave you
+  /** The element's DOM id, AND the prefix for its mask ids (`<id>-l`, `-r`, `-b`, `-t`).
+   *  It used to be the prefix only, which meant passing `id` gave you
    *  something getElementById could not find. Unique
    *  per page. Defaults to `la1`, `la2`, ... in render order, so the built HTML
    *  is the same on every build; pass one when you need a stable name that
    *  does not depend on render order. */
   id?: string;
-  /** How the pen trail is drawn. `swash` (default) inks the Illustrator
-   *  swash's own tapered shape; `stroke` inks a uniform 460-unit round-capped
-   *  line along its centre, which is what the reference clip shows. Only the
-   *  chosen one is rendered — the other mode's geometry never reaches the HTML —
-   *  and the root carries `site-logo-anim-trail-<mode>` to style against. */
-  trail?: 'swash' | 'stroke';
   /** Time scale for the WHOLE timeline: 2 runs it twice as fast, 0.5 half speed.
    *  Every delay and duration below divides by it, so the choreography holds its
    *  shape at any speed and there is no second version to keep in step. */
@@ -80,7 +74,6 @@ const {
   class: className = '',
   autoplay = true,
   id,
-  trail = 'swash',
   speed = 1,
   ink,
   outline,
@@ -151,10 +144,12 @@ const BAR_CENTRE =
 // crosses it at 0.033 and 0.509 of its own length, runs left below the bar,
 // crosses the left leg at 0.909 and ends on the left hook tip, where the bar's
 // centre-line begins: one continuous pen gesture, right leg -> trail -> bar.
-// TRAIL_OUTLINE_D is the swash's tapered shape, revealed by a mask stroke
-// sweeping TRAIL_MASK_D (the centre-line, extended past both ends so a butt cap
-// never has to cut across an end face); TRAIL_CENTRE_D itself is the uniform-stroke
-// alternative (`trail="stroke"`), which is what the clip draws.
+// TRAIL_OUTLINE_D is the swash's tapered shape, revealed by a mask stroke sweeping
+// TRAIL_MASK_D (the centre-line, extended past both ends so a butt cap never has to cut
+// across an end face). There used to be a second mode, `trail="stroke"`, that inked a
+// uniform round-capped line along TRAIL_CENTRE_D instead -- closer to the reference clip,
+// but not the mark's own gesture. It is gone; the centre-line is still what TRAIL_MASK_D
+// is built from.
 
 // The head's easing. The pen's speed is not a taste: it follows the stroke it is laying,
 // v proportional to width, one law for the whole gesture (design/logo-animation/
@@ -164,19 +159,15 @@ const BAR_CENTRE =
 // retracts the way it was laid down.
 const HEAD_STOPS: [number, number][] = TRAIL_HEAD_STOPS;
 const TAIL_STOPS: [number, number][] = TRAIL_TAIL_STOPS;
-// Both are authored in TRAIL fractions and mapped to what the dash actually is, so that
-// the VISIBLE head, not the dash position, lands on each landmark:
-//   swash   the mask sweeps TRAIL_MASK_D, whose lead-in and lead-out shift and squeeze the
-//           trail into [start, start + span]; its caps are butt, so ink boundary = dash.
-//   stroke  the line IS the centre-line, but its round cap puts the ink half a pen width
-//           (190 units, 0.015) past the dash at each end, so the dash runs that far behind.
-const LINE_CAP = 190 / 12337;
-const dash = (f: number) =>
-  +(trail === 'swash' ? TRAIL_MASK.start + TRAIL_MASK.span * f : Math.max(0, f - LINE_CAP)).toFixed(3);
+// Authored in TRAIL fractions and mapped to what the dash actually is, so the VISIBLE head,
+// not the dash position, lands on each landmark: the mask sweeps TRAIL_MASK_D, whose lead-in
+// and lead-out shift and squeeze the trail into [start, start + span], and its caps are butt,
+// so the ink boundary is exactly the dash.
+const dash = (f: number) => +(TRAIL_MASK.start + TRAIL_MASK.span * f).toFixed(3);
 const at = (list: [number, number][]) => list.map(([f, pct]) => `${dash(f)} ${pct}%`).join(', ');
-// The head ends at 1 in the swash mode: the last stop sweeps the mask's lead-out, which
-// only covers the outline's final 96 units, in the last 6 ms.
-const easeHead = `linear(${dash(0)}, ${at(HEAD_STOPS)}, ${trail === 'swash' ? 1 : dash(1)})`;
+// The head ends at 1: the last stop sweeps the mask's lead-out, which covers only the
+// outline's final 96 units, in the last 6 ms.
+const easeHead = `linear(${dash(0)}, ${at(HEAD_STOPS)}, 1)`;
 const easeTail = `linear(${dash(0)}, ${at(TAIL_STOPS)}, 1)`;
 
 // The ring grows as its OWN geometry: a hairline about the outer circle's centre
@@ -189,7 +180,7 @@ const easeTail = `linear(${dash(0)}, ${at(TAIL_STOPS)}, 1)`;
 <svg
   id={id}
   style={`${timing};--la-ease-head-l:${easeHead};--la-ease-tail-l:${easeTail}${vars ? ';' + vars : ''}`}
-  class={`site-logo ${layerClasses(variant)} ${extra} site-logo-anim site-logo-anim-trail-${trail} ${autoplay ? 'la-play' : ''} ${className}`.trim()}
+  class={`site-logo ${layerClasses(variant)} ${extra} site-logo-anim ${autoplay ? 'la-play' : ''} ${className}`.trim()}
   viewBox="-70 -70 1246 1246"
   width={px}
   height={px}
@@ -224,11 +215,9 @@ const easeTail = `linear(${dash(0)}, ${at(TAIL_STOPS)}, 1)`;
          at its widest from the centre-line), BUTT-capped so the ink boundary is exactly
          the dash position, along a path that runs 550 units before the trail's start and
          150 past its end so that boundary never has to cut across an end face. -->
-    {trail === 'swash' && (
-      <mask id={`${uid}-t`} maskUnits="userSpaceOnUse" x="-600" y="-600" width="13000" height="13000">
-        <path class="la-mask la-trail-m" d={TRAIL_MASK_D} pathLength="1" stroke-width={TRAIL_MASK.strokeWidth} />
-      </mask>
-    )}
+    <mask id={`${uid}-t`} maskUnits="userSpaceOnUse" x="-600" y="-600" width="13000" height="13000">
+      <path class="la-mask la-trail-m" d={TRAIL_MASK_D} pathLength="1" stroke-width={TRAIL_MASK.strokeWidth} />
+    </mask>
     <!-- The finished mark's own two, matching Logo.astro element for element: the band cut
          out of the stroke, and the field with the letterform punched out. These belong to
          the resting render, not the write-on, so they carry no la- class. -->
@@ -247,9 +236,7 @@ const easeTail = `linear(${dash(0)}, ${at(TAIL_STOPS)}, 1)`;
   </defs>
 
   <g class="la-trail-layer" transform="translate(0,1084) scale(0.1,-0.1)">
-    {trail === 'swash'
-      ? <path class="la-trail-swash" d={TRAIL_OUTLINE_D} mask={`url(#${uid}-t)`} />
-      : <path class="la-trail-line" d={TRAIL_CENTRE_D} pathLength="1" />}
+    <path class="la-trail-swash" d={TRAIL_OUTLINE_D} mask={`url(#${uid}-t)`} />
   </g>
 
   <g class="la-pieces" transform="translate(0,1084) scale(0.1,-0.1)">
@@ -308,11 +295,6 @@ const easeTail = `linear(${dash(0)}, ${at(TAIL_STOPS)}, 1)`;
   .site-logo-anim .la-leg,
   .site-logo-anim .la-bar,
   .site-logo-anim .la-trail-swash { fill: currentColor; }
-  .site-logo-anim .la-trail-line {
-    fill: none;
-    stroke: currentColor;
-    stroke-linecap: round;
-  }
   /* The ring is a filled rect seen through its own mask, not a stroked circle: a stroke's
      counter is concentric, and this one is displaced. */
   .site-logo-anim .la-ring,
@@ -324,13 +306,6 @@ const easeTail = `linear(${dash(0)}, ${at(TAIL_STOPS)}, 1)`;
     stroke-linecap: round;
     stroke-linejoin: round;
   }
-
-  /* The two trail treatments; the `trail` prop renders one or the other, never
-     both. Default: the swash's own tapered shape, filled and swept by its mask.
-     `trail="stroke"` inks a uniform line along the same centre-line instead,
-     which is what the clip shows; it needs no mask, its dash reveal runs on the
-     stroke itself. */
-  .site-logo-anim .la-trail-line { stroke-width: var(--la-trail-weight); }
 
   /* The trail's mask alone is butt-capped: its path is extended past both ends of
      the trail (logo-trail.ts), so the sweep never has to cut across an end face,
@@ -350,8 +325,7 @@ const easeTail = `linear(${dash(0)}, ${at(TAIL_STOPS)}, 1)`;
     stroke-dasharray: 1 2;
     stroke-dashoffset: 1;
   }
-  .site-logo-anim .la-trail-m,
-  .site-logo-anim .la-trail-line {
+  .site-logo-anim .la-trail-m {
     stroke-dasharray: 0 2;
     stroke-dashoffset: 0;
   }
@@ -375,7 +349,6 @@ const easeTail = `linear(${dash(0)}, ${at(TAIL_STOPS)}, 1)`;
     --la-t-pieces: calc(var(--la-n-pieces) * 1s / var(--la-speed));  /* the drawn pieces switch off */
     --la-t-treat: calc(var(--la-n-treat-t) * 1s / var(--la-speed));  --la-d-treat: calc(var(--la-n-treat-d) * 1s / var(--la-speed));
     --la-t-done: calc(var(--la-n-done) * 1s / var(--la-speed));      /* everything over */
-    --la-trail-weight: 460;                        /* trail="stroke" only: 0.6 of the bar's run */
   }
 
   /* Easing. Every piece now carries the speed law -- v proportional to the width of the
@@ -414,8 +387,7 @@ const easeTail = `linear(${dash(0)}, ${at(TAIL_STOPS)}, 1)`;
     }
     .la-play .la-leg-l { animation: la-draw var(--la-d-leg-l) var(--la-e-legL) var(--la-t-leg-l) forwards; }
     .la-play .la-leg-r { animation: la-draw var(--la-d-leg-r) var(--la-e-legR) var(--la-t-leg-r) forwards; }
-    .la-play .la-trail-m,
-    .la-play .la-trail-line {
+    .la-play .la-trail-m {
       animation:
         la-trail-head var(--la-d-trail) var(--la-ease-head) var(--la-t-trail) forwards,
         la-trail-tail var(--la-d-tail) var(--la-ease-tail) var(--la-t-tail) forwards;
@@ -438,6 +410,26 @@ const easeTail = `linear(${dash(0)}, ${at(TAIL_STOPS)}, 1)`;
     .logo-layer-outline.la-play .la-final-mark {
       animation: la-outline var(--la-d-treat) var(--la-ease-grow) var(--la-t-treat) both;
     }
+    /* Cut and knockout are properties of the finished UNION, so the pen cannot draw them:
+       it lays filled pieces, and a piece's own edge includes boundaries interior to the
+       finished mark. Left alone, the write-on therefore drew a SOLID mark for its whole
+       run and then cross-faded to a hollow band -- two unrelated shapes swapping at the
+       hand-off, which is what "doesn't work right" looked like.
+
+       So the mark lands solid, and the treatment takes hold over the same beat the outline
+       and the shadow already settle in. The resting rules below still hide the solid mark;
+       these only apply while la-play is on, and it is dropped once everything finishes. */
+    .logo-layer-cut.logo-layer-outline.la-play .site-logo-mark,
+    .logo-layer-knock.la-play .site-logo-mark {
+      display: block;
+      animation: la-hide var(--la-d-treat) linear var(--la-t-treat) both;
+    }
+    .logo-layer-cut.logo-layer-outline.la-play .site-logo-cut-holder,
+    .logo-layer-knock.la-play .site-logo-knock-holder {
+      opacity: 0;
+      animation: la-show var(--la-d-treat) linear var(--la-t-treat) forwards;
+    }
+
     .la-play .la-bar-m { animation: la-draw var(--la-d-bar) var(--la-e-bar) var(--la-t-bar) forwards; }
     /* Linear timing on purpose: ease-grow's stops are baked into the keyframe values so the
        two circles share one progress. See the keyframes. */
