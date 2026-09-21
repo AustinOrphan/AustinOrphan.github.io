@@ -3427,7 +3427,9 @@ body.blog {
    classes and cannot grow elements it did not ship with. Hidden until its layer is on: an
    unpainted SVG shape is black, so leaving it visible put a hard black mark behind the
    letter on every treatment that is not hero. */
-.site-logo-shadow-holder {
+.site-logo-shadow-holder,
+.site-logo-shadow-knocked,
+.site-logo-shadow-offset {
     display: none;
     /* Where the offset copy sits, as polar coordinates rather than the fixed
        translate(30,30) it used to carry as a markup attribute. The defaults reproduce that
@@ -3454,7 +3456,25 @@ body.blog {
     transform-origin: center;
 }
 
-.logo-layer-shadow .site-logo-shadow-holder { display: block; }
+/* Two offset copies ship, and exactly one is ever drawn.
+ 
+   Without a knockout the shadow sits behind the mark, as a shadow does. WITH one, the cut
+   goes through the whole assembly: the field is a sheet of ink with the letterform punched
+   out, and the offset copy is another sheet on top of it, punched by the same mask at the
+   same place. So the hole is a real hole -- it shows the ground, not a blue shape -- and the
+   shadow reads as something lying on the card rather than under it.
+
+   The alternative, one copy sitting behind the field, makes the letterform reveal the shadow
+   instead of the ground, which is a window rather than a cut. */
+.logo-layer-shadow:not(.logo-layer-knock) .site-logo-shadow-holder { display: block; }
+
+/* The knocked copy wears the mask on the OUTSIDE and the offset on the inside, so the hole
+   stays where the field's hole is instead of travelling with the shadow. The outer group must
+   therefore carry no transform of its own. */
+.logo-layer-shadow.logo-layer-knock .site-logo-shadow-knocked,
+.logo-layer-shadow.logo-layer-knock .site-logo-shadow-offset { display: block; }
+
+.site-logo-shadow-knocked { transform: none; }
 
 .logo-layer-shadow .site-logo-shadow {
     fill: var(--logo-shadow, var(--color-accent));
@@ -3469,7 +3489,13 @@ body.blog {
    instance and a class rule cannot name it. */
 .site-logo-cut-holder { display: none; }
 
-.logo-layer-cut.logo-layer-outline .site-logo-cut-holder {
+/* Also when the field is knocked out, and that is the point rather than a convenience: with
+   the letterform punched out there is no fill for a stroke to sit under, so the only thing
+   an outline CAN be is a band ringing the hole -- which is the shape `cut` already draws.
+   Without this the outline silently did nothing under a knockout, because the stroke lives
+   on .site-logo-mark and the knockout hides it. */
+.logo-layer-cut.logo-layer-outline .site-logo-cut-holder,
+.logo-layer-knock.logo-layer-outline .site-logo-cut-holder {
     display: block;
     fill: none;
     stroke: var(--logo-outline, var(--color-secondary));
@@ -3482,9 +3508,15 @@ body.blog {
 
 /* With the outline hollowed there is no fill to draw. Nor with the field knocked out: there
    the hole IS the mark, and painting the glyph back over it in the same ink made the
-   letterform invisible -- off-white on off-white -- which is the whole treatment undone. */
+   letterform invisible -- off-white on off-white -- which is the whole treatment undone.
+   The outline is not lost with it: the rule above gives it the band instead. */
 .logo-layer-cut.logo-layer-outline .site-logo-mark,
 .logo-layer-knock .site-logo-mark { display: none; }
+
+/* The offset copy sits BEHIND the knockout field, so under a knockout it is seen through the
+   letterform's hole rather than painted over the field. It used to be drawn after the field
+   and so covered it, which read as a stray coloured mark rather than as depth. The markup
+   order is what does this; the rule is here to say why it must not move. */
 
 /* "knock" is a field with the letterform punched out of it, so the ground shows through
    the mark instead of the mark being painted on the ground. Its edge is the viewBox,

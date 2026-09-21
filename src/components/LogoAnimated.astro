@@ -232,6 +232,16 @@ const easeTail = `linear(${dash(0)}, ${at(TAIL_STOPS)}, 1)`;
         <rect x="-1000" y="-1000" width="14000" height="14000" fill="#fff" />
         <path d={LOGO_MARK_D} fill="#000" />
       </mask>
+      <!-- The same knockout, authored in VIEWBOX space. The mask above is in path units,
+           which is right for the field because the field is drawn inside the mark's
+           translate/scale group. The knocked shadow is not: it carries the offset, which is
+           in viewBox units, and the hole has to stay at the letterform's HOME position --
+           one cut through both sheets, not a hole that travels with the shadow. So it needs
+           a mask it can wear from outside that group. -->
+      <mask id={`${uid}-knockvb`} maskUnits="userSpaceOnUse" x="-70" y="-70" width="1246" height="1246">
+        <rect x="-70" y="-70" width="1246" height="1246" fill="#fff" />
+        <g transform="translate(0.000000,1084.000000) scale(0.100000,-0.100000)"><path d={LOGO_MARK_D} fill="#000" /></g>
+      </mask>
     )}
   </defs>
 
@@ -256,14 +266,21 @@ const easeTail = `linear(${dash(0)}, ${at(TAIL_STOPS)}, 1)`;
        resting render is the same raster as Logo's (a nested <svg> would go
        through its own viewport and anti-alias a few edge pixels differently). -->
   <g class="la-final">
+    <g class="la-final-shadow site-logo-shadow-holder">
+      <g transform="translate(0.000000,1084.000000) scale(0.100000,-0.100000)" class="site-logo-shadow"><path d={LOGO_MARK_D} /></g>
+    </g>
     {masks && (
       <g transform="translate(0.000000,1084.000000) scale(0.100000,-0.100000)" class="site-logo-knock-holder">
         <rect x="-1000" y="-1000" width="14000" height="14000" class="site-logo-knock" mask={`url(#${uid}-knock)`} />
       </g>
     )}
-    <g class="la-final-shadow site-logo-shadow-holder">
-      <g transform="translate(0.000000,1084.000000) scale(0.100000,-0.100000)" class="site-logo-shadow"><path d={LOGO_MARK_D} /></g>
-    </g>
+    {masks && (
+      <g class="site-logo-shadow-knocked" mask={`url(#${uid}-knockvb)`}>
+        <g class="la-final-shadow site-logo-shadow-offset">
+          <g transform="translate(0.000000,1084.000000) scale(0.100000,-0.100000)" class="site-logo-shadow"><path d={LOGO_MARK_D} /></g>
+        </g>
+      </g>
+    )}
     {masks && (
       <g
         transform="translate(0.000000,1084.000000) scale(0.100000,-0.100000)"
@@ -425,6 +442,7 @@ const easeTail = `linear(${dash(0)}, ${at(TAIL_STOPS)}, 1)`;
       animation: la-hide var(--la-d-treat) linear var(--la-t-treat) both;
     }
     .logo-layer-cut.logo-layer-outline.la-play .site-logo-cut-holder,
+    .logo-layer-knock.logo-layer-outline.la-play .site-logo-cut-holder,
     .logo-layer-knock.la-play .site-logo-knock-holder {
       opacity: 0;
       animation: la-show var(--la-d-treat) linear var(--la-t-treat) forwards;
