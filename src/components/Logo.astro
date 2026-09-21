@@ -107,6 +107,11 @@ const vars = [ink && `--logo-ink:${ink}`, outline && `--logo-outline:${outline}`
     </g>
   )}
   {masks && (
+    <g class="site-logo-shadow-knocked" mask={`url(#${uid}-knock)`}>
+      <g transform="translate(0.000000,1084.000000) scale(0.100000,-0.100000)" class="site-logo-shadow"><path d={LOGO_MARK_D} /></g>
+    </g>
+  )}
+  {masks && (
     <g
       transform="translate(0.000000,1084.000000) scale(0.100000,-0.100000)"
       class="site-logo-cut-holder"

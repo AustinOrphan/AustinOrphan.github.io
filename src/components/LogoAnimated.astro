@@ -265,6 +265,11 @@ const easeTail = `linear(${dash(0)}, ${at(TAIL_STOPS)}, 1)`;
       </g>
     )}
     {masks && (
+      <g class="la-final-shadow site-logo-shadow-knocked" mask={`url(#${uid}-knock)`}>
+        <g transform="translate(0.000000,1084.000000) scale(0.100000,-0.100000)" class="site-logo-shadow"><path d={LOGO_MARK_D} /></g>
+      </g>
+    )}
+    {masks && (
       <g
         transform="translate(0.000000,1084.000000) scale(0.100000,-0.100000)"
         class="site-logo-cut-holder"

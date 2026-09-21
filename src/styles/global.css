@@ -3427,7 +3427,8 @@ body.blog {
    classes and cannot grow elements it did not ship with. Hidden until its layer is on: an
    unpainted SVG shape is black, so leaving it visible put a hard black mark behind the
    letter on every treatment that is not hero. */
-.site-logo-shadow-holder {
+.site-logo-shadow-holder,
+.site-logo-shadow-knocked {
     display: none;
     /* Where the offset copy sits, as polar coordinates rather than the fixed
        translate(30,30) it used to carry as a markup attribute. The defaults reproduce that
@@ -3454,7 +3455,19 @@ body.blog {
     transform-origin: center;
 }
 
-.logo-layer-shadow .site-logo-shadow-holder { display: block; }
+/* Two offset copies ship, and exactly one is ever drawn.
+ 
+   Without a knockout the shadow sits behind the mark, as a shadow does. WITH one, the cut
+   goes through the whole assembly: the field is a sheet of ink with the letterform punched
+   out, and the offset copy is another sheet on top of it, punched by the same mask at the
+   same place. So the hole is a real hole -- it shows the ground, not a blue shape -- and the
+   shadow reads as something lying on the card rather than under it.
+
+   The alternative, one copy sitting behind the field, makes the letterform reveal the shadow
+   instead of the ground, which is a window rather than a cut. */
+.logo-layer-shadow:not(.logo-layer-knock) .site-logo-shadow-holder { display: block; }
+
+.logo-layer-shadow.logo-layer-knock .site-logo-shadow-knocked { display: block; }
 
 .logo-layer-shadow .site-logo-shadow {
     fill: var(--logo-shadow, var(--color-accent));
