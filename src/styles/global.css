@@ -3405,34 +3405,59 @@ body.blog {
     flex: 0 0 auto;
 }
 
-.site-logo-hero .site-logo-mark {
+/* Ink is the base, and every mark has it. The two extra passes are independent layers,
+   switched on by their own class rather than by a variant name, so the four combinations
+   are all reachable and a variant is only a preset that turns the right ones on. */
+.site-logo .site-logo-mark {
     fill: var(--logo-ink, var(--color-primary));
+    stroke: none;
+    stroke-width: 0;
+}
+
+/* The outline is painted UNDER the fill -- paint-order in the markup -- so only its outer
+   half shows. --logo-band is its full width in path units, which is twice the visible band.
+   It is a property rather than the markup attribute it used to be, so the bench can drive
+   it; serializeLogo reads it back off the computed style for the same reason. */
+.logo-layer-outline .site-logo-mark {
     stroke: var(--logo-outline, var(--color-secondary));
+    stroke-width: var(--logo-band, 300);
 }
 
-.site-logo-hero .site-logo-shadow {
+/* The offset copy is always in the markup, because a mark can be RE-TREATED by swapping
+   classes and cannot grow elements it did not ship with. Hidden until its layer is on: an
+   unpainted SVG shape is black, so leaving it visible put a hard black mark behind the
+   letter on every treatment that is not hero. */
+.site-logo-shadow-holder {
+    display: none;
+    /* Where the offset copy sits, as polar coordinates rather than the fixed
+       translate(30,30) it used to carry as a markup attribute. The defaults reproduce that
+       exactly: 30 * sqrt(2) units at 45deg is (30, 30). Distance is in viewBox units, because
+       the holder sits OUTSIDE the mark's own translate/scale group.
+
+       The angle follows the CSS convention, clockwise from the positive x axis with y running
+       DOWN the screen, so 45deg is down-and-right and 270deg points straight up. That is the
+       screen's y, not the mark's: the path data inside the holder is y-up and flipped by the
+       scale(0.1,-0.1) below it, but this transform is applied above that group.
+
+       cos() and sin() return unitless numbers, so the product is multiplied by 1px to make a
+       length: the CSS transform property needs units even where the SVG attribute would not,
+       and in SVG 1px is one user unit. */
+    --logo-shadow-x: calc(var(--logo-shadow-dist, 42.4264069) * cos(var(--logo-shadow-angle, 45deg)) * 1px);
+    --logo-shadow-y: calc(var(--logo-shadow-dist, 42.4264069) * sin(var(--logo-shadow-angle, 45deg)) * 1px);
+    /* Composed once as a property so the write-on's keyframe can land on exactly this value
+       instead of restating it. */
+    --logo-shadow-t: translate(var(--logo-shadow-x), var(--logo-shadow-y)) scale(var(--logo-shadow-scale, 1));
+    transform: var(--logo-shadow-t);
+    /* SVG's transform-origin is 0 0, which would scale the shadow away from the mark's corner
+       rather than about itself. fill-box makes `center` mean the copy's own bounding box. */
+    transform-box: fill-box;
+    transform-origin: center;
+}
+
+.logo-layer-shadow .site-logo-shadow-holder { display: block; }
+
+.logo-layer-shadow .site-logo-shadow {
     fill: var(--logo-shadow, var(--color-accent));
-}
-
-.site-logo-flat .site-logo-mark {
-    fill: var(--logo-ink, var(--color-accent));
-    stroke: none;
-}
-
-/* The offset copy is hero's alone. It is normally absent from the markup for the other two,
-   but a mark can be RE-TREATED by swapping its variant class (the logo page's export panel
-   does exactly that), which leaves hero's shadow group in place with no rule to paint it --
-   and an unpainted SVG shape is black, so a hard black mark appeared behind the letter.
-   Hiding it makes the class swap safe wherever it happens. */
-.site-logo-plain .site-logo-shadow,
-.site-logo-flat .site-logo-shadow { display: none; }
-
-/* "plain" is hero's ink with neither of hero's two extra passes: no red outline,
-   no blue offset copy. Same fill as hero, so the two can be swapped without the
-   mark changing weight or colour. */
-.site-logo-plain .site-logo-mark {
-    fill: var(--logo-ink, var(--color-primary));
-    stroke: none;
 }
 
 /* 14.1 Blog nav */

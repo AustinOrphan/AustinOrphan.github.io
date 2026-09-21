@@ -18,7 +18,10 @@ import ProjectsMenu from './ProjectsMenu.astro';
 ---
 <section id="hero" class="hero-section">
   <div class="hero-logo-backdrop" aria-hidden="true">
-    <slot name="backdrop"><Logo variant="flat" /></slot>
+    <!-- `plain`, not the retired `flat`: the fill here is overridden by the heroLogoTint
+         animation in global.css, so flat's accent default was never visible. What this call
+         site actually wants is ink with neither extra pass, which is what plain is. -->
+    <slot name="backdrop"><Logo variant="plain" /></slot>
   </div>
   <div class="page-wrapper">
     <div class="content-wrapper">

@@ -13,17 +13,32 @@
 // are legal in HTML and not in XML, and `paint-order`, which browsers honour and design tools
 // do not. Each is dealt with below, and each of the three shipped broken once.
 
-// Only fill and stroke come from CSS. stroke-width, stroke-linejoin and paint-order are
-// already attributes in Logo.astro, so cloneNode carries them and copying the COMPUTED value
-// would only corrupt them -- it rewrites 300 as "300px" and "stroke fill markers" as "stroke".
-const PAINT = ['fill', 'stroke'];
+// What has to be read back off the computed style, because a rule sets it rather than the
+// markup. stroke-linejoin and paint-order stay OUT: they are still attributes in Logo.astro,
+// so cloneNode carries them, and copying the computed value would corrupt paint-order from
+// "stroke fill markers" to "stroke".
+//
+// stroke-width joined this list when the outline's weight became --logo-band. It was an
+// attribute precisely so it did not need copying; a property cannot be one, so the exporter
+// has to carry it now or every saved mark loses its outline. Computed lengths arrive with a
+// unit, and `stroke-width="300px"` is only valid in SVG 2, so it is normalised to a bare
+// number on the way out.
+const PAINT = ['fill', 'stroke', 'stroke-width'];
+
+/** SVG's own initial stroke-width is 1; a computed length arrives as "300px". */
+function normalise(prop: string, value: string): string {
+  return prop === 'stroke-width' ? value.replace(/px$/, '') : value;
+}
 
 /** The theme values the component's rules fall back to, needed by the animated download. */
 const THEME = ['--color-primary', '--color-secondary', '--color-accent', '--color-background',
-               '--logo-ink', '--logo-outline', '--logo-shadow'];
+               '--logo-ink', '--logo-outline', '--logo-shadow',
+               // The band's weight and the shadow's placement, so an animated file plays the
+               // treatment it was configured with rather than the component's defaults.
+               '--logo-band', '--logo-shadow-dist', '--logo-shadow-angle', '--logo-shadow-scale'];
 
 /** SVG's own initial values, so an element that just inherits them writes nothing. */
-const INITIAL: Record<string, string> = { fill: 'rgb(0, 0, 0)', stroke: 'none' };
+const INITIAL: Record<string, string> = { fill: 'rgb(0, 0, 0)', stroke: 'none', 'stroke-width': '1' };
 
 /**
  * Write the paint on, and drop whatever a rule was hiding.
@@ -31,7 +46,7 @@ const INITIAL: Record<string, string> = { fill: 'rgb(0, 0, 0)', stroke: 'none' }
  * The pruning is the same class of problem as the paint: a saved file carries no stylesheet,
  * so anything held back by a RULE comes back, and unpainted SVG is black. Re-treating a mark
  * by swapping its variant class (the export panel does exactly that) leaves hero's offset copy
- * in the markup with only `.site-logo-plain .site-logo-shadow { display: none }` to hide it, so
+ * in the markup with only `.site-logo-shadow-holder { display: none }` over it, so
  * plain and flat both saved with a hard black shadow behind the letter. The video baker already
  * carried its own fix for this; the still export did not.
  *
@@ -42,12 +57,24 @@ function paintAndPrune(src: Element, dst: Element, inherited: Record<string, str
   const cs = getComputedStyle(src);
   const own: Record<string, string> = { ...inherited };
   for (const prop of PAINT) {
-    const v = cs.getPropertyValue(prop).trim();
+    const v = normalise(prop, cs.getPropertyValue(prop).trim());
     if (!v) continue;
     own[prop] = v;
     // Only write what actually differs from what this element would inherit anyway, so the
     // file carries the paint once, on the element that changes it, and nowhere else.
     if (v !== inherited[prop]) dst.setAttribute(prop, v);
+  }
+  // A transform that came from a RULE has no attribute for cloneNode to carry, so it has to
+  // be written on. The test is exactly "no attribute of its own": an element that has one
+  // keeps it untouched, which matters because the mark's own translate/scale group would
+  // otherwise be rewritten into an equivalent matrix for no reason.
+  //
+  // This is here because the shadow's offset stopped being transform="translate(30,30)" and
+  // became --logo-shadow-dist / -angle / -scale. Without it every saved mark loses its
+  // shadow offset and the copy sits exactly behind the letter, invisible.
+  if (!src.hasAttribute('transform')) {
+    const t = cs.transform;
+    if (t && t !== 'none') dst.setAttribute('transform', t);
   }
   const sk = Array.from(src.children);
   // A snapshot, taken before anything is removed, so src and dst stay index-aligned.
@@ -116,7 +143,10 @@ function flattenPaintOrder(root: SVGSVGElement): void {
 }
 
 /** The component's own classes. A rule is the animation's if it targets one of these. */
-const OWN = /(^|[\s.,>+~])(site-logo-anim|la-(play|pieces|final|ring|leg|bar|mask|trail))/;
+// site-logo-shadow-holder earns its place here: the la-shadow keyframe lands on
+// --logo-shadow-t, which that rule composes, so without it the animated file's treatment
+// beat has nothing to animate towards.
+const OWN = /(^|[\s.,>+~])(site-logo-anim|site-logo-shadow-holder|la-(play|pieces|final|ring|leg|bar|mask|trail))/;
 /** Layout classes on the demo page that merely start with the same two letters. */
 const PAGE = /\.la-(demo|dl)\b/;
 

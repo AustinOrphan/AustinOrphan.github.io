@@ -1,13 +1,32 @@
 ---
-// The site mark. One vector, three treatments:
-//   "hero"  mirrors the desktop h1 (off-white fill, red outline, blue shadow)
-//   "plain" the same off-white fill with neither extra pass
-//   "flat"  a single accent fill, for sizes where the outline goes sub-pixel
-// The three colours are custom properties (--logo-ink / --logo-outline /
-// --logo-shadow) falling back to the theme, so an instance can be recoloured
-// without a second component.
+// The site mark. One vector, three paint layers.
+//
+// Ink is always on. Outline and shadow are independent, which is two booleans and
+// therefore four combinations. `variant` names them:
+//
+//   plain     ink
+//   outlined  ink + outline
+//   shadowed  ink + shadow
+//   hero      ink + outline + shadow   (mirrors the desktop h1)
+//
+// It used to be a three-value enum -- hero, plain, flat -- over the same two booleans,
+// which is why `plain` and `flat` collided (identical drawings differing only in which
+// colour the fill fell back to) and why the middle two above had no name. `flat` is
+// retired: its one real call site was the hero backdrop, where the fill is overridden by
+// the heroLogoTint animation anyway, so its accent default was never seen.
+//
+// A variant is a preset, not the mechanism. It resolves to the layer classes below, and
+// anything that wants a combination directly -- the bench -- toggles those classes.
+//
+// The three colours are custom properties (--logo-ink / --logo-outline / --logo-shadow)
+// falling back to the theme, so an instance can be recoloured without a second component.
+// The outline's weight is --logo-band.
+// The variant table and the class mapping live in logo-layers.ts, not here: Astro does not
+// treat frontmatter as an importable module surface, so LogoAnimated could not share them.
+import { layerClasses, type LogoVariant } from './logo-layers';
+
 interface Props {
-  variant?: 'hero' | 'plain' | 'flat';
+  variant?: LogoVariant;
   size?: number | string;
   class?: string;
   /** For addressing one instance from script, as LogoAnimated already allows. */
@@ -22,9 +41,16 @@ const { variant = 'hero', size = 28, class: className = '', id, ink, outline, sh
 const px = typeof size === 'number' ? `${size}px` : size;
 const vars = [ink && `--logo-ink:${ink}`, outline && `--logo-outline:${outline}`,
                shadow && `--logo-shadow:${shadow}`].filter(Boolean).join(';');
+// The offset copy is always rendered, and the shadow layer's rule is what reveals it. It
+// has to be in the markup either way, because the bench re-treats a mark by swapping
+// classes and cannot add elements to one that shipped without them.
+//
+// No `site-logo-<variant>` class on the root: nothing keys on it now that the rules sit on
+// the layers, and the bench re-treats a mark by toggling layers, so the variant name would
+// stay on the element describing a treatment it no longer has.
 ---
 <svg
-  class={`site-logo site-logo-${variant} ${className}`.trim()}
+  class={`site-logo ${layerClasses(variant)} ${className}`.trim()}
   id={id}
   style={vars || undefined}
   viewBox="-70 -70 1246 1246"
@@ -34,15 +60,12 @@ const vars = [ink && `--logo-ink:${ink}`, outline && `--logo-outline:${outline}`
   aria-hidden="true"
   focusable="false"
 >
-  {variant === 'hero' && (
-    <g transform="translate(30,30)">
-      <g transform="translate(0.000000,1084.000000) scale(0.100000,-0.100000)" class="site-logo-shadow"><path d={LOGO_MARK_D} /></g>
-    </g>
-  )}
+  <g class="site-logo-shadow-holder">
+    <g transform="translate(0.000000,1084.000000) scale(0.100000,-0.100000)" class="site-logo-shadow"><path d={LOGO_MARK_D} /></g>
+  </g>
   <g
     transform="translate(0.000000,1084.000000) scale(0.100000,-0.100000)"
     class="site-logo-mark"
-    stroke-width={variant === 'hero' ? 300 : 0}
     stroke-linejoin="round"
     paint-order="stroke fill markers"
   ><path d={LOGO_MARK_D} /></g>
