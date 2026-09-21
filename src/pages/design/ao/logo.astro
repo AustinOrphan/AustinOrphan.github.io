@@ -164,6 +164,10 @@ const VARIANT_RECIPE: Record<string, string> = Object.fromEntries(
     color: var(--color-primary);
     min-height: 100vh;
     margin: 0;
+    /* For the full-bleed hero panel below. 100vw counts the scrollbar and the page always
+       has one, so without this it would overflow by the scrollbar's width. `clip` rather
+       than `hidden` so no scroll container is created. */
+    overflow-x: clip;
   }
   .la-demo {
     display: flex;
@@ -244,7 +248,20 @@ const VARIANT_RECIPE: Record<string, string> = Object.fromEntries(
   /* The real hero is full-height and its backdrop is revealed by index.astro's own
      scroll handler, which does not run here — so it is forced visible and the section
      is scaled down to sit in a panel. Everything else is the hero's own CSS. */
-  .situ-hero-frame { padding: 0; overflow: hidden; position: relative; }
+  /* Full-bleed, and that is the point rather than a flourish. The hero sizes its wordmark
+     with 14vw -- the VIEWPORT's width -- so penning it into the 1180px article column makes
+     it render something the live page never shows: above about 1856px the wordmark wraps to
+     two lines, "Orphan" is clipped by the frame, and the tagline and link bar are pushed out
+     of it entirely. A panel whose whole claim is "the real hero" cannot misreport it at the
+     widest viewports. Giving the frame the viewport's own width makes 14vw resolve against
+     the width the hero actually has.
+
+     overflow-x: clip on the page rather than hidden: it does not create a scroll container,
+     so it absorbs the scrollbar's width without changing how anything else scrolls. */
+  .situ-hero-frame {
+    padding: 0; overflow: hidden; position: relative;
+    width: 100vw; margin-left: calc(50% - 50vw); border-radius: 0; border-left: 0; border-right: 0;
+  }
   .situ-hero-frame .hero-section { min-height: 0; height: 78vh; }
   .situ-hero-frame .scroll-indicator { display: none; }
   /* Three things the real page does with script or chrome that the panel has to
