@@ -3460,6 +3460,43 @@ body.blog {
     fill: var(--logo-shadow, var(--color-accent));
 }
 
+/* "cut" hollows the outline. It is the same paint as the outline layer, standing alone
+   instead of sitting under the fill, so it takes --logo-outline and --logo-band. The
+   letterform becomes a hole: the band is what you see and the ground shows through the
+   letter, rather than the fill merely being invisible with the stroke behind it.
+
+   A separate element rather than a mask on .site-logo-mark, because the mask's id is per
+   instance and a class rule cannot name it. */
+.site-logo-cut-holder { display: none; }
+
+.logo-layer-cut.logo-layer-outline .site-logo-cut-holder {
+    display: block;
+    fill: none;
+    stroke: var(--logo-outline, var(--color-secondary));
+    stroke-width: var(--logo-band, 300);
+}
+
+/* The mask's covering stroke has to be the same width as the visible one, or the band is
+   trimmed to whichever is narrower. */
+.site-logo-cut-mask { stroke-width: var(--logo-band, 300); }
+
+/* With the outline hollowed there is no fill to draw. Nor with the field knocked out: there
+   the hole IS the mark, and painting the glyph back over it in the same ink made the
+   letterform invisible -- off-white on off-white -- which is the whole treatment undone. */
+.logo-layer-cut.logo-layer-outline .site-logo-mark,
+.logo-layer-knock .site-logo-mark { display: none; }
+
+/* "knock" is a field with the letterform punched out of it, so the ground shows through
+   the mark instead of the mark being painted on the ground. Its edge is the viewBox,
+   which is the one boundary the mark already has. */
+.site-logo-knock-holder { display: none; }
+
+.logo-layer-knock .site-logo-knock-holder { display: block; }
+
+.logo-layer-knock .site-logo-knock {
+    fill: var(--logo-ink, var(--color-primary));
+}
+
 /* 14.1 Blog nav */
 .blog-site-nav .site-logo {
     margin-right: 10px;

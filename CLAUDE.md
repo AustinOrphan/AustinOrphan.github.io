@@ -291,11 +291,55 @@ this at least once:
   `paint-order`: there the outline is a `stroke-width` keyframe on that element, and a file
   carrying CSS animations is for a browser anyway.
 
+- **Defs are pruned to what the file points at.** Both components ship the cut and knockout
+  masks unconditionally, because a mark gets re-treated by swapping classes and cannot grow
+  elements it did not ship with. Each mask holds its own copy of the 3.3KB mark path, so a
+  file using neither was carrying about 13KB it never draws. One pass, not a fixed point:
+  nothing currently defines a mask that references another def, and if that changes this has
+  to iterate or it will drop a def whose only user it just removed.
+
 The panel's own controls: **treatment** is a class swap, **ink/outline/shadow** are custom
 properties, **speed** is `--la-speed`, and **size** feeds every button (the video caps at 1024;
-frames are baked and rasterised up front). The ink swatch follows the treatment until it is
-deliberately set — the panel writes `--logo-ink` onto every mark, so hero's off-white left
-sitting in the picker made flat save as a byte-identical copy of plain.
+frames are baked and rasterised up front).
+
+### The layer model
+
+`src/components/logo-layers.ts` is the table. Ink is always on; **outline** and **shadow** are
+independent, which is two booleans and therefore four combinations, and all four are named:
+
+| | outline | shadow |
+| --- | --- | --- |
+| `plain` | | |
+| `outlined` | ✓ | |
+| `shadowed` | | ✓ |
+| `hero` | ✓ | ✓ |
+
+A variant is a **name for a combination**, not the mechanism. It resolves to `logo-layer-*`
+classes and the rules key on those, which is what lets the bench toggle a combination directly.
+It replaced a three-value enum — `hero`, `plain`, `flat` — over the same two booleans, where
+two values were the same drawing and two combinations had no name at all. `flat` is retired.
+
+Two more layers exist that the variant table does not name, because they are **export
+treatments rather than site ones**:
+
+- **`cut`** hollows the outline: the fill goes and the band is cut out of the stroke with a
+  mask, so the letterform is a hole and the ground shows through it. It is a *mode of the
+  outline*, not a layer of its own — the same paint standing alone instead of sitting under
+  the fill — so it needs `outline` and lives in that fieldset in the bench.
+- **`knock`** is a field with the letterform punched out, bounded by the viewBox.
+
+Both hide `.site-logo-mark`: with the outline hollowed there is no fill to draw, and with the
+field knocked out the hole *is* the mark — painting the glyph back over it in the same ink made
+the letterform invisible, off-white on off-white, which is the whole treatment undone.
+
+Neither can be something the pen draws. The write-on lays **filled pieces**, and the band is a
+property of their **union**: a piece's own edge includes boundaries interior to the finished
+mark that get covered by whatever is drawn next. That is the same trap that made `LOGO_A_D`
+necessary. So both apply to the finished mark, in the treatment beat that already exists.
+
+**Band weight is `--logo-band`** and the shadow's placement is `--logo-shadow-dist` /
+`-angle` / `-scale`, composed into `--logo-shadow-t` so the write-on's keyframe lands on
+exactly that value. Defaults reproduce the old fixed `translate(30,30)` bit-for-bit.
 
 ### Robots directives
 
