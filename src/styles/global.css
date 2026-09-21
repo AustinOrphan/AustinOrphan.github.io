@@ -3428,7 +3428,8 @@ body.blog {
    unpainted SVG shape is black, so leaving it visible put a hard black mark behind the
    letter on every treatment that is not hero. */
 .site-logo-shadow-holder,
-.site-logo-shadow-knocked {
+.site-logo-shadow-knocked,
+.site-logo-shadow-offset {
     display: none;
     /* Where the offset copy sits, as polar coordinates rather than the fixed
        translate(30,30) it used to carry as a markup attribute. The defaults reproduce that
@@ -3467,7 +3468,13 @@ body.blog {
    instead of the ground, which is a window rather than a cut. */
 .logo-layer-shadow:not(.logo-layer-knock) .site-logo-shadow-holder { display: block; }
 
-.logo-layer-shadow.logo-layer-knock .site-logo-shadow-knocked { display: block; }
+/* The knocked copy wears the mask on the OUTSIDE and the offset on the inside, so the hole
+   stays where the field's hole is instead of travelling with the shadow. The outer group must
+   therefore carry no transform of its own. */
+.logo-layer-shadow.logo-layer-knock .site-logo-shadow-knocked,
+.logo-layer-shadow.logo-layer-knock .site-logo-shadow-offset { display: block; }
+
+.site-logo-shadow-knocked { transform: none; }
 
 .logo-layer-shadow .site-logo-shadow {
     fill: var(--logo-shadow, var(--color-accent));
