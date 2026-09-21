@@ -10,6 +10,7 @@ import { join, relative, sep } from 'node:path';
 // Node strips the types natively, so the registry is testable with no build step
 // and no dependency.
 import { DESIGN_ENTRIES, entryFor, robotsFor, wipEntries } from '../src/data/design-index.ts';
+import { endMs } from '../src/components/logo-timing.ts';
 
 const ROOT = join(import.meta.dirname, '..');
 const DIST = join(ROOT, 'dist');
@@ -145,6 +146,37 @@ test('the lab size presets no longer collide with the download buttons', async (
   // The only bare data-size attributes left must be the two PNG download buttons.
   const bare = [...doc.matchAll(/data-size="(\d+)"/g)].map((m) => m[1]).sort();
   assert.deepEqual(bare, ['1024', '512'], 'a third data-size appeared, or a preset regressed to data-size');
+});
+
+// The page used to state 1300ms for hero and 1100ms where the choreography actually ends at
+// 1360 and 1160, so the scrub stopped 60ms short -- precisely where the hero treatment settles
+// -- and every caption lied. Both numbers now come from logo-timing.ts, which derives them from
+// the generated logo-choreography.ts. Asserted against the derivation rather than a literal, so
+// retiming the mark moves the page and this test together.
+// Both scrubs, because the lab's is server-rendered too: its initial max is what the page
+// shows before any script runs, and it held the stale 1300 long after the demo's did.
+test('both scrubs span the whole write-on, derived rather than remembered', async () => {
+  const doc = markup(await html('design/ao/logo'));
+  const scrubs = {
+    demo: doc.match(/<input[^>]*data-la-scrub[^>]*>/)?.[0],
+    lab: doc.match(/<input[^>]*name="scrub"[^>]*>/)?.[0],
+  };
+  for (const [which, input] of Object.entries(scrubs)) {
+    assert.ok(input, `the ${which} scrub is missing`);
+    assert.equal(
+      Number(input.match(/max="(\d+)"/)?.[1]),
+      endMs('hero'),
+      `the ${which} scrub no longer spans the write-on; it is restating a duration instead of deriving it`,
+    );
+  }
+});
+
+test('the speed captions state the choreography they actually run at', async () => {
+  const doc = markup(await html('design/ao/logo'));
+  for (const speed of [0.5, 1, 2]) {
+    const caption = `speed=${speed} — ${(endMs('hero', speed) / 1000).toFixed(2)}s`;
+    assert.ok(doc.includes(caption), `the demo is missing or misstates "${caption}"`);
+  }
 });
 
 test('the demo replay is scoped to the demo, not to the whole document', async () => {

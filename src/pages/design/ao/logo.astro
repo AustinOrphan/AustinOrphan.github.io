@@ -17,11 +17,18 @@ import LogoAnimated from '../../../components/LogoAnimated.astro';
 import Hero from '../../../components/Hero.astro';
 import WipBanner from '../../../components/WipBanner.astro';
 import { entryFor, robotsFor } from '../../../data/design-index';
+import { endMs } from '../../../components/logo-timing';
 
 const entry = entryFor('logo');
 
 const VARIANTS = ['hero', 'plain', 'flat'] as const;
 const TRAILS = ['swash', 'stroke'] as const;
+
+// Derived, never typed in. Every duration on this page comes from logo-choreography.ts by
+// way of logo-timing.ts, because the choreography is generated and moves whenever the mark
+// does. These had drifted to 1300/1100 against a real 1360/1160.
+const HERO_MS = endMs('hero');
+const secs = (ms: number) => (ms / 1000).toFixed(2);
 ---
 
 <BaseLayout title={entry.title} description={entry.blurb}
@@ -43,8 +50,8 @@ const TRAILS = ['swash', 'stroke'] as const;
       <button type="button" class="la-demo-replay" data-la-replay>Replay</button>
       <label class="la-demo-scrub">
         <span>Scrub</span>
-        <input type="range" min="0" max="1300" step="1" value="1300" data-la-scrub>
-        <output data-la-time>1.30s</output>
+        <input type="range" min="0" max={HERO_MS} step="1" value={HERO_MS} data-la-scrub>
+        <output data-la-time>{secs(HERO_MS)}s</output>
       </label>
     </div>
     <div class="la-demo-row la-demo-small">
@@ -70,15 +77,15 @@ const TRAILS = ['swash', 'stroke'] as const;
     <div class="la-demo-row">
       <figure class="la-demo-cell">
         <LogoAnimated variant="hero" size="min(220px, 20vw)" id="la-sp-half" class="la-sp-half" speed={0.5} />
-        <figcaption>speed=0.5 — 2.60s</figcaption>
+        <figcaption>speed=0.5 — {secs(endMs('hero', 0.5))}s</figcaption>
       </figure>
       <figure class="la-demo-cell">
         <LogoAnimated variant="hero" size="min(220px, 20vw)" id="la-sp-one" class="la-sp-one" />
-        <figcaption>speed=1 — 1.30s</figcaption>
+        <figcaption>speed=1 — {secs(HERO_MS)}s</figcaption>
       </figure>
       <figure class="la-demo-cell">
         <LogoAnimated variant="hero" size="min(220px, 20vw)" id="la-sp-two" class="la-sp-two" speed={2} />
-        <figcaption>speed=2 — 0.65s</figcaption>
+        <figcaption>speed=2 — {secs(endMs('hero', 2))}s</figcaption>
       </figure>
       <figure class="la-demo-cell">
         <LogoAnimated variant="hero" size="min(220px, 20vw)" id="la-col" class="la-col" ink="#EEE5E9" outline="#2892D7" shadow="#D16666" />
@@ -192,7 +199,7 @@ const TRAILS = ['swash', 'stroke'] as const;
           <legend>speed</legend>
           <label class="lab-range">
             <input type="range" name="speed" aria-label="speed" min="0.25" max="4" step="0.05" value="1" />
-            <output data-out="speed">1.00× · 1.30s</output>
+            <output data-out="speed">1.00× · {secs(HERO_MS)}s</output>
           </label>
           <div class="lab-presets">
             <button type="button" data-speed="0.5">0.5</button>
@@ -232,8 +239,8 @@ const TRAILS = ['swash', 'stroke'] as const;
           </div>
           <label><input type="checkbox" data-loop /> loop</label>
           <label class="lab-range">
-            <input type="range" name="scrub" aria-label="scrub" min="0" max="1300" step="1" value="1300" />
-            <output data-out="scrub">1.300s</output>
+            <input type="range" name="scrub" aria-label="scrub" min="0" max={HERO_MS} step="1" value={HERO_MS} />
+            <output data-out="scrub">{(HERO_MS / 1000).toFixed(3)}s</output>
           </label>
           <p class="lab-hint">Scrubbing pauses. Replay resumes from the top.</p>
         </fieldset>
@@ -555,16 +562,20 @@ const TRAILS = ['swash', 'stroke'] as const;
   // Size, speed and the three colours are set on the SVG itself, not on a wrapper:
   // LogoAnimated declares --la-speed on .site-logo-anim, and a declaration on the element
   // beats a value inherited from an ancestor, so setting it on a parent would do nothing.
+  import { endMs } from '../../../components/logo-timing';
+
   const stage = document.querySelector<HTMLElement>('[data-stage]')!;
   const slots = [...stage.querySelectorAll<HTMLElement>('.lab-slot')];
   const svgs = slots.map((s) => s.querySelector<SVGSVGElement>('svg')!);
   const $ = <T extends Element>(sel: string) => document.querySelector<T>(sel)!;
   const out = (name: string) => $<HTMLOutputElement>(`[data-out="${name}"]`);
 
+  // The duration is appended at render time rather than written into the prose, so these
+  // cannot fall out of step with the choreography the way the old "(1.30s)" had.
   const HINT: Record<string, string> = {
-    hero: 'off-white ink, red outline, blue offset — the treatment settles in after the draw (1.30s)',
-    plain: 'the same ink, neither extra pass (1.10s)',
-    flat: 'a single accent fill, for sizes where an outline goes sub-pixel (1.10s)',
+    hero: 'off-white ink, red outline, blue offset — the treatment settles in after the draw',
+    plain: 'the same ink, neither extra pass',
+    flat: 'a single accent fill, for sizes where an outline goes sub-pixel',
   };
 
   const state = {
@@ -576,7 +587,7 @@ const TRAILS = ['swash', 'stroke'] as const;
     const i = slots.findIndex((s) => s.dataset.variant === state.variant && s.dataset.trail === state.trail);
     return svgs[i];
   };
-  const totalMs = () => Math.round((state.variant === 'hero' ? 1300 : 1100) / state.speed);
+  const totalMs = () => endMs(state.variant, state.speed);
 
   function apply() {
     slots.forEach((s) => {
@@ -593,7 +604,10 @@ const TRAILS = ['swash', 'stroke'] as const;
     }
     out('size').value = `${state.size}px`;
     out('speed').value = `${state.speed.toFixed(2)}× · ${(totalMs() / 1000).toFixed(2)}s`;
-    $<HTMLElement>('[data-variant-hint]').textContent = HINT[state.variant];
+    // The hint describes the variant, so it carries the variant's own length at speed 1;
+    // the speed readout above is the one that tracks the slider.
+    $<HTMLElement>('[data-variant-hint]').textContent =
+      `${HINT[state.variant]} (${(endMs(state.variant) / 1000).toFixed(2)}s)`;
     const scrub = $<HTMLInputElement>('input[name="scrub"]');
     scrub.max = String(totalMs());
     scrub.value = scrub.max;
