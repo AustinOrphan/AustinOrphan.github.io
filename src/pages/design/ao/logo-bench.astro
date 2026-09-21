@@ -256,21 +256,37 @@ const VARIANT_RECIPE: Record<string, string> = Object.fromEntries(
 
 <style is:global>
   .logo-lab { background: var(--color-background); color: var(--color-primary); }
-  .lab-stage-wrap { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 28px; align-items: start; }
-  @media (max-width: 900px) { .lab-stage-wrap { grid-template-columns: 1fr; } }
+  /* The stage above, the controls beneath it in as many columns as fit.
+  
+     This was a 320px right rail, and the proportions were backwards: the rail held nine
+     fieldsets and measured 1388px tall at EVERY desktop width -- taller than a 1080px
+     viewport, so the mark and the lower controls could never be on screen together -- while
+     the flexible column held one 280px mark and wasted 78-83% of its area. Wide and short
+     beats narrow and tall when there are nine of anything. */
+  .lab-stage-wrap { display: grid; gap: 20px; align-items: start; }
   .lab-stage {
-    display: grid; place-items: center; min-height: 560px; border-radius: 10px;
+    display: grid; place-items: center; min-height: 420px; border-radius: 10px;
     border: 1px solid rgba(var(--color-primary-rgb), 0.12); overflow: hidden;
+  }
+  /* Sticky so the mark stays in view while the controls scroll past it, but only where
+     there is height to spare: on a short viewport a 420px band pinned to the top costs
+     more than it gives. */
+  @media (min-width: 760px) and (min-height: 760px) {
+    .lab-stage { position: sticky; top: 12px; z-index: 1; }
   }
   .lab-stage[data-bg="site"]   { background: var(--color-background); }
   .lab-stage[data-bg="ink"]    { background: #0b1116; }
   .lab-stage[data-bg="light"]  { background: #EEE5E9; }
   .lab-stage[data-bg="accent"] { background: var(--color-accent); }
   .lab-slot[hidden] { display: none; }
-  .lab-controls { display: grid; gap: 14px; }
+  /* Multi-column rather than grid: the fieldsets are independent and wildly uneven in
+     height, and a grid row is as tall as its tallest cell, so four columns of them left
+     visible holes. Columns pack them instead. break-inside keeps a fieldset whole. */
+  .lab-controls { columns: 240px 4; column-gap: 14px; }
   .lab-controls fieldset {
     border: 1px solid rgba(var(--color-primary-rgb), 0.14); border-radius: 8px;
-    padding: 10px 12px 12px; margin: 0; display: grid; gap: 8px;
+    padding: 10px 12px 12px; margin: 0 0 14px; display: grid; gap: 8px;
+    break-inside: avoid;
   }
   .lab-controls legend { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em;
     color: rgba(var(--color-primary-rgb), 0.55); padding: 0 4px; }

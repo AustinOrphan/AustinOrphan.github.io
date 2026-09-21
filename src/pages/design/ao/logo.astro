@@ -62,12 +62,8 @@ const VARIANT_RECIPE: Record<string, string> = Object.fromEntries(
         <output data-la-time>{secs(HERO_MS)}s</output>
       </label>
     </div>
-    <div class="la-demo-row la-demo-small">
-      <LogoAnimated variant="hero" size={44} id="la-demo-s1" />
-      <LogoAnimated variant="plain" size={28} id="la-demo-s2" />
-      <LogoAnimated variant="plain" size={120} id="la-demo-s3" />
-      <span class="la-demo-note">44 / 28 / 120 px</span>
-    </div>
+    <!-- Form: the four combinations of the two layers, and the same drawing recoloured, so
+         what a treatment IS sits beside what it is made of. -->
     <div class="la-demo-row">
       {LOGO_VARIANTS.map((v) => (
         <figure class="la-demo-cell">
@@ -75,25 +71,12 @@ const VARIANT_RECIPE: Record<string, string> = Object.fromEntries(
           <figcaption>variant="{v}" — {VARIANT_RECIPE[v]}</figcaption>
         </figure>
       ))}
-    </div>
-    <div class="la-demo-row">
       <figure class="la-demo-cell">
-        <LogoAnimated variant="hero" size="min(220px, 20vw)" id="la-sp-half" class="la-sp-half" speed={0.5} />
-        <figcaption>speed=0.5 — {secs(endMs('hero', 0.5))}s</figcaption>
-      </figure>
-      <figure class="la-demo-cell">
-        <LogoAnimated variant="hero" size="min(220px, 20vw)" id="la-sp-one" class="la-sp-one" />
-        <figcaption>speed=1 — {secs(HERO_MS)}s</figcaption>
-      </figure>
-      <figure class="la-demo-cell">
-        <LogoAnimated variant="hero" size="min(220px, 20vw)" id="la-sp-two" class="la-sp-two" speed={2} />
-        <figcaption>speed=2 — {secs(endMs('hero', 2))}s</figcaption>
-      </figure>
-      <figure class="la-demo-cell">
-        <LogoAnimated variant="hero" size="min(220px, 20vw)" id="la-col" class="la-col" ink="#EEE5E9" outline="#2892D7" shadow="#D16666" />
-        <figcaption>ink / outline / shadow swapped</figcaption>
+        <LogoAnimated variant="hero" size="min(240px, 21vw)" id="la-col" class="la-col" ink="#EEE5E9" outline="#2892D7" shadow="#D16666" />
+        <figcaption>hero, recoloured — <code>ink</code> / <code>outline</code> / <code>shadow</code></figcaption>
       </figure>
     </div>
+    <!-- Motion: the only prop that changes what the pen draws. -->
     <div class="la-demo-row">
       <figure class="la-demo-cell">
         <LogoAnimated variant="hero" size="min(400px, 34vw)" id="la-mode-swash" class="la-mode-swash" trail="swash" />
@@ -223,8 +206,6 @@ const VARIANT_RECIPE: Record<string, string> = Object.fromEntries(
     font-variant-numeric: tabular-nums;
     min-width: 3.5em;
   }
-  .la-demo-small { gap: 1.5rem; }
-  .la-demo-note { font-size: 0.8rem; opacity: 0.6; }
 </style>
 
 <style is:global>
@@ -274,8 +255,13 @@ const VARIANT_RECIPE: Record<string, string> = Object.fromEntries(
           through the whole write-on on the live page (see the note above).
        3. #linkBar is position:fixed, so inside a panel it pins itself to the
           viewport instead of sitting in the hero. */
+  /* transform as well as opacity, and the transform is the one that bites. global.css holds
+     both at opacity 0 AND at the reveal animation's from-state, translate(0,50px) scale(.95);
+     index.astro's script animates both away. Forcing only the opacity made them visible while
+     still displaced 50px down, which on a phone dropped the tagline straight onto the link
+     bar -- 16px of overlap, and the same displacement unnoticed at every other width. */
   .situ-hero-frame .hero-section h1,
-  .situ-hero-frame .hero-section #cbar { opacity: 1; }
+  .situ-hero-frame .hero-section #cbar { opacity: 1; transform: none; }
   .situ-hero-frame .hero-logo-backdrop { opacity: 0.34; }
   .situ-hero-frame #linkBar { position: static; margin-top: 28px; opacity: 1; transform: none; }
 </style>

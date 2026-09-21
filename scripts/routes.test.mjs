@@ -191,12 +191,16 @@ test('both scrubs span the whole write-on, derived rather than remembered', asyn
   }
 });
 
-test('the speed captions state the choreography they actually run at', async () => {
-  const doc = markup(await html('design/ao/logo'));
-  for (const speed of [0.5, 1, 2]) {
-    const caption = `speed=${speed} — ${(endMs('hero', speed) / 1000).toFixed(2)}s`;
-    assert.ok(doc.includes(caption), `the demo is missing or misstates "${caption}"`);
-  }
+// The write-up used to caption three marks with their own durations, which tied the page to
+// the derivation at speeds other than 1. Those marks are gone -- speed is invisible in a
+// still, and the bench has a slider that shows it properly -- so there is nothing left on a
+// page to check at 0.5 and 2. The derivation itself is still worth pinning: it divides by
+// speed, and getting that backwards would leave the scrub assertion above green.
+test('endMs scales the write-on by speed', () => {
+  const base = endMs('hero');
+  assert.equal(endMs('hero', 2), Math.round(base / 2), 'twice the speed should be half the time');
+  assert.equal(endMs('hero', 0.5), base * 2, 'half the speed should be twice the time');
+  assert.ok(endMs('plain') < base, 'plain runs no treatment beat, so it ends sooner than hero');
 });
 
 test('the demo replay is scoped to the demo, not to the whole document', async () => {
