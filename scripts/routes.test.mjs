@@ -207,6 +207,20 @@ test('the demo replay is scoped to the demo, not to the whole document', async (
   assert.match(js, /\.la-demo\s+\.site-logo-anim/, "the demo's mark list lost its .la-demo scope");
 });
 
+// The in-situ marks ship autoplay={false}, so the click handler is the only thing that ever
+// moves them and the caption promises it. The split stranded that handler on the bench while
+// the panels came to the write-up, and nothing failed: the markup was intact, the copy still
+// said "Each replays on click", and the panels simply sat there. Assert the handler is on the
+// same page as the things it binds to.
+test('the in-situ panels and their replay handler are on the same page', async () => {
+  const doc = markup(await html('design/ao/logo'));
+  assert.match(doc, /data-situ/, 'the in-situ panels are missing from the write-up');
+  const js = await scriptsOf('design/ao/logo');
+  assert.match(js, /data-situ/, 'the in-situ replay handler did not come with the panels');
+  const benchJs = await scriptsOf('design/ao/logo-bench');
+  assert.doesNotMatch(benchJs, /data-situ/, 'the bench still carries a handler for panels it does not have');
+});
+
 test('each page has exactly one <main>, and its h1 leads the document', async () => {
   for (const route of ['design/ao/logo', 'design/ao/logo-bench']) {
     const doc = markup(await html(route));

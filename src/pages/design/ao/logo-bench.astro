@@ -369,23 +369,6 @@ const VARIANT_RECIPE: Record<string, string> = Object.fromEntries(
     border: 1px solid rgb(238 229 233 / 0.3); background: transparent;
     color: var(--color-primary); cursor: pointer;
   }
-  .la-dl-anim {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: center;
-    gap: 1rem;
-  }
-  .la-dl-anim label { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; opacity: 0.8; }
-  .la-dl-anim select {
-    font: inherit;
-    font-size: 0.78rem;
-    padding: 0.3rem 0.5rem;
-    border-radius: 0.4rem;
-    border: 1px solid rgb(238 229 233 / 0.3);
-    background: var(--color-background);
-    color: var(--color-primary);
-  }
   .la-dl-note {
     margin: 0;
     /* the page's global paragraph rule paints this accent blue otherwise */
@@ -593,13 +576,6 @@ import { LOGO_LAYERS, LOGO_VARIANTS } from '../../../components/logo-layers';
   }
   for (const b of document.querySelectorAll<HTMLButtonElement>('[data-bg]')) {
     b.addEventListener('click', () => { stage.dataset.bg = b.dataset.bg!; });
-  }
-
-  // The in-situ panels replay on click, at their own real sizes.
-  for (const holder of document.querySelectorAll<HTMLElement>('[data-situ]')) {
-    const svg = holder.querySelector<SVGSVGElement>('svg')!;
-    const frame = holder.closest('.situ-frame') ?? holder;
-    frame.addEventListener('click', (e) => { e.preventDefault(); play(svg); });
   }
 
   apply();

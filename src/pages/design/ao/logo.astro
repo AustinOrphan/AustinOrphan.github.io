@@ -21,8 +21,6 @@ import { LOGO_LAYERS, LOGO_VARIANTS } from '../../../components/logo-layers';
 
 const entry = entryFor('logo');
 
-const VARIANTS = LOGO_VARIANTS;
-const TRAILS = ['swash', 'stroke'] as const;
 
 // Derived, never typed in. Every duration on this page comes from logo-choreography.ts by
 // way of logo-timing.ts, because the choreography is generated and moves whenever the mark
@@ -107,9 +105,6 @@ const VARIANT_RECIPE: Record<string, string> = Object.fromEntries(
       </figure>
     </div>
 
-    <!-- One configured mark, exported. The controls drive both previews, so what you set is
-         what the file gets: treatment and colours are the component's own props expressed as
-         classes and custom properties, and speed and trail belong to the animated one. -->
   </section>
 
   <main class="lab">
@@ -310,4 +305,19 @@ const VARIANT_RECIPE: Record<string, string> = Object.fromEntries(
     if (time) time.value = `${(ms / 1000).toFixed(2)}s`;
   });
 
+  // The in-situ panels replay on click, at their own real sizes. They ship
+  // autoplay={false}, so without this they never move and the caption's "Each replays on
+  // click" is a lie -- which is what the split left behind for a while, because the handler
+  // stayed with the lab while the panels came here.
+  for (const holder of document.querySelectorAll<HTMLElement>('[data-situ]')) {
+    const svg = holder.querySelector<SVGSVGElement>('svg');
+    if (!svg) continue;
+    const frame = holder.closest('.situ-frame') ?? holder;
+    frame.addEventListener('click', (e) => {
+      e.preventDefault();
+      svg.classList.remove('la-play');
+      void svg.getBoundingClientRect();          // force the restart
+      svg.classList.add('la-play');
+    });
+  }
 </script>
