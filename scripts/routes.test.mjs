@@ -139,12 +139,15 @@ test('both body classes are present, so both style blocks apply', async () => {
   );
 });
 
-test('the lab size presets no longer collide with the download buttons', async () => {
+test('the lab size presets no longer collide with the download panel', async () => {
   const doc = markup(await html('design/ao/logo'));
   assert.match(doc, /data-lab-size="280"/, 'lab presets were not renamed');
-  // The only bare data-size attributes left must be the two PNG download buttons.
+  assert.match(doc, /data-dl-size/, 'the download panel lost its size control');
+  // The download panel's fixed 512/1024 PNG buttons are gone -- one `data-dl-size` select
+  // drives every download now -- so no bare `data-size` should remain anywhere. The lab wires
+  // its presets with a document-wide querySelectorAll, which is what made the collision.
   const bare = [...doc.matchAll(/data-size="(\d+)"/g)].map((m) => m[1]).sort();
-  assert.deepEqual(bare, ['1024', '512'], 'a third data-size appeared, or a preset regressed to data-size');
+  assert.deepEqual(bare, [], 'a data-size reappeared; the lab presets would pick it up');
 });
 
 test('the demo replay is scoped to the demo, not to the whole document', async () => {

@@ -267,6 +267,36 @@ works only because the stylesheet uses plain class-descendant selectors; if that
 stops being true it should become a browser check rather than a cleverer parser.
 Nothing guards the heading or paragraph cases — those are still on you.
 
+### The export panel saves files, not screenshots
+
+`src/components/logo-download.ts` lifts a rendered mark out of the page and writes it to a
+file. A file has no page around it, and every assumption the page makes for free has broken
+this at least once:
+
+- **Paint is read back off `getComputedStyle` and written on as attributes.** `Logo.astro`
+  gets its fill and stroke from CSS, so a node saved as-is arrives unpainted.
+- **Anything a rule was HIDING comes back, and unpainted SVG is black.** Re-treating a mark by
+  swapping its variant class leaves hero's offset copy in the markup with only
+  `display: none` over it, so plain and flat both saved with a hard black shadow behind the
+  letter. The serializer now drops `display: none` subtrees. Safe for the animated file too:
+  nothing in `<defs>` is hidden that way — masks and clipPaths compute `display: inline`.
+- **The markup's own comments are not valid XML.** `LogoAnimated.astro`'s notes use `--`
+  freely, which HTML allows and XML does not, so the animated SVG and every baked video frame
+  were files nothing could open. Comments are stripped from both.
+- **`paint-order` is a promise design tools do not keep.** Hero paints its outline *under* its
+  fill so only the outer half shows. Browsers honour the attribute — which is why the file
+  looked right when checked in one — but Illustrator, Figma, Sketch and macOS Preview paint the
+  stroke last, putting a red outline on top of the mark. The still export therefore writes the
+  outline as its own stroke-only shape beneath a fill-only copy. The animated export keeps
+  `paint-order`: there the outline is a `stroke-width` keyframe on that element, and a file
+  carrying CSS animations is for a browser anyway.
+
+The panel's own controls: **treatment** is a class swap, **ink/outline/shadow** are custom
+properties, **speed** is `--la-speed`, and **size** feeds every button (the video caps at 1024;
+frames are baked and rasterised up front). The ink swatch follows the treatment until it is
+deliberately set — the panel writes `--logo-ink` onto every mark, so hero's off-white left
+sitting in the picker made flat save as a byte-identical copy of plain.
+
 ### Robots directives
 
 `BaseLayout.astro` owns the robots directive through its `robots` prop and emits

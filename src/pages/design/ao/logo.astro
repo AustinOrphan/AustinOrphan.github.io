@@ -113,6 +113,14 @@ const TRAILS = ['swash', 'stroke'] as const;
         <label>ink <input type="color" data-dl-var="ink" value="#EEE5E9"></label>
         <label data-dl-when="hero">outline <input type="color" data-dl-var="outline" value="#D16666"></label>
         <label data-dl-when="hero">shadow <input type="color" data-dl-var="shadow" value="#2892D7"></label>
+        <label>size
+          <select data-dl-size>
+            <option value="256">256</option>
+            <option value="512" selected>512</option>
+            <option value="1024">1024</option>
+            <option value="2048">2048</option>
+          </select>
+        </label>
         <label>speed <input type="number" data-dl-speed min="0.25" max="4" step="0.25" value="1"></label>
         <button type="button" data-dl-reset>reset</button>
       </div>
@@ -123,8 +131,7 @@ const TRAILS = ['swash', 'stroke'] as const;
           <figcaption>still</figcaption>
           <div class="la-dl-btns">
             <button type="button" data-dl="svg" data-sel="#la-dl-still" data-name="ao-mark">SVG</button>
-            <button type="button" data-dl="png" data-sel="#la-dl-still" data-name="ao-mark" data-size="512">512</button>
-            <button type="button" data-dl="png" data-sel="#la-dl-still" data-name="ao-mark" data-size="1024">1024</button>
+            <button type="button" data-dl="png" data-sel="#la-dl-still" data-name="ao-mark">PNG</button>
           </div>
         </figure>
         <figure class="la-dl-cell">
@@ -141,8 +148,12 @@ const TRAILS = ['swash', 'stroke'] as const;
 
       <p class="la-dl-note">
         One vector, three treatments. <em>plain</em> and <em>flat</em> are the same drawing and
-        differ only in fill, so setting <em>ink</em> makes them identical. SVG files carry their
-        paint on the elements themselves and need no stylesheet; the animated file carries the
+        differ only in fill, so <em>ink</em> follows the treatment until you set it yourself;
+        set them alike and the two files are identical. <em>size</em> drives every download
+        (the video caps at 1024); <em>speed</em> reaches the animated SVG and the video, which
+        the still has no use for. SVG files carry their paint on the elements themselves and
+        need no stylesheet, and hero's outline is saved as its own shape rather than leaning on
+        a <code>paint-order</code> that design tools ignore; the animated file carries the
         write-on's own CSS and plays when opened. All are transparent, so a light ink wants a
         dark background &mdash; the video is given one.
       </p>
@@ -743,16 +754,27 @@ const TRAILS = ['swash', 'stroke'] as const;
   // properties, and trail is a choice between two instances because the two draw different
   // markup and cannot be switched with a property.
   const TREATMENTS = ['hero', 'plain', 'flat'] as const;
+  /** Each treatment's own ink, so the swatch shows what the treatment actually uses.
+   *  flat fills with the accent; hero and plain both fill with the primary. */
+  const INK: Record<string, string> = { hero: '#EEE5E9', plain: '#EEE5E9', flat: '#2892D7' };
   const still = document.querySelector<SVGSVGElement>('#la-dl-still');
   const live = document.querySelector<SVGSVGElement>('#la-dl-sw');
   const treatSel = document.querySelector<HTMLSelectElement>('[data-dl-treat]');
   const speedIn = document.querySelector<HTMLInputElement>('[data-dl-speed]');
+  const sizeSel = document.querySelector<HTMLSelectElement>('[data-dl-size]');
   const colourIns = Array.from(document.querySelectorAll<HTMLInputElement>('[data-dl-var]'));
+  const inkIn = colourIns.find((i) => i.dataset.dlVar === 'ink');
+  // The panel writes --logo-ink on every mark, so an ink of #EEE5E9 left over from hero made
+  // flat paint hero's off-white and the two treatments saved as the same file. Follow the
+  // treatment until the ink is deliberately set, then stay where it was put.
+  let inkPicked = false;
 
   const liveMark = (): SVGSVGElement | null => live;
+  const size = (): number => Number(sizeSel?.value || 512);
 
   function apply(): void {
     const treat = treatSel?.value ?? 'hero';
+    if (inkIn && !inkPicked) inkIn.value = INK[treat];
     const marks: (SVGSVGElement | null)[] = [still, live];
     for (const el of marks) {
       if (!el) continue;
@@ -777,12 +799,15 @@ const TRAILS = ['swash', 'stroke'] as const;
     m.classList.add('la-play');
   };
 
-  [treatSel, speedIn, ...colourIns].forEach((el) =>
+  inkIn?.addEventListener('input', () => { inkPicked = true; });
+  [treatSel, speedIn, sizeSel, ...colourIns].forEach((el) =>
     el?.addEventListener('input', () => { apply(); replayLive(); }));
   document.querySelector('[data-dl-reset]')?.addEventListener('click', () => {
     if (treatSel) treatSel.value = 'hero';
     if (speedIn) speedIn.value = '1';
+    if (sizeSel) sizeSel.value = '512';
     colourIns.forEach((i) => { i.value = i.defaultValue; });
+    inkPicked = false;
     apply(); replayLive();
   });
   document.querySelector('[data-dl-replay]')?.addEventListener('click', replayLive);
@@ -809,18 +834,22 @@ const TRAILS = ['swash', 'stroke'] as const;
         btn.disabled = true;
         setTimeout(() => { btn.textContent = was; btn.disabled = false; }, 1200);
       };
+      const px = size();
       try {
-        if (kind === 'svg') { downloadSvg(src, `${name}.svg`); done('saved'); }
-        else if (kind === 'anim') { downloadSvg(src, `${name}.svg`, { animated: true }); done('saved'); }
+        if (kind === 'svg') { downloadSvg(src, `${name}.svg`, { size: px }); done('saved'); }
+        else if (kind === 'anim') { downloadSvg(src, `${name}.svg`, { animated: true, size: px }); done('saved'); }
         else if (kind === 'png') {
           btn.disabled = true;
-          await downloadPng(src, `${name}-${btn.dataset.size}.png`, Number(btn.dataset.size || 1024));
+          await downloadPng(src, `${name}-${px}.png`, px);
           done('saved');
         } else if (kind === 'video') {
           btn.disabled = true;
           btn.textContent = 'baking';
+          // Capped: every frame is baked and rasterised up front, so 2048 turns a 1.3s clip
+          // into a minute of work for a size no one plays a logo animation at.
           await downloadVideo(src, name, {
-            slow: Number(btn.dataset.slow || 1), size: 512, fps: 30, background: '#1D2B35',
+            slow: Number(btn.dataset.slow || 1), size: Math.min(px, 1024), fps: 30,
+            background: '#1D2B35',
             onProgress: (d, t) => { btn.textContent = `${Math.round((d / t) * 100)}%`; },
           });
           done('saved');
