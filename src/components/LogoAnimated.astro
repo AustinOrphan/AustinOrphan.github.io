@@ -238,7 +238,7 @@ const easeTail = `linear(${dash(0)}, ${at(TAIL_STOPS)}, 1)`;
        resting render is the same raster as Logo's (a nested <svg> would go
        through its own viewport and anti-alias a few edge pixels differently). -->
   <g class="la-final">
-    <g class="la-final-shadow site-logo-shadow-holder" transform="translate(30,30)">
+    <g class="la-final-shadow site-logo-shadow-holder">
       <g transform="translate(0.000000,1084.000000) scale(0.100000,-0.100000)" class="site-logo-shadow"><path d={LOGO_MARK_D} /></g>
     </g>
     <g
@@ -382,13 +382,13 @@ const easeTail = `linear(${dash(0)}, ${at(TAIL_STOPS)}, 1)`;
        not supposed to have. Keyed on the layer classes now rather than on `hero`, so the two
        combinations that used to have no name animate correctly too.
 
-       `both`, not `forwards`, and that is load-bearing: the shadow group carries
-       transform="translate(30,30)" as a MARKUP attribute, so under `forwards` it paints its
-       finished offset during the animation's delay -- a grey shadow at full offset for the
-       frames between the final layer fading in and the treatment starting. `backwards` fill
-       makes the delay show the keyframes' from-state instead. The outline is no longer an
-       attribute (its width is --logo-band now), but it keeps `both` for the same reason:
-       the rule's stroke-width would otherwise apply in full during the delay. */
+       `both`, not `forwards`, and that is load-bearing. Neither layer's resting value is in
+       the markup any more -- the offset is --logo-shadow-t and the weight is --logo-band --
+       but the rules still apply in full during the animation's DELAY, so under `forwards`
+       you get a shadow at full offset and an outline at full width for the frames between
+       the final layer fading in and the treatment starting. `backwards` fill makes the delay
+       show the keyframes' from-state instead. It was the markup attributes that made this
+       necessary before; it is the rules now, and the fix is the same. */
     .logo-layer-shadow.la-play .la-final-shadow {
       animation: la-shadow var(--la-d-treat) var(--la-ease-grow) var(--la-t-treat) both;
     }
@@ -422,7 +422,13 @@ const easeTail = `linear(${dash(0)}, ${at(TAIL_STOPS)}, 1)`;
      390 and nothing else.
      Linear timing with ease-grow's stops baked into the values: a shared easing is applied
      per-interval, and these two need different stop counts, so they would drift. */
-  @keyframes la-shadow { from { transform: translate(0px, 0px); } to { transform: translate(30px, 30px); } }
+  /* Lands on whatever the shadow is configured to, rather than the 30,30 it used to restate.
+     The from-state matches the to-state's function list -- translate then scale -- so the two
+     interpolate componentwise instead of through a matrix. */
+  @keyframes la-shadow {
+    from { transform: translate(0px, 0px) scale(1); }
+    to { transform: var(--logo-shadow-t); }
+  }
   /* Grows to whatever the band is set to, rather than to the 300 it used to hardcode. */
   @keyframes la-outline { from { stroke-width: 0; } to { stroke-width: var(--logo-band, 300); } }
   /* Visible trail = [tail, head]: dasharray "(head - tail) 2", offset -tail. */

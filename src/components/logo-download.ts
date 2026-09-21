@@ -32,7 +32,10 @@ function normalise(prop: string, value: string): string {
 
 /** The theme values the component's rules fall back to, needed by the animated download. */
 const THEME = ['--color-primary', '--color-secondary', '--color-accent', '--color-background',
-               '--logo-ink', '--logo-outline', '--logo-shadow'];
+               '--logo-ink', '--logo-outline', '--logo-shadow',
+               // The band's weight and the shadow's placement, so an animated file plays the
+               // treatment it was configured with rather than the component's defaults.
+               '--logo-band', '--logo-shadow-dist', '--logo-shadow-angle', '--logo-shadow-scale'];
 
 /** SVG's own initial values, so an element that just inherits them writes nothing. */
 const INITIAL: Record<string, string> = { fill: 'rgb(0, 0, 0)', stroke: 'none', 'stroke-width': '1' };
@@ -60,6 +63,18 @@ function paintAndPrune(src: Element, dst: Element, inherited: Record<string, str
     // Only write what actually differs from what this element would inherit anyway, so the
     // file carries the paint once, on the element that changes it, and nowhere else.
     if (v !== inherited[prop]) dst.setAttribute(prop, v);
+  }
+  // A transform that came from a RULE has no attribute for cloneNode to carry, so it has to
+  // be written on. The test is exactly "no attribute of its own": an element that has one
+  // keeps it untouched, which matters because the mark's own translate/scale group would
+  // otherwise be rewritten into an equivalent matrix for no reason.
+  //
+  // This is here because the shadow's offset stopped being transform="translate(30,30)" and
+  // became --logo-shadow-dist / -angle / -scale. Without it every saved mark loses its
+  // shadow offset and the copy sits exactly behind the letter, invisible.
+  if (!src.hasAttribute('transform')) {
+    const t = cs.transform;
+    if (t && t !== 'none') dst.setAttribute('transform', t);
   }
   const sk = Array.from(src.children);
   // A snapshot, taken before anything is removed, so src and dst stay index-aligned.
@@ -128,7 +143,10 @@ function flattenPaintOrder(root: SVGSVGElement): void {
 }
 
 /** The component's own classes. A rule is the animation's if it targets one of these. */
-const OWN = /(^|[\s.,>+~])(site-logo-anim|la-(play|pieces|final|ring|leg|bar|mask|trail))/;
+// site-logo-shadow-holder earns its place here: the la-shadow keyframe lands on
+// --logo-shadow-t, which that rule composes, so without it the animated file's treatment
+// beat has nothing to animate towards.
+const OWN = /(^|[\s.,>+~])(site-logo-anim|site-logo-shadow-holder|la-(play|pieces|final|ring|leg|bar|mask|trail))/;
 /** Layout classes on the demo page that merely start with the same two letters. */
 const PAGE = /\.la-(demo|dl)\b/;
 
