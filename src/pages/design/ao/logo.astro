@@ -18,10 +18,11 @@ import Hero from '../../../components/Hero.astro';
 import WipBanner from '../../../components/WipBanner.astro';
 import { entryFor, robotsFor } from '../../../data/design-index';
 import { endMs } from '../../../components/logo-timing';
+import { LOGO_LAYERS, LOGO_VARIANTS } from '../../../components/logo-layers';
 
 const entry = entryFor('logo');
 
-const VARIANTS = ['hero', 'plain', 'flat'] as const;
+const VARIANTS = LOGO_VARIANTS;
 const TRAILS = ['swash', 'stroke'] as const;
 
 // Derived, never typed in. Every duration on this page comes from logo-choreography.ts by
@@ -29,6 +30,15 @@ const TRAILS = ['swash', 'stroke'] as const;
 // does. These had drifted to 1300/1100 against a real 1360/1160.
 const HERO_MS = endMs('hero');
 const secs = (ms: number) => (ms / 1000).toFixed(2);
+
+// What each named variant actually turns on, written from the layer table rather than
+// restated, so a variant added to logo-layers.ts cannot go undescribed here.
+const VARIANT_RECIPE: Record<string, string> = Object.fromEntries(
+  LOGO_VARIANTS.map((v) => {
+    const { outline, shadow } = LOGO_LAYERS[v];
+    return [v, ['ink', outline && 'outline', shadow && 'shadow'].filter(Boolean).join(' + ')];
+  }),
+);
 ---
 
 <BaseLayout title={entry.title} description={entry.blurb}
@@ -56,23 +66,17 @@ const secs = (ms: number) => (ms / 1000).toFixed(2);
     </div>
     <div class="la-demo-row la-demo-small">
       <LogoAnimated variant="hero" size={44} id="la-demo-s1" />
-      <LogoAnimated variant="flat" size={28} id="la-demo-s2" />
-      <LogoAnimated variant="flat" size={120} id="la-demo-s3" />
+      <LogoAnimated variant="plain" size={28} id="la-demo-s2" />
+      <LogoAnimated variant="plain" size={120} id="la-demo-s3" />
       <span class="la-demo-note">44 / 28 / 120 px</span>
     </div>
     <div class="la-demo-row">
-      <figure class="la-demo-cell">
-        <LogoAnimated variant="hero" size="min(300px, 26vw)" id="la-treat-on" class="la-treat-on" />
-        <figcaption>variant="hero" — outline and shadow</figcaption>
-      </figure>
-      <figure class="la-demo-cell">
-        <LogoAnimated variant="plain" size="min(300px, 26vw)" id="la-treat-off" class="la-treat-off" />
-        <figcaption>variant="plain" — neither</figcaption>
-      </figure>
-      <figure class="la-demo-cell">
-        <LogoAnimated variant="flat" size="min(300px, 26vw)" id="la-treat-flat" class="la-treat-flat" />
-        <figcaption>variant="flat" — accent fill</figcaption>
-      </figure>
+      {LOGO_VARIANTS.map((v) => (
+        <figure class="la-demo-cell">
+          <LogoAnimated variant={v} size="min(240px, 21vw)" id={`la-treat-${v}`} class={`la-treat-${v}`} />
+          <figcaption>variant="{v}" — {VARIANT_RECIPE[v]}</figcaption>
+        </figure>
+      ))}
     </div>
     <div class="la-demo-row">
       <figure class="la-demo-cell">
@@ -112,14 +116,17 @@ const secs = (ms: number) => (ms / 1000).toFixed(2);
       <div class="la-dl-controls">
         <label>treatment
           <select data-dl-treat>
-            <option value="hero">hero — ink, outline, shadow</option>
-            <option value="plain">plain — ink only</option>
-            <option value="flat">flat — one fill</option>
+            {LOGO_VARIANTS.map((v) => (
+              <option value={v} selected={v === 'hero'}>{v} — {VARIANT_RECIPE[v]}</option>
+            ))}
           </select>
         </label>
         <label>ink <input type="color" data-dl-var="ink" value="#EEE5E9"></label>
-        <label data-dl-when="hero">outline <input type="color" data-dl-var="outline" value="#D16666"></label>
-        <label data-dl-when="hero">shadow <input type="color" data-dl-var="shadow" value="#2892D7"></label>
+        <!-- Each colour control is shown only while its LAYER is on, so it cannot be set to
+             something that has no effect. Keyed on the layer, not on the variant name, which
+             is what let outline and shadow hide on the two combinations that now have names. -->
+        <label data-dl-layer="outline">outline <input type="color" data-dl-var="outline" value="#D16666"></label>
+        <label data-dl-layer="shadow">shadow <input type="color" data-dl-var="shadow" value="#2892D7"></label>
         <label>size
           <select data-dl-size>
             <option value="256">256</option>
@@ -295,7 +302,7 @@ const secs = (ms: number) => (ms / 1000).toFixed(2);
         </figcaption>
         <div class="situ-frame situ-hero-frame" data-situ>
           <Hero>
-            <LogoAnimated slot="backdrop" variant="flat" autoplay={false} id="situ-hero" />
+            <LogoAnimated slot="backdrop" variant="plain" autoplay={false} id="situ-hero" />
           </Hero>
         </div>
         <p class="lab-hint">
@@ -574,6 +581,7 @@ const secs = (ms: number) => (ms / 1000).toFixed(2);
   // LogoAnimated declares --la-speed on .site-logo-anim, and a declaration on the element
   // beats a value inherited from an ancestor, so setting it on a parent would do nothing.
   import { endMs } from '../../../components/logo-timing';
+import { LOGO_LAYERS, LOGO_VARIANTS } from '../../../components/logo-layers';
 
   const stage = document.querySelector<HTMLElement>('[data-stage]')!;
   const slots = [...stage.querySelectorAll<HTMLElement>('.lab-slot')];
@@ -767,41 +775,40 @@ const secs = (ms: number) => (ms / 1000).toFixed(2);
   // there is one source of truth: treatment is a class swap, colours and speed are custom
   // properties, and trail is a choice between two instances because the two draw different
   // markup and cannot be switched with a property.
-  const TREATMENTS = ['hero', 'plain', 'flat'] as const;
-  /** Each treatment's own ink, so the swatch shows what the treatment actually uses.
-   *  flat fills with the accent; hero and plain both fill with the primary. */
-  const INK: Record<string, string> = { hero: '#EEE5E9', plain: '#EEE5E9', flat: '#2892D7' };
+  import { LOGO_LAYERS, LOGO_VARIANTS, type LogoVariant } from '../../../components/logo-layers';
+
   const still = document.querySelector<SVGSVGElement>('#la-dl-still');
   const live = document.querySelector<SVGSVGElement>('#la-dl-sw');
   const treatSel = document.querySelector<HTMLSelectElement>('[data-dl-treat]');
   const speedIn = document.querySelector<HTMLInputElement>('[data-dl-speed]');
   const sizeSel = document.querySelector<HTMLSelectElement>('[data-dl-size]');
   const colourIns = Array.from(document.querySelectorAll<HTMLInputElement>('[data-dl-var]'));
-  const inkIn = colourIns.find((i) => i.dataset.dlVar === 'ink');
-  // The panel writes --logo-ink on every mark, so an ink of #EEE5E9 left over from hero made
-  // flat paint hero's off-white and the two treatments saved as the same file. Follow the
-  // treatment until the ink is deliberately set, then stay where it was put.
-  let inkPicked = false;
-
   const liveMark = (): SVGSVGElement | null => live;
   const size = (): number => Number(sizeSel?.value || 512);
 
+  const treatment = (): LogoVariant => {
+    const v = treatSel?.value as LogoVariant | undefined;
+    return v && LOGO_VARIANTS.includes(v) ? v : 'hero';
+  };
+
   function apply(): void {
-    const treat = treatSel?.value ?? 'hero';
-    if (inkIn && !inkPicked) inkIn.value = INK[treat];
+    const layers = LOGO_LAYERS[treatment()];
     const marks: (SVGSVGElement | null)[] = [still, live];
     for (const el of marks) {
       if (!el) continue;
-      for (const t of TREATMENTS) {
-        el.classList.toggle(`site-logo-${t}`, t === treat);
-        if (el !== still) el.classList.toggle(`site-logo-anim-${t}`, t === treat);
-      }
+      // The layer classes ARE the mechanism; the variant name is only a preset over them.
+      // This used to swap `site-logo-<variant>` classes, which stopped meaning anything when
+      // the rules moved onto the layers. Both components resolve a variant the same way, so
+      // the still and the animated preview stay in step with no second mapping here.
+      el.classList.toggle('logo-layer-outline', layers.outline);
+      el.classList.toggle('logo-layer-shadow', layers.shadow);
       for (const input of colourIns) el.style.setProperty(`--logo-${input.dataset.dlVar}`, input.value);
       if (el !== still) el.style.setProperty('--la-speed', String(speedIn?.value || 1));
     }
-    // outline and shadow exist only on hero, so hide the controls that would do nothing
-    document.querySelectorAll<HTMLElement>('[data-dl-when]').forEach((el) => {
-      el.hidden = el.dataset.dlWhen !== treat;
+    // A colour control is shown only while its layer is on, so nothing can be set to no effect
+    document.querySelectorAll<HTMLElement>('[data-dl-layer]').forEach((el) => {
+      const layer = el.dataset.dlLayer as keyof typeof layers;
+      el.hidden = !layers[layer];
     });
   }
 
@@ -813,7 +820,6 @@ const secs = (ms: number) => (ms / 1000).toFixed(2);
     m.classList.add('la-play');
   };
 
-  inkIn?.addEventListener('input', () => { inkPicked = true; });
   [treatSel, speedIn, sizeSel, ...colourIns].forEach((el) =>
     el?.addEventListener('input', () => { apply(); replayLive(); }));
   document.querySelector('[data-dl-reset]')?.addEventListener('click', () => {
@@ -821,7 +827,6 @@ const secs = (ms: number) => (ms / 1000).toFixed(2);
     if (speedIn) speedIn.value = '1';
     if (sizeSel) sizeSel.value = '512';
     colourIns.forEach((i) => { i.value = i.defaultValue; });
-    inkPicked = false;
     apply(); replayLive();
   });
   document.querySelector('[data-dl-replay]')?.addEventListener('click', replayLive);
@@ -839,8 +844,7 @@ const secs = (ms: number) => (ms / 1000).toFixed(2);
     btn.addEventListener('click', async () => {
       const src = btn.dataset.sel ? document.querySelector(btn.dataset.sel) : liveMark();
       if (!(src instanceof SVGSVGElement)) { console.error('no mark for', btn.dataset.sel); return; }
-      const treat = treatSel?.value ?? 'hero';
-      const name = `${btn.dataset.name || 'ao-mark'}-${treat}`;
+      const name = `${btn.dataset.name || 'ao-mark'}-${treatment()}`;
       const kind = btn.dataset.dl;
       const was = btn.textContent;
       const done = (label: string) => {

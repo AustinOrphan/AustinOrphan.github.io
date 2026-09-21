@@ -3405,34 +3405,34 @@ body.blog {
     flex: 0 0 auto;
 }
 
-.site-logo-hero .site-logo-mark {
+/* Ink is the base, and every mark has it. The two extra passes are independent layers,
+   switched on by their own class rather than by a variant name, so the four combinations
+   are all reachable and a variant is only a preset that turns the right ones on. */
+.site-logo .site-logo-mark {
     fill: var(--logo-ink, var(--color-primary));
+    stroke: none;
+    stroke-width: 0;
+}
+
+/* The outline is painted UNDER the fill -- paint-order in the markup -- so only its outer
+   half shows. --logo-band is its full width in path units, which is twice the visible band.
+   It is a property rather than the markup attribute it used to be, so the bench can drive
+   it; serializeLogo reads it back off the computed style for the same reason. */
+.logo-layer-outline .site-logo-mark {
     stroke: var(--logo-outline, var(--color-secondary));
+    stroke-width: var(--logo-band, 300);
 }
 
-.site-logo-hero .site-logo-shadow {
+/* The offset copy is always in the markup, because a mark can be RE-TREATED by swapping
+   classes and cannot grow elements it did not ship with. Hidden until its layer is on: an
+   unpainted SVG shape is black, so leaving it visible put a hard black mark behind the
+   letter on every treatment that is not hero. */
+.site-logo-shadow-holder { display: none; }
+
+.logo-layer-shadow .site-logo-shadow-holder { display: block; }
+
+.logo-layer-shadow .site-logo-shadow {
     fill: var(--logo-shadow, var(--color-accent));
-}
-
-.site-logo-flat .site-logo-mark {
-    fill: var(--logo-ink, var(--color-accent));
-    stroke: none;
-}
-
-/* The offset copy is hero's alone. It is normally absent from the markup for the other two,
-   but a mark can be RE-TREATED by swapping its variant class (the logo page's export panel
-   does exactly that), which leaves hero's shadow group in place with no rule to paint it --
-   and an unpainted SVG shape is black, so a hard black mark appeared behind the letter.
-   Hiding it makes the class swap safe wherever it happens. */
-.site-logo-plain .site-logo-shadow,
-.site-logo-flat .site-logo-shadow { display: none; }
-
-/* "plain" is hero's ink with neither of hero's two extra passes: no red outline,
-   no blue offset copy. Same fill as hero, so the two can be swapped without the
-   mark changing weight or colour. */
-.site-logo-plain .site-logo-mark {
-    fill: var(--logo-ink, var(--color-primary));
-    stroke: none;
 }
 
 /* 14.1 Blog nav */

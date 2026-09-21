@@ -25,6 +25,7 @@
 // mark, derive_trail.py for the trail). Coordinates below are site path units
 // (y-up, tenths) inside the same translate/scale group Logo uses.
 import { LOGO_A_D, LOGO_MARK_D, nextLogoAnimId } from './logo-mark';
+import { layerClasses, type LogoVariant } from './logo-layers';
 import { TRAIL_CENTRE_D, TRAIL_MARKS, TRAIL_MASK, TRAIL_MASK_D, TRAIL_OUTLINE_D } from './logo-trail';
 import {
   AFTER, BEATS, RING_ANNULUS_D, RING_CIRCLE_D, RING_CIRCLE_WIDTH,
@@ -33,7 +34,8 @@ import {
 } from './logo-choreography';
 
 interface Props {
-  variant?: 'hero' | 'plain' | 'flat';
+  /** A preset over the two independent layers; see Logo.astro for the table. */
+  variant?: LogoVariant;
   size?: number | string;
   class?: string;
   /** Start playing on load. Off, the mark sits in its final state until
@@ -171,7 +173,7 @@ const easeTail = `linear(${dash(0)}, ${at(TAIL_STOPS)}, 1)`;
 <svg
   id={id}
   style={`${timing};--la-ease-head-l:${easeHead};--la-ease-tail-l:${easeTail}${vars ? ';' + vars : ''}`}
-  class={`site-logo site-logo-${variant} site-logo-anim site-logo-anim-${variant} site-logo-anim-trail-${trail} ${autoplay ? 'la-play' : ''} ${className}`.trim()}
+  class={`site-logo ${layerClasses(variant)} site-logo-anim site-logo-anim-trail-${trail} ${autoplay ? 'la-play' : ''} ${className}`.trim()}
   viewBox="-70 -70 1246 1246"
   width={px}
   height={px}
@@ -236,15 +238,12 @@ const easeTail = `linear(${dash(0)}, ${at(TAIL_STOPS)}, 1)`;
        resting render is the same raster as Logo's (a nested <svg> would go
        through its own viewport and anti-alias a few edge pixels differently). -->
   <g class="la-final">
-    {variant === 'hero' && (
-      <g class="la-final-shadow" transform="translate(30,30)">
-        <g transform="translate(0.000000,1084.000000) scale(0.100000,-0.100000)" class="site-logo-shadow"><path d={LOGO_MARK_D} /></g>
-      </g>
-    )}
+    <g class="la-final-shadow site-logo-shadow-holder" transform="translate(30,30)">
+      <g transform="translate(0.000000,1084.000000) scale(0.100000,-0.100000)" class="site-logo-shadow"><path d={LOGO_MARK_D} /></g>
+    </g>
     <g
       transform="translate(0.000000,1084.000000) scale(0.100000,-0.100000)"
       class="site-logo-mark la-final-mark"
-      stroke-width={variant === 'hero' ? 300 : 0}
       stroke-linejoin="round"
       paint-order="stroke fill markers"
     ><path d={LOGO_MARK_D} /></g>
@@ -257,12 +256,11 @@ const easeTail = `linear(${dash(0)}, ${at(TAIL_STOPS)}, 1)`;
   .site-logo-anim .la-pieces,
   .site-logo-anim .la-trail-layer { opacity: 0; }
 
-  .site-logo-anim-hero .la-pieces,
-  .site-logo-anim-hero .la-trail-layer,
-  .site-logo-anim-plain .la-pieces,
-  .site-logo-anim-plain .la-trail-layer { color: var(--logo-ink, var(--color-primary)); }
-  .site-logo-anim-flat .la-pieces,
-  .site-logo-anim-flat .la-trail-layer { color: var(--logo-ink, var(--color-accent)); }
+  /* One rule, because the pen lays ink and ink is ink. This used to fork on variant, with
+     flat alone falling back to the accent -- the only real difference between flat and
+     plain, and invisible wherever --logo-ink was set, which the bench always did. */
+  .site-logo-anim .la-pieces,
+  .site-logo-anim .la-trail-layer { color: var(--logo-ink, var(--color-primary)); }
 
   .site-logo-anim .la-leg,
   .site-logo-anim .la-bar,
@@ -379,18 +377,22 @@ const easeTail = `linear(${dash(0)}, ${at(TAIL_STOPS)}, 1)`;
         la-trail-head var(--la-d-trail) var(--la-ease-head) var(--la-t-trail) forwards,
         la-trail-tail var(--la-d-tail) var(--la-ease-tail) var(--la-t-tail) forwards;
     }
-    /* Hero only: flat has neither a shadow nor a stroke, and animating stroke-width there
-       would give it a red outline it is not supposed to have. */
-    /* `both`, not `forwards`, and that is load-bearing: the shadow group carries
-       transform="translate(30,30)" and the mark carries stroke-width="300" as MARKUP
-       attributes, so under `forwards` each paints its finished treatment during the
-       animation's delay -- a grey shadow at full offset and a red outline at full width,
-       for the frames between the final layer fading in and the treatment starting.
-       `backwards` fill makes the delay show the keyframes' from-state instead. */
-    .site-logo-anim-hero.la-play .la-final-shadow {
+    /* Each treatment layer settles in after the mark lands, and only if its layer is on:
+       animating stroke-width on a mark with no outline layer would give it an outline it is
+       not supposed to have. Keyed on the layer classes now rather than on `hero`, so the two
+       combinations that used to have no name animate correctly too.
+
+       `both`, not `forwards`, and that is load-bearing: the shadow group carries
+       transform="translate(30,30)" as a MARKUP attribute, so under `forwards` it paints its
+       finished offset during the animation's delay -- a grey shadow at full offset for the
+       frames between the final layer fading in and the treatment starting. `backwards` fill
+       makes the delay show the keyframes' from-state instead. The outline is no longer an
+       attribute (its width is --logo-band now), but it keeps `both` for the same reason:
+       the rule's stroke-width would otherwise apply in full during the delay. */
+    .logo-layer-shadow.la-play .la-final-shadow {
       animation: la-shadow var(--la-d-treat) var(--la-ease-grow) var(--la-t-treat) both;
     }
-    .site-logo-anim-hero.la-play .la-final-mark {
+    .logo-layer-outline.la-play .la-final-mark {
       animation: la-outline var(--la-d-treat) var(--la-ease-grow) var(--la-t-treat) both;
     }
     .la-play .la-bar-m { animation: la-draw var(--la-d-bar) var(--la-e-bar) var(--la-t-bar) forwards; }
@@ -421,7 +423,8 @@ const easeTail = `linear(${dash(0)}, ${at(TAIL_STOPS)}, 1)`;
      Linear timing with ease-grow's stops baked into the values: a shared easing is applied
      per-interval, and these two need different stop counts, so they would drift. */
   @keyframes la-shadow { from { transform: translate(0px, 0px); } to { transform: translate(30px, 30px); } }
-  @keyframes la-outline { from { stroke-width: 0px; } to { stroke-width: 300px; } }
+  /* Grows to whatever the band is set to, rather than to the 300 it used to hardcode. */
+  @keyframes la-outline { from { stroke-width: 0; } to { stroke-width: var(--logo-band, 300); } }
   /* Visible trail = [tail, head]: dasharray "(head - tail) 2", offset -tail. */
   @keyframes la-trail-head {
     from { stroke-dasharray: 0 2; }
