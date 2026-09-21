@@ -55,6 +55,22 @@ for (const f of CARRIERS) {
   if (!readFileSync(p, 'utf8').includes(MARK)) stale.push(f);
 }
 
+// LOGO_BAND_D is derived AT a stroke width, so the width is part of the derivation and the two
+// representations of the band -- the live mask and the baked path -- agree only while they use
+// the same number. Two sources of truth for one shape is how the icons and public/fonts/ drifted;
+// this is the assertion that makes carrying both safe.
+const BAND_WIDTH = Number(src.match(/export const LOGO_BAND_WIDTH\s*=\s*(\d+)/)?.[1]);
+const css = readFileSync(join(ROOT, 'src/styles/global.css'), 'utf8');
+const cssBand = Number(css.match(/--logo-band,\s*(\d+)\s*\)/)?.[1]);
+if (!BAND_WIDTH) stale.push('src/components/logo-mark.ts (LOGO_BAND_WIDTH is missing)');
+else if (!cssBand) stale.push('src/styles/global.css (no --logo-band fallback to check)');
+else if (cssBand !== BAND_WIDTH) {
+  console.error(`  the band's two representations disagree on its width:`);
+  console.error(`    LOGO_BAND_D was derived at ${BAND_WIDTH}, --logo-band defaults to ${cssBand}`);
+  console.error('    re-run font/measure/band_derived.py at the new width, or restore the default.');
+  process.exitCode = 1;
+}
+
 if (stale.length) {
   console.error(`  ${stale.length} file(s) carry a mark that is not the derived one:`);
   for (const f of stale) console.error(`    ${f}`);

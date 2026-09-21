@@ -370,12 +370,36 @@ The source of truth is `src/components/logo-mark.ts`:
 - `LOGO_A_D` — the A alone, used only for the write-on's leg pieces, because clipping the
   union to a leg region also catches the slivers of ring and hoop that cross it
 
-Both come from `font/measure/mark_derived.py`. **Extract them by export name**, never by
-"the first long path in the file" — there is more than one now.
+- `LOGO_BAND_D` — the cut band: the outline with the letterform punched out, as a real filled
+  path. On the page that shape is a mask, which is exact and needs no generator; this is the
+  same shape flattened, for the same reason hero's outline is flattened on export.
+
+The first two come from `font/measure/mark_derived.py`, the band from `band_derived.py`.
+**Extract them by export name**, never by "the first long path in the file" — there are three
+now.
+
+The band is the one derived artifact with a **parameter**: it is `buffer(mark, 150) - mark`,
+so the stroke width it was derived at is part of the derivation. `LOGO_BAND_WIDTH` records it
+and `check:derived` asserts it still matches the `--logo-band` default in `global.css`. Two
+representations of one shape is exactly how the icons and `public/fonts/` drifted; that
+assertion is what makes carrying both safe.
+
+300 was chosen against two measurements, not taste. The mark's own thinnest stroke is 191 path
+units and the band's visible weight is half the stroke, so below 382 the band is lighter than
+the lightest part of the mark. The tightest of the mark's 8 counters has a gap of 402, and the
+band advances half its width from each side, so that counter seals at about 400 — confirmed by
+rasterising, 8 counters open at 380 and 7 at 400. 300 sits 23% below that ceiling. 382 would
+make the band exactly the mark's thinnest stroke and is 2% from failure, which a re-derivation
+of the mark could cross.
+
+The band's generator reads `LOGO_MARK_D` rather than the font, so re-deriving it does not need
+the font sources — which is why it is its own script rather than another branch of
+`mark_derived.py`. Both need `font/requirements.txt`; the band alone needs only `shapely`.
 
 | Generator | Owns |
 | --- | --- |
 | `font/measure/mark_derived.py` | `LOGO_MARK_D`, `LOGO_A_D` (paste its `site_path` output in) |
+| `font/measure/band_derived.py` | `LOGO_BAND_D`, `LOGO_BAND_WIDTH` — the cut band, `buffer(mark, 150) - mark` |
 | `scripts/make-icons.mjs` | every icon in `public/`, plus `favicon.svg` and `safari-pinned-tab.svg` |
 | `scripts/make-og-image.mjs` | `public/og-image.png` and the path inside `docs/og-image.html` |
 | `font/build_variable.py` | `public/fonts/OrphanDisplay-VF.{ttf,woff2}` — **installs them itself** |
