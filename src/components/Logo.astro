@@ -98,14 +98,14 @@ const vars = [ink && `--logo-ink:${ink}`, outline && `--logo-outline:${outline}`
     </defs>
   )}
 
+  <g class="site-logo-shadow-holder">
+    <g transform="translate(0.000000,1084.000000) scale(0.100000,-0.100000)" class="site-logo-shadow"><path d={LOGO_MARK_D} /></g>
+  </g>
   {masks && (
     <g transform="translate(0.000000,1084.000000) scale(0.100000,-0.100000)" class="site-logo-knock-holder">
       <rect x="-1000" y="-1000" width="14000" height="14000" class="site-logo-knock" mask={`url(#${uid}-knock)`} />
     </g>
   )}
-  <g class="site-logo-shadow-holder">
-    <g transform="translate(0.000000,1084.000000) scale(0.100000,-0.100000)" class="site-logo-shadow"><path d={LOGO_MARK_D} /></g>
-  </g>
   {masks && (
     <g
       transform="translate(0.000000,1084.000000) scale(0.100000,-0.100000)"

@@ -3,7 +3,7 @@
 // which is why it lives at its own permanent URL and why /design/ao/logo/ no longer holds it.
 //
 // Nothing is a build-time prop any more. The layers, the band, the shadow's placement, size,
-// speed and the three colours are all classes or custom properties set live on the one
+// speed and the three colors are all classes or custom properties set live on the one
 // instance, so what is on screen is the real component's own output.
 //
 // Custom properties go on the SVG itself, never on a wrapper: LogoAnimated declares
@@ -93,14 +93,14 @@ const VARIANT_RECIPE: Record<string, string> = Object.fromEntries(
         </fieldset>
 
         <fieldset>
-          <legend>colour</legend>
-          <label class="lab-colour"><span>ink</span><input type="color" name="ink" value="#EEE5E9" /></label>
-          <label class="lab-colour"><span>outline</span><input type="color" name="outline" value="#D16666" /></label>
-          <label class="lab-colour"><span>shadow</span><input type="color" name="shadow" value="#2892D7" /></label>
+          <legend>color</legend>
+          <label class="lab-color"><span>ink</span><input type="color" name="ink" value="#EEE5E9" /></label>
+          <label class="lab-color"><span>outline</span><input type="color" name="outline" value="#D16666" /></label>
+          <label class="lab-color"><span>shadow</span><input type="color" name="shadow" value="#2892D7" /></label>
           <div class="lab-presets">
-            <button type="button" data-colours="theme">theme</button>
-            <button type="button" data-colours="swap">swap red/blue</button>
-            <button type="button" data-colours="mono">mono</button>
+            <button type="button" data-colors="theme">theme</button>
+            <button type="button" data-colors="swap">swap red/blue</button>
+            <button type="button" data-colors="mono">mono</button>
           </div>
         </fieldset>
 
@@ -110,8 +110,9 @@ const VARIANT_RECIPE: Record<string, string> = Object.fromEntries(
         <fieldset data-when-layer="outline">
           <legend>band</legend>
           <!-- Cut lives here because it is a mode of the outline, not a layer of its own:
-               the same paint, standing alone instead of sitting under the fill. -->
-          <label><input type="checkbox" name="layer" value="cut" /> cut out the glyph</label>
+               the same paint, standing alone instead of sitting under the fill. Hidden under
+               a knockout, where the glyph is already a hole and cut has nothing left to do. -->
+          <label data-hide-when-knock><input type="checkbox" name="layer" value="cut" /> cut out the glyph</label>
           <label class="lab-range">
             <input type="range" name="band" aria-label="band" min="0" max="1200" step="10" value="300" />
             <output data-out="band"></output>
@@ -182,9 +183,9 @@ const VARIANT_RECIPE: Record<string, string> = Object.fromEntries(
       <h2 id="la-dl-h">Download</h2>
 
       <!-- The only control here is a file property. Everything about the MARK -- its layers,
-           its band, its shadow's placement, its colours, its speed -- is set on the bench
+           its band, its shadow's placement, its colors, its speed -- is set on the bench
            above and these previews wear it, so what downloads is what is on the stage. The
-           panel used to carry its own treatment dropdown and colour pickers, which meant it
+           panel used to carry its own treatment dropdown and color pickers, which meant it
            could not express cut, knockout, the band or the shadow offset, and disagreed with
            the bench about everything else. -->
       <div class="la-dl-controls">
@@ -276,8 +277,23 @@ const VARIANT_RECIPE: Record<string, string> = Object.fromEntries(
   .lab-range input[type="range"] { width: 100%; }
   .lab-range output { font-family: ui-monospace, monospace; font-size: 0.76rem;
     color: rgba(var(--color-primary-rgb), 0.7); min-width: 8ch; text-align: right; }
-  .lab-colour { justify-content: space-between; }
-  .lab-colour input[type="color"] { width: 46px; height: 24px; padding: 0; border: 0; background: none; }
+  .lab-color { justify-content: space-between; }
+  /* A rounded swatch. The radius has to go on the input's own shadow parts as well as the
+     input: the native control paints its colour into ::-webkit-color-swatch, which squares
+     off the corners again unless it is given the same radius, and the wrapper's padding
+     would otherwise inset it. */
+  .lab-color input[type="color"] {
+    width: 48px; height: 26px; padding: 0; border: 0; background: none;
+    border-radius: 6px; cursor: pointer;
+  }
+  .lab-color input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+  .lab-color input[type="color"]::-webkit-color-swatch {
+    border: 1px solid rgba(var(--color-primary-rgb), 0.28); border-radius: 6px;
+  }
+  .lab-color input[type="color"]::-moz-color-swatch {
+    border: 1px solid rgba(var(--color-primary-rgb), 0.28); border-radius: 6px;
+  }
+  .lab-color input[type="color"]:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
   .lab-presets { display: flex; flex-wrap: wrap; gap: 6px; }
   .lab-presets button {
     font: inherit; font-size: 0.76rem; padding: 3px 9px; border-radius: 999px; cursor: pointer;
@@ -376,7 +392,7 @@ const VARIANT_RECIPE: Record<string, string> = Object.fromEntries(
 
 <script>
   // One instance; every control writes to it.
-  // Size, speed and the three colours are set on the SVG itself, not on a wrapper:
+  // Size, speed and the three colors are set on the SVG itself, not on a wrapper:
   // LogoAnimated declares --la-speed on .site-logo-anim, and a declaration on the element
   // beats a value inherited from an ancestor, so setting it on a parent would do nothing.
   import { endMs, endMsForLayers } from '../../../components/logo-timing';
@@ -446,6 +462,9 @@ import { LOGO_LAYERS, LOGO_VARIANTS } from '../../../components/logo-layers';
     // control that would do nothing.
     document.querySelectorAll<HTMLElement>('[data-when-layer]').forEach((el) => {
       el.hidden = !state[el.dataset.whenLayer as 'outline' | 'shadow'];
+    });
+    document.querySelectorAll<HTMLElement>('[data-hide-when-knock]').forEach((el) => {
+      el.hidden = state.knock;
     });
     out('size').value = `${state.size}px`;
     out('speed').value = `${state.speed.toFixed(2)}× · ${(totalMs() / 1000).toFixed(2)}s`;
@@ -524,7 +543,7 @@ import { LOGO_LAYERS, LOGO_VARIANTS } from '../../../components/logo-layers';
     for (const a of svg.getAnimations({ subtree: true })) { a.pause(); a.currentTime = ms; }
     out('scrub').value = `${(ms / 1000).toFixed(3)}s`;
   });
-  // The colour inputs are named for the layer they paint; state keys them with a Col suffix
+  // The color inputs are named for the layer they paint; state keys them with a Col suffix
   // so they do not collide with the booleans of the same name.
   for (const [input, key] of [['ink', 'ink'], ['outline', 'outlineCol'], ['shadow', 'shadowCol']] as const) {
     $<HTMLInputElement>(`input[name="${input}"]`).addEventListener('input', (e) => {
@@ -564,9 +583,9 @@ import { LOGO_LAYERS, LOGO_VARIANTS } from '../../../components/logo-layers';
     swap: ['#EEE5E9', '#2892D7', '#D16666'],
     mono: ['#EEE5E9', '#8fa0ad', '#4a5c6a'],
   };
-  for (const b of document.querySelectorAll<HTMLButtonElement>('[data-colours]')) {
+  for (const b of document.querySelectorAll<HTMLButtonElement>('[data-colors]')) {
     b.addEventListener('click', () => {
-      const [i, o, s] = PALETTES[b.dataset.colours!];
+      const [i, o, s] = PALETTES[b.dataset.colors!];
       state.ink = i; state.outlineCol = o; state.shadowCol = s;
       if (i) $<HTMLInputElement>('input[name="ink"]').value = i;
       if (o) $<HTMLInputElement>('input[name="outline"]').value = o;
@@ -585,7 +604,7 @@ import { LOGO_LAYERS, LOGO_VARIANTS } from '../../../components/logo-layers';
 <script>
   // ---- Downloads -----------------------------------------------------------------
   // The controls write to the two previews, and the export reads whatever is on them, so
-  // there is one source of truth: treatment is a class swap, colours and speed are custom
+  // there is one source of truth: treatment is a class swap, colors and speed are custom
   // properties, and trail is a choice between two instances because the two draw different
   // markup and cannot be switched with a property.
   import { LOGO_LAYERS, LOGO_VARIANTS, type LogoVariant } from '../../../components/logo-layers';
