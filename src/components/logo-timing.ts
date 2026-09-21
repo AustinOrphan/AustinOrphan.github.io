@@ -17,6 +17,7 @@
 // scripts/routes.test.mjs can pull this in under plain Node the way it already pulls in
 // design-index.ts. Astro's base tsconfig sets allowImportingTsExtensions, so both resolve it.
 import { AFTER, BEATS } from './logo-choreography.ts';
+import { LOGO_LAYERS, type LogoVariant } from './logo-layers.ts';
 
 /** The draw itself: every beat, plus the moment the drawn pieces switch off. */
 const drawEnd = Math.max(
@@ -33,10 +34,18 @@ export const CHOREOGRAPHY_END = {
   untreated: drawEnd,
 } as const;
 
-/** Only `hero` animates a treatment in; plain and flat end when the draw does. */
+/**
+ * A mark runs the treatment beat if it has any layer to settle in, which is what the outline
+ * and shadow animations key on. Only `plain` ends when the draw does.
+ *
+ * This used to test `variant === 'hero'`, which was right while hero was the only variant with
+ * either layer. `outlined` and `shadowed` broke that assumption the moment they existed, and
+ * they would have reported 1160ms while actually running to 1360.
+ */
 export function endSeconds(variant: string, speed = 1): number {
-  const end = variant === 'hero' ? CHOREOGRAPHY_END.treated : CHOREOGRAPHY_END.untreated;
-  return end / speed;
+  const layers = LOGO_LAYERS[variant as LogoVariant];
+  const treated = layers ? layers.outline || layers.shadow : true;
+  return (treated ? CHOREOGRAPHY_END.treated : CHOREOGRAPHY_END.untreated) / speed;
 }
 
 /** The same, in whole milliseconds, which is what a range input wants. */
