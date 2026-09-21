@@ -63,6 +63,11 @@ interface Props {
   ink?: string;
   outline?: string;
   shadow?: string;
+  /** Hollow the outline; see Logo.astro. Applies to the finished mark, not the write-on:
+   *  the pen lays filled pieces, and the band is a property of their union. */
+  cut?: boolean;
+  /** A field with the letterform punched out of it. */
+  knock?: boolean;
 }
 const {
   variant = 'hero',
@@ -75,6 +80,8 @@ const {
   ink,
   outline,
   shadow,
+  cut = false,
+  knock = false,
 } = Astro.props;
 const px = typeof size === 'number' ? `${size}px` : size;
 // Merged into the ONE style attribute below, not added as a second: two style
@@ -84,6 +91,7 @@ const vars = [speed !== 1 && `--la-speed:${speed}`, ink && `--logo-ink:${ink}`,
               outline && `--logo-outline:${outline}`, shadow && `--logo-shadow:${shadow}`]
              .filter(Boolean).join(';');
 const uid = id ?? nextLogoAnimId();
+const extra = [cut && 'logo-layer-cut', knock && 'logo-layer-knock'].filter(Boolean).join(' ');
 
 // The timeline, as unitless seconds plus easings. The CSS multiplies by 1s and divides by
 // --la-speed, so nothing below restates a number that emit_choreography.py derived.
@@ -173,7 +181,7 @@ const easeTail = `linear(${dash(0)}, ${at(TAIL_STOPS)}, 1)`;
 <svg
   id={id}
   style={`${timing};--la-ease-head-l:${easeHead};--la-ease-tail-l:${easeTail}${vars ? ';' + vars : ''}`}
-  class={`site-logo ${layerClasses(variant)} site-logo-anim site-logo-anim-trail-${trail} ${autoplay ? 'la-play' : ''} ${className}`.trim()}
+  class={`site-logo ${layerClasses(variant)} ${extra} site-logo-anim site-logo-anim-trail-${trail} ${autoplay ? 'la-play' : ''} ${className}`.trim()}
   viewBox="-70 -70 1246 1246"
   width={px}
   height={px}
@@ -213,6 +221,17 @@ const easeTail = `linear(${dash(0)}, ${at(TAIL_STOPS)}, 1)`;
         <path class="la-mask la-trail-m" d={TRAIL_MASK_D} pathLength="1" stroke-width={TRAIL_MASK.strokeWidth} />
       </mask>
     )}
+    <!-- The finished mark's own two, matching Logo.astro element for element: the band cut
+         out of the stroke, and the field with the letterform punched out. These belong to
+         the resting render, not the write-on, so they carry no la- class. -->
+    <mask id={`${uid}-cut`} maskUnits="userSpaceOnUse" x="-1000" y="-1000" width="14000" height="14000">
+      <path d={LOGO_MARK_D} fill="#fff" stroke="#fff" stroke-linejoin="round" class="site-logo-cut-mask" />
+      <path d={LOGO_MARK_D} fill="#000" />
+    </mask>
+    <mask id={`${uid}-knock`} maskUnits="userSpaceOnUse" x="-1000" y="-1000" width="14000" height="14000">
+      <rect x="-1000" y="-1000" width="14000" height="14000" fill="#fff" />
+      <path d={LOGO_MARK_D} fill="#000" />
+    </mask>
   </defs>
 
   <g class="la-trail-layer" transform="translate(0,1084) scale(0.1,-0.1)">
@@ -238,9 +257,17 @@ const easeTail = `linear(${dash(0)}, ${at(TAIL_STOPS)}, 1)`;
        resting render is the same raster as Logo's (a nested <svg> would go
        through its own viewport and anti-alias a few edge pixels differently). -->
   <g class="la-final">
+    <g transform="translate(0.000000,1084.000000) scale(0.100000,-0.100000)" class="site-logo-knock-holder">
+      <rect x="-1000" y="-1000" width="14000" height="14000" class="site-logo-knock" mask={`url(#${uid}-knock)`} />
+    </g>
     <g class="la-final-shadow site-logo-shadow-holder">
       <g transform="translate(0.000000,1084.000000) scale(0.100000,-0.100000)" class="site-logo-shadow"><path d={LOGO_MARK_D} /></g>
     </g>
+    <g
+      transform="translate(0.000000,1084.000000) scale(0.100000,-0.100000)"
+      class="site-logo-cut-holder"
+      stroke-linejoin="round"
+    ><path d={LOGO_MARK_D} mask={`url(#${uid}-cut)`} /></g>
     <g
       transform="translate(0.000000,1084.000000) scale(0.100000,-0.100000)"
       class="site-logo-mark la-final-mark"

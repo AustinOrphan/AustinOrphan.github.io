@@ -100,6 +100,31 @@ function stripComments(root: Element): void {
   for (const c of doomed) (c as ChildNode).remove();
 }
 
+/**
+ * Drop defs nothing points at.
+ *
+ * Both components ship the cut and knockout masks unconditionally, because a mark gets
+ * re-treated by swapping classes and cannot grow elements it did not ship with. Each mask
+ * holds its own copy of the 3.3KB mark path, so a file using neither was carrying about 13KB
+ * of geometry it never draws.
+ *
+ * One pass, not a fixed point: nothing here defines a mask that references another def. If
+ * that changes this has to iterate, or it will drop a def whose only user it just removed.
+ */
+function pruneUnusedDefs(root: SVGSVGElement): void {
+  const used = new Set<string>();
+  for (const el of Array.from(root.querySelectorAll('*'))) {
+    for (const attr of ['mask', 'clip-path', 'fill', 'stroke', 'filter']) {
+      const m = el.getAttribute(attr)?.match(/url\(#([^)]+)\)/);
+      if (m) used.add(m[1]);
+    }
+  }
+  const defs = 'mask, clipPath, linearGradient, radialGradient, pattern, filter';
+  for (const d of Array.from(root.querySelectorAll(defs))) {
+    if (d.id && !used.has(d.id)) d.remove();
+  }
+}
+
 /** Set a paint property to none here and on every descendant that overrides it. */
 function clearPaint(el: Element, prop: 'fill' | 'stroke'): void {
   el.setAttribute(prop, 'none');
@@ -199,6 +224,8 @@ export function serializeLogo(svg: SVGSVGElement, opts: SerializeOptions = {}): 
   const clone = svg.cloneNode(true) as SVGSVGElement;
   paintAndPrune(svg, clone);
   stripComments(clone);
+  // After the display:none pass, so a mask whose only user was just pruned goes with it.
+  pruneUnusedDefs(clone);
 
   if (animated) {
     const cs = getComputedStyle(svg);

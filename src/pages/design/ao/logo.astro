@@ -194,6 +194,7 @@ const VARIANT_RECIPE: Record<string, string> = Object.fromEntries(
           <legend>layers</legend>
           <label><input type="checkbox" name="layer" value="outline" checked /> outline</label>
           <label><input type="checkbox" name="layer" value="shadow" checked /> shadow</label>
+          <label><input type="checkbox" name="layer" value="knock" /> knock out</label>
           <p class="lab-hint" data-variant-hint></p>
         </fieldset>
 
@@ -249,6 +250,9 @@ const VARIANT_RECIPE: Record<string, string> = Object.fromEntries(
              by the fill. 300 is what hero has always drawn. -->
         <fieldset data-when-layer="outline">
           <legend>band</legend>
+          <!-- Cut lives here because it is a mode of the outline, not a layer of its own:
+               the same paint, standing alone instead of sitting under the fill. -->
+          <label><input type="checkbox" name="layer" value="cut" /> cut out the glyph</label>
           <label class="lab-range">
             <input type="range" name="band" aria-label="band" min="0" max="1200" step="10" value="300" />
             <output data-out="band"></output>
@@ -653,7 +657,8 @@ import { LOGO_LAYERS, LOGO_VARIANTS } from '../../../components/logo-layers';
   };
 
   const state = {
-    outline: true, shadow: true, trail: 'swash', size: 280, speed: 1,
+    outline: true, shadow: true, cut: false, knock: false,
+    trail: 'swash', size: 280, speed: 1,
     ink: '', outlineCol: '', shadowCol: '', loop: false,
     band: 300, sdist: 42.4264069, sangle: 45, sscale: 1,
   };
@@ -674,6 +679,8 @@ import { LOGO_LAYERS, LOGO_VARIANTS } from '../../../components/logo-layers';
       svg.style.setProperty('--la-speed', String(state.speed));
       svg.classList.toggle('logo-layer-outline', state.outline);
       svg.classList.toggle('logo-layer-shadow', state.shadow);
+      svg.classList.toggle('logo-layer-cut', state.cut);
+      svg.classList.toggle('logo-layer-knock', state.knock);
       svg.style.setProperty('--logo-band', String(state.band));
       svg.style.setProperty('--logo-shadow-dist', String(state.sdist));
       svg.style.setProperty('--logo-shadow-angle', `${state.sangle}deg`);
@@ -705,8 +712,12 @@ import { LOGO_LAYERS, LOGO_VARIANTS } from '../../../components/logo-layers';
     const name = variantName();
     // The hint describes the combination, so it carries its own length at speed 1; the speed
     // readout above is the one that tracks the slider.
+    // cut and knock are not in the variant table -- they are export treatments, not site
+    // ones -- so the name covers outline and shadow and they are named after it.
+    const modes = [state.cut && 'cut out', state.knock && 'knocked out'].filter(Boolean);
     $<HTMLElement>('[data-variant-hint]').textContent =
-      `${name} — ${HINT[name]} (${(endMs(name) / 1000).toFixed(2)}s)`;
+      `${name} — ${HINT[name]} (${(endMs(name) / 1000).toFixed(2)}s)`
+      + (modes.length ? `, ${modes.join(' and ')}` : '');
     const scrub = $<HTMLInputElement>('input[name="scrub"]');
     scrub.max = String(totalMs());
     scrub.value = scrub.max;
@@ -743,7 +754,7 @@ import { LOGO_LAYERS, LOGO_VARIANTS } from '../../../components/logo-layers';
 
   for (const c of document.querySelectorAll<HTMLInputElement>('input[name="layer"]')) {
     c.addEventListener('change', () => {
-      state[c.value as 'outline' | 'shadow'] = c.checked;
+      state[c.value as 'outline' | 'shadow' | 'cut' | 'knock'] = c.checked;
       apply();
       play(currentSvg());
     });

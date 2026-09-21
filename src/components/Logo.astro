@@ -26,6 +26,12 @@
 import { layerClasses, type LogoVariant } from './logo-layers';
 
 interface Props {
+  /** Hollow the outline: the fill goes and the band is cut out of the stroke, so the
+   *  letterform is a hole rather than a shape. Needs `outline`; it is that layer's paint
+   *  standing alone instead of sitting under the fill. */
+  cut?: boolean;
+  /** A field with the letterform punched out of it. Independent of everything else. */
+  knock?: boolean;
   variant?: LogoVariant;
   size?: number | string;
   class?: string;
@@ -35,9 +41,14 @@ interface Props {
   outline?: string;
   shadow?: string;
 }
-import { LOGO_MARK_D } from './logo-mark';
+import { LOGO_MARK_D, nextLogoAnimId } from './logo-mark';
 
-const { variant = 'hero', size = 28, class: className = '', id, ink, outline, shadow } = Astro.props;
+const { variant = 'hero', size = 28, class: className = '', id, ink, outline, shadow,
+        cut = false, knock = false } = Astro.props;
+// The mask ids have to be unique per instance, and stable across builds: the counter in
+// logo-mark.ts is module state, so it numbers in render order rather than at random.
+const uid = id ?? nextLogoAnimId();
+const extra = [cut && 'logo-layer-cut', knock && 'logo-layer-knock'].filter(Boolean).join(' ');
 const px = typeof size === 'number' ? `${size}px` : size;
 const vars = [ink && `--logo-ink:${ink}`, outline && `--logo-outline:${outline}`,
                shadow && `--logo-shadow:${shadow}`].filter(Boolean).join(';');
@@ -50,7 +61,7 @@ const vars = [ink && `--logo-ink:${ink}`, outline && `--logo-outline:${outline}`
 // stay on the element describing a treatment it no longer has.
 ---
 <svg
-  class={`site-logo ${layerClasses(variant)} ${className}`.trim()}
+  class={`site-logo ${layerClasses(variant)} ${extra} ${className}`.replace(/\s+/g, ' ').trim()}
   id={id}
   style={vars || undefined}
   viewBox="-70 -70 1246 1246"
@@ -60,9 +71,33 @@ const vars = [ink && `--logo-ink:${ink}`, outline && `--logo-outline:${outline}`
   aria-hidden="true"
   focusable="false"
 >
+  <defs>
+    <!-- The band, as a shape rather than a stroke: white over the whole stroke, black over
+         the glyph, so only the outer half of the stroke survives and the letterform is a
+         clean hole. fill-rule leaves the counters white, which is right -- the band hugs
+         them from the inside the same way it hugs the silhouette from the outside. -->
+    <mask id={`${uid}-cut`} maskUnits="userSpaceOnUse" x="-1000" y="-1000" width="14000" height="14000">
+      <path d={LOGO_MARK_D} fill="#fff" stroke="#fff" stroke-linejoin="round" class="site-logo-cut-mask" />
+      <path d={LOGO_MARK_D} fill="#000" />
+    </mask>
+    <!-- Everything except the letterform. -->
+    <mask id={`${uid}-knock`} maskUnits="userSpaceOnUse" x="-1000" y="-1000" width="14000" height="14000">
+      <rect x="-1000" y="-1000" width="14000" height="14000" fill="#fff" />
+      <path d={LOGO_MARK_D} fill="#000" />
+    </mask>
+  </defs>
+
+  <g transform="translate(0.000000,1084.000000) scale(0.100000,-0.100000)" class="site-logo-knock-holder">
+    <rect x="-1000" y="-1000" width="14000" height="14000" class="site-logo-knock" mask={`url(#${uid}-knock)`} />
+  </g>
   <g class="site-logo-shadow-holder">
     <g transform="translate(0.000000,1084.000000) scale(0.100000,-0.100000)" class="site-logo-shadow"><path d={LOGO_MARK_D} /></g>
   </g>
+  <g
+    transform="translate(0.000000,1084.000000) scale(0.100000,-0.100000)"
+    class="site-logo-cut-holder"
+    stroke-linejoin="round"
+  ><path d={LOGO_MARK_D} mask={`url(#${uid}-cut)`} /></g>
   <g
     transform="translate(0.000000,1084.000000) scale(0.100000,-0.100000)"
     class="site-logo-mark"
