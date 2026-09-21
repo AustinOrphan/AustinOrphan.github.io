@@ -51,7 +51,7 @@ const VARIANT_RECIPE: Record<string, string> = Object.fromEntries(
       <div class="lab-stage" data-stage data-bg="site">
         {TRAILS.map((t) => (
           <div class="lab-slot" data-trail={t} hidden>
-            <LogoAnimated trail={t} size={280} autoplay={false} id={`lab-${t}`} />
+            <LogoAnimated trail={t} size={280} autoplay={false} treatable id={`lab-${t}`} />
           </div>
         ))}
       </div>
@@ -220,7 +220,7 @@ const VARIANT_RECIPE: Record<string, string> = Object.fromEntries(
 
       <div class="la-dl-row">
         <figure class="la-dl-cell">
-          <Logo variant="hero" size={132} id="la-dl-still" />
+          <Logo variant="hero" size={132} treatable id="la-dl-still" />
           <figcaption>still</figcaption>
           <div class="la-dl-btns">
             <button type="button" data-dl="svg" data-sel="#la-dl-still" data-name="ao-mark">SVG</button>
@@ -228,7 +228,7 @@ const VARIANT_RECIPE: Record<string, string> = Object.fromEntries(
           </div>
         </figure>
         <figure class="la-dl-cell">
-          <LogoAnimated variant="hero" size={132} id="la-dl-sw" class="la-dl-live" />
+          <LogoAnimated variant="hero" size={132} treatable id="la-dl-sw" class="la-dl-live" />
           <figcaption>animated</figcaption>
           <div class="la-dl-btns">
             <button type="button" data-dl="anim" data-name="ao-mark-animated">SVG</button>

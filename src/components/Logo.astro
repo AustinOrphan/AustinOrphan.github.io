@@ -32,6 +32,11 @@ interface Props {
   cut?: boolean;
   /** A field with the letterform punched out of it. Independent of everything else. */
   knock?: boolean;
+  /** Ship the cut and knockout masks even when those layers are off, so they can be
+   *  switched on later by swapping classes. Only the bench needs that. Every other instance
+   *  would be carrying two more copies of the mark path -- about 10KB -- for masks it never
+   *  references, which on the write-up's twenty-odd marks came to a fifth of the page. */
+  treatable?: boolean;
   variant?: LogoVariant;
   size?: number | string;
   class?: string;
@@ -44,7 +49,11 @@ interface Props {
 import { LOGO_MARK_D, nextLogoAnimId } from './logo-mark';
 
 const { variant = 'hero', size = 28, class: className = '', id, ink, outline, shadow,
-        cut = false, knock = false } = Astro.props;
+        cut = false, knock = false, treatable = false } = Astro.props;
+// Only ship the cut and knockout masks where they can actually be used. Each holds its own
+// copy of the 3.3KB mark path, so an instance that never references them is carrying about
+// 10KB for nothing -- which on the write-up's twenty-odd marks came to a fifth of the page.
+const masks = cut || knock || treatable;
 // The mask ids have to be unique per instance, and stable across builds: the counter in
 // logo-mark.ts is module state, so it numbers in render order rather than at random.
 const uid = id ?? nextLogoAnimId();
@@ -71,33 +80,39 @@ const vars = [ink && `--logo-ink:${ink}`, outline && `--logo-outline:${outline}`
   aria-hidden="true"
   focusable="false"
 >
-  <defs>
-    <!-- The band, as a shape rather than a stroke: white over the whole stroke, black over
-         the glyph, so only the outer half of the stroke survives and the letterform is a
-         clean hole. fill-rule leaves the counters white, which is right -- the band hugs
-         them from the inside the same way it hugs the silhouette from the outside. -->
-    <mask id={`${uid}-cut`} maskUnits="userSpaceOnUse" x="-1000" y="-1000" width="14000" height="14000">
-      <path d={LOGO_MARK_D} fill="#fff" stroke="#fff" stroke-linejoin="round" class="site-logo-cut-mask" />
-      <path d={LOGO_MARK_D} fill="#000" />
-    </mask>
-    <!-- Everything except the letterform. -->
-    <mask id={`${uid}-knock`} maskUnits="userSpaceOnUse" x="-1000" y="-1000" width="14000" height="14000">
-      <rect x="-1000" y="-1000" width="14000" height="14000" fill="#fff" />
-      <path d={LOGO_MARK_D} fill="#000" />
-    </mask>
-  </defs>
+  {masks && (
+    <defs>
+      <!-- The band, as a shape rather than a stroke: white over the whole stroke, black over
+           the glyph, so only the outer half of the stroke survives and the letterform is a
+           clean hole. fill-rule leaves the counters white, which is right -- the band hugs
+           them from the inside the same way it hugs the silhouette from the outside. -->
+      <mask id={`${uid}-cut`} maskUnits="userSpaceOnUse" x="-1000" y="-1000" width="14000" height="14000">
+        <path d={LOGO_MARK_D} fill="#fff" stroke="#fff" stroke-linejoin="round" class="site-logo-cut-mask" />
+        <path d={LOGO_MARK_D} fill="#000" />
+      </mask>
+      <!-- Everything except the letterform. -->
+      <mask id={`${uid}-knock`} maskUnits="userSpaceOnUse" x="-1000" y="-1000" width="14000" height="14000">
+        <rect x="-1000" y="-1000" width="14000" height="14000" fill="#fff" />
+        <path d={LOGO_MARK_D} fill="#000" />
+      </mask>
+    </defs>
+  )}
 
-  <g transform="translate(0.000000,1084.000000) scale(0.100000,-0.100000)" class="site-logo-knock-holder">
-    <rect x="-1000" y="-1000" width="14000" height="14000" class="site-logo-knock" mask={`url(#${uid}-knock)`} />
-  </g>
+  {masks && (
+    <g transform="translate(0.000000,1084.000000) scale(0.100000,-0.100000)" class="site-logo-knock-holder">
+      <rect x="-1000" y="-1000" width="14000" height="14000" class="site-logo-knock" mask={`url(#${uid}-knock)`} />
+    </g>
+  )}
   <g class="site-logo-shadow-holder">
     <g transform="translate(0.000000,1084.000000) scale(0.100000,-0.100000)" class="site-logo-shadow"><path d={LOGO_MARK_D} /></g>
   </g>
-  <g
-    transform="translate(0.000000,1084.000000) scale(0.100000,-0.100000)"
-    class="site-logo-cut-holder"
-    stroke-linejoin="round"
-  ><path d={LOGO_MARK_D} mask={`url(#${uid}-cut)`} /></g>
+  {masks && (
+    <g
+      transform="translate(0.000000,1084.000000) scale(0.100000,-0.100000)"
+      class="site-logo-cut-holder"
+      stroke-linejoin="round"
+    ><path d={LOGO_MARK_D} mask={`url(#${uid}-cut)`} /></g>
+  )}
   <g
     transform="translate(0.000000,1084.000000) scale(0.100000,-0.100000)"
     class="site-logo-mark"
