@@ -7,6 +7,11 @@
 //
 // The animated download keeps its classes instead, and carries the component's own rules with
 // it, so the file plays on its own when opened.
+//
+// Three other things the page can take for granted and a file cannot: a rule that HIDES an
+// element (the offset copy on a re-treated mark), the markup's own `--`-riddled comments, which
+// are legal in HTML and not in XML, and `paint-order`, which browsers honour and design tools
+// do not. Each is dealt with below, and each of the three shipped broken once.
 
 // Only fill and stroke come from CSS. stroke-width, stroke-linejoin and paint-order are
 // already attributes in Logo.astro, so cloneNode carries them and copying the COMPUTED value
@@ -20,7 +25,20 @@ const THEME = ['--color-primary', '--color-secondary', '--color-accent', '--colo
 /** SVG's own initial values, so an element that just inherits them writes nothing. */
 const INITIAL: Record<string, string> = { fill: 'rgb(0, 0, 0)', stroke: 'none' };
 
-function paintAll(src: Element, dst: Element, inherited: Record<string, string> = INITIAL): void {
+/**
+ * Write the paint on, and drop whatever a rule was hiding.
+ *
+ * The pruning is the same class of problem as the paint: a saved file carries no stylesheet,
+ * so anything held back by a RULE comes back, and unpainted SVG is black. Re-treating a mark
+ * by swapping its variant class (the export panel does exactly that) leaves hero's offset copy
+ * in the markup with only `.site-logo-plain .site-logo-shadow { display: none }` to hide it, so
+ * plain and flat both saved with a hard black shadow behind the letter. The video baker already
+ * carried its own fix for this; the still export did not.
+ *
+ * Only `display` is read, and nothing inside <defs> is hidden that way -- masks and clipPaths
+ * compute `display: inline` -- so the animated export keeps all of its machinery.
+ */
+function paintAndPrune(src: Element, dst: Element, inherited: Record<string, string> = INITIAL): void {
   const cs = getComputedStyle(src);
   const own: Record<string, string> = { ...inherited };
   for (const prop of PAINT) {
@@ -32,8 +50,69 @@ function paintAll(src: Element, dst: Element, inherited: Record<string, string> 
     if (v !== inherited[prop]) dst.setAttribute(prop, v);
   }
   const sk = Array.from(src.children);
+  // A snapshot, taken before anything is removed, so src and dst stay index-aligned.
   const dk = Array.from(dst.children);
-  for (let i = 0; i < sk.length && i < dk.length; i++) paintAll(sk[i], dk[i], own);
+  for (let i = 0; i < sk.length && i < dk.length; i++) {
+    if (getComputedStyle(sk[i]).display === 'none') dk[i].remove();
+    else paintAndPrune(sk[i], dk[i], own);
+  }
+}
+
+/**
+ * Drop the markup's own notes.
+ *
+ * XML forbids `--` inside a comment and HTML does not, so the component's prose -- which uses
+ * the double dash freely -- survives into the DOM, survives cloneNode, and lands in the file as
+ * a parse error. The animated export was an unopenable file for exactly this reason, and so was
+ * every baked video frame. They are dead weight in an exported asset in any case.
+ */
+function stripComments(root: Element): void {
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_COMMENT);
+  const doomed: Node[] = [];
+  while (walker.nextNode()) doomed.push(walker.currentNode);
+  for (const c of doomed) (c as ChildNode).remove();
+}
+
+/** Set a paint property to none here and on every descendant that overrides it. */
+function clearPaint(el: Element, prop: 'fill' | 'stroke'): void {
+  el.setAttribute(prop, 'none');
+  el.querySelectorAll(`[${prop}]`).forEach((k) => k.setAttribute(prop, 'none'));
+}
+
+/**
+ * Say hero's outline as a shape rather than as a painting instruction.
+ *
+ * The mark paints its stroke UNDER its fill, so only the outer half of the 300-unit outline
+ * shows. On the page that is one attribute, `paint-order="stroke fill markers"`. In a saved
+ * file it is a promise the renderer may not keep: browsers honour it, but Illustrator, Figma,
+ * Sketch and macOS Preview do not, and they paint the stroke LAST -- a red outline sitting on
+ * top of the mark, eating half its weight. Opened in a browser the file looked right, which is
+ * why this took a while to see.
+ *
+ * So the file states it twice instead: a stroke-only copy first, the fill-only original second.
+ * That is what `paint-order` means, written in the one drawing order every renderer agrees on.
+ *
+ * Not for the animated export -- there the outline IS a `stroke-width` keyframe on this very
+ * element, and a file that carries CSS animations is for a browser anyway.
+ */
+function flattenPaintOrder(root: SVGSVGElement): void {
+  for (const el of Array.from(root.querySelectorAll<SVGElement>('[paint-order]'))) {
+    // Anything but stroke-first already asks for the drawing order every renderer defaults to,
+    // so it is not a promise anyone breaks; leave it as it stands.
+    if ((el.getAttribute('paint-order') ?? '').trim().split(/\s+/)[0] !== 'stroke') continue;
+    el.removeAttribute('paint-order');
+    const stroke = el.getAttribute('stroke');
+    // Nothing is painted under anything here, so dropping the attribute was the whole job.
+    // plain and flat land on this branch: they keep hero's markup attributes but resolve
+    // `stroke` to none.
+    if (!stroke || stroke === 'none' || el.getAttribute('stroke-width') === '0') continue;
+    const under = el.cloneNode(true) as SVGElement;
+    clearPaint(under, 'fill');
+    clearPaint(el, 'stroke');
+    el.removeAttribute('stroke-width');
+    el.removeAttribute('stroke-linejoin');
+    el.parentNode?.insertBefore(under, el);
+  }
 }
 
 /** The component's own classes. A rule is the animation's if it targets one of these. */
@@ -88,7 +167,8 @@ export interface SerializeOptions {
 export function serializeLogo(svg: SVGSVGElement, opts: SerializeOptions = {}): string {
   const { animated = false, size } = opts;
   const clone = svg.cloneNode(true) as SVGSVGElement;
-  paintAll(svg, clone);
+  paintAndPrune(svg, clone);
+  stripComments(clone);
 
   if (animated) {
     const cs = getComputedStyle(svg);
@@ -104,6 +184,7 @@ export function serializeLogo(svg: SVGSVGElement, opts: SerializeOptions = {}): 
     // paint is on the attributes now, so the classes would only be dead weight
     clone.removeAttribute('class');
     clone.querySelectorAll('[class]').forEach((el) => el.removeAttribute('class'));
+    flattenPaintOrder(clone);
   }
 
   clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
@@ -236,6 +317,7 @@ function frameAt(svg: SVGSVGElement, anims: Animation[], ms: number, size: numbe
   for (const a of anims) a.currentTime = ms;
   const clone = svg.cloneNode(true) as SVGSVGElement;
   bake(svg, clone);
+  stripComments(clone);
 
   // Resolve the hand-off instead of freezing it. The write-on ends by cross-fading the drawn
   // pieces for the finished mark, and the two are not the same drawing: the pieces are masked
