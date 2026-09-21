@@ -62,12 +62,8 @@ const VARIANT_RECIPE: Record<string, string> = Object.fromEntries(
         <output data-la-time>{secs(HERO_MS)}s</output>
       </label>
     </div>
-    <div class="la-demo-row la-demo-small">
-      <LogoAnimated variant="hero" size={44} id="la-demo-s1" />
-      <LogoAnimated variant="plain" size={28} id="la-demo-s2" />
-      <LogoAnimated variant="plain" size={120} id="la-demo-s3" />
-      <span class="la-demo-note">44 / 28 / 120 px</span>
-    </div>
+    <!-- Form: the four combinations of the two layers, and the same drawing recoloured, so
+         what a treatment IS sits beside what it is made of. -->
     <div class="la-demo-row">
       {LOGO_VARIANTS.map((v) => (
         <figure class="la-demo-cell">
@@ -75,25 +71,12 @@ const VARIANT_RECIPE: Record<string, string> = Object.fromEntries(
           <figcaption>variant="{v}" — {VARIANT_RECIPE[v]}</figcaption>
         </figure>
       ))}
-    </div>
-    <div class="la-demo-row">
       <figure class="la-demo-cell">
-        <LogoAnimated variant="hero" size="min(220px, 20vw)" id="la-sp-half" class="la-sp-half" speed={0.5} />
-        <figcaption>speed=0.5 — {secs(endMs('hero', 0.5))}s</figcaption>
-      </figure>
-      <figure class="la-demo-cell">
-        <LogoAnimated variant="hero" size="min(220px, 20vw)" id="la-sp-one" class="la-sp-one" />
-        <figcaption>speed=1 — {secs(HERO_MS)}s</figcaption>
-      </figure>
-      <figure class="la-demo-cell">
-        <LogoAnimated variant="hero" size="min(220px, 20vw)" id="la-sp-two" class="la-sp-two" speed={2} />
-        <figcaption>speed=2 — {secs(endMs('hero', 2))}s</figcaption>
-      </figure>
-      <figure class="la-demo-cell">
-        <LogoAnimated variant="hero" size="min(220px, 20vw)" id="la-col" class="la-col" ink="#EEE5E9" outline="#2892D7" shadow="#D16666" />
-        <figcaption>ink / outline / shadow swapped</figcaption>
+        <LogoAnimated variant="hero" size="min(240px, 21vw)" id="la-col" class="la-col" ink="#EEE5E9" outline="#2892D7" shadow="#D16666" />
+        <figcaption>hero, recoloured — <code>ink</code> / <code>outline</code> / <code>shadow</code></figcaption>
       </figure>
     </div>
+    <!-- Motion: the only prop that changes what the pen draws. -->
     <div class="la-demo-row">
       <figure class="la-demo-cell">
         <LogoAnimated variant="hero" size="min(400px, 34vw)" id="la-mode-swash" class="la-mode-swash" trail="swash" />
@@ -164,6 +147,10 @@ const VARIANT_RECIPE: Record<string, string> = Object.fromEntries(
     color: var(--color-primary);
     min-height: 100vh;
     margin: 0;
+    /* For the full-bleed hero panel below. 100vw counts the scrollbar and the page always
+       has one, so without this it would overflow by the scrollbar's width. `clip` rather
+       than `hidden` so no scroll container is created. */
+    overflow-x: clip;
   }
   .la-demo {
     display: flex;
@@ -219,8 +206,6 @@ const VARIANT_RECIPE: Record<string, string> = Object.fromEntries(
     font-variant-numeric: tabular-nums;
     min-width: 3.5em;
   }
-  .la-demo-small { gap: 1.5rem; }
-  .la-demo-note { font-size: 0.8rem; opacity: 0.6; }
 </style>
 
 <style is:global>
@@ -244,7 +229,20 @@ const VARIANT_RECIPE: Record<string, string> = Object.fromEntries(
   /* The real hero is full-height and its backdrop is revealed by index.astro's own
      scroll handler, which does not run here — so it is forced visible and the section
      is scaled down to sit in a panel. Everything else is the hero's own CSS. */
-  .situ-hero-frame { padding: 0; overflow: hidden; position: relative; }
+  /* Full-bleed, and that is the point rather than a flourish. The hero sizes its wordmark
+     with 14vw -- the VIEWPORT's width -- so penning it into the 1180px article column makes
+     it render something the live page never shows: above about 1856px the wordmark wraps to
+     two lines, "Orphan" is clipped by the frame, and the tagline and link bar are pushed out
+     of it entirely. A panel whose whole claim is "the real hero" cannot misreport it at the
+     widest viewports. Giving the frame the viewport's own width makes 14vw resolve against
+     the width the hero actually has.
+
+     overflow-x: clip on the page rather than hidden: it does not create a scroll container,
+     so it absorbs the scrollbar's width without changing how anything else scrolls. */
+  .situ-hero-frame {
+    padding: 0; overflow: hidden; position: relative;
+    width: 100vw; margin-left: calc(50% - 50vw); border-radius: 0; border-left: 0; border-right: 0;
+  }
   .situ-hero-frame .hero-section { min-height: 0; height: 78vh; }
   .situ-hero-frame .scroll-indicator { display: none; }
   /* Three things the real page does with script or chrome that the panel has to
@@ -257,8 +255,13 @@ const VARIANT_RECIPE: Record<string, string> = Object.fromEntries(
           through the whole write-on on the live page (see the note above).
        3. #linkBar is position:fixed, so inside a panel it pins itself to the
           viewport instead of sitting in the hero. */
+  /* transform as well as opacity, and the transform is the one that bites. global.css holds
+     both at opacity 0 AND at the reveal animation's from-state, translate(0,50px) scale(.95);
+     index.astro's script animates both away. Forcing only the opacity made them visible while
+     still displaced 50px down, which on a phone dropped the tagline straight onto the link
+     bar -- 16px of overlap, and the same displacement unnoticed at every other width. */
   .situ-hero-frame .hero-section h1,
-  .situ-hero-frame .hero-section #cbar { opacity: 1; }
+  .situ-hero-frame .hero-section #cbar { opacity: 1; transform: none; }
   .situ-hero-frame .hero-logo-backdrop { opacity: 0.34; }
   .situ-hero-frame #linkBar { position: static; margin-top: 28px; opacity: 1; transform: none; }
 </style>
