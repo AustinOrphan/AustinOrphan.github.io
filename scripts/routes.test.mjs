@@ -123,46 +123,63 @@ test('/design/ao/logo/ is built, noindex, and carries the WIP banner', async () 
   assert.match(doc, /Work in progress\./, '/design/ao/logo/ lost its WipBanner');
 });
 
-test('/design/ao/logo/ contains both the demo and the lab', async () => {
-  // Against markup(), not the raw file: both of these strings also occur inside
-  // the page's scripts, so the raw document would pass with the elements gone.
-  const doc = markup(await html('design/ao/logo'));
-  assert.match(doc, /data-la-replay/, 'the demo replay control is missing');
-  assert.match(doc, /data-stage/, 'the lab stage is missing');
+test('/design/ao/logo-bench/ is built, noindex, and carries the WIP banner', async () => {
+  const doc = await html('design/ao/logo-bench');
+  assert.equal(robotsOf(doc), 'noindex, nofollow');
+  assert.match(doc, /<title>The AO mark bench<\/title>/, 'the bench title drifted from the registry');
+  assert.match(doc, /Work in progress\./, '/design/ao/logo-bench/ lost its WipBanner');
 });
 
-test('both body classes are present, so both style blocks apply', async () => {
-  const doc = await html('design/ao/logo');
-  assert.match(
-    doc,
-    /<body class="logo-lab logo-anim-demo">/,
-    'body lost one of the two classes the merged style blocks are keyed to',
-  );
+// The split's whole point: a publication and an instrument, at two permanent URLs. Each
+// assertion is paired with its opposite, because "the lab moved" and "the lab was deleted"
+// look identical from one page alone.
+test('the write-up holds the demo and the in-situ panels, and not the bench', async () => {
+  const doc = markup(await html('design/ao/logo'));
+  assert.match(doc, /data-la-replay/, 'the demo replay control is missing');
+  assert.match(doc, /class="lab-situ"/, 'the in-situ section is missing');
+  assert.doesNotMatch(doc, /data-stage/, 'the lab stage is still on the write-up');
+  assert.doesNotMatch(doc, /data-dl-treat/, 'the download panel is still on the write-up');
+});
+
+test('the bench holds the lab and the exporter, and not the demo', async () => {
+  const doc = markup(await html('design/ao/logo-bench'));
+  assert.match(doc, /data-stage/, 'the lab stage is missing from the bench');
+  assert.match(doc, /data-dl-treat/, 'the download panel is missing from the bench');
+  assert.doesNotMatch(doc, /data-la-replay/, 'the demo followed the lab onto the bench');
+  assert.doesNotMatch(doc, /class="lab-situ"/, 'the in-situ section followed the lab onto the bench');
+});
+
+// Each page carries ONE body class now. The merged page needed both because two style
+// blocks were keyed to their original bodies; splitting is what retires that hazard, so
+// this asserts the opposite of what it used to.
+test('each page carries its own body class and not the other\'s', async () => {
+  const writeup = await html('design/ao/logo');
+  const bench = await html('design/ao/logo-bench');
+  assert.match(writeup, /<body class="logo-anim-demo">/, 'the write-up lost its body class');
+  assert.match(bench, /<body class="logo-lab">/, 'the bench lost its body class');
 });
 
 test('the lab size presets no longer collide with the download panel', async () => {
-  const doc = markup(await html('design/ao/logo'));
+  const doc = markup(await html('design/ao/logo-bench'));
   assert.match(doc, /data-lab-size="280"/, 'lab presets were not renamed');
   assert.match(doc, /data-dl-size/, 'the download panel lost its size control');
-  // The download panel's fixed 512/1024 PNG buttons are gone -- one `data-dl-size` select
-  // drives every download now -- so no bare `data-size` should remain anywhere. The lab wires
-  // its presets with a document-wide querySelectorAll, which is what made the collision.
+  // Both are on the bench now, so the collision is still reachable and still guarded: the
+  // lab wires its presets with a document-wide querySelectorAll.
   const bare = [...doc.matchAll(/data-size="(\d+)"/g)].map((m) => m[1]).sort();
   assert.deepEqual(bare, [], 'a data-size reappeared; the lab presets would pick it up');
 });
 
 // The page used to state 1300ms for hero and 1100ms where the choreography actually ends at
 // 1360 and 1160, so the scrub stopped 60ms short -- precisely where the hero treatment settles
-// -- and every caption lied. Both numbers now come from logo-timing.ts, which derives them from
+// -- and every caption lied. Both numbers come from logo-timing.ts, which derives them from
 // the generated logo-choreography.ts. Asserted against the derivation rather than a literal, so
-// retiming the mark moves the page and this test together.
-// Both scrubs, because the lab's is server-rendered too: its initial max is what the page
-// shows before any script runs, and it held the stale 1300 long after the demo's did.
+// retiming the mark moves the pages and this test together. The two scrubs now live on
+// different pages, and the lab's is server-rendered: its initial max is what shows before
+// any script runs, and it held the stale 1300 long after the demo's did.
 test('both scrubs span the whole write-on, derived rather than remembered', async () => {
-  const doc = markup(await html('design/ao/logo'));
   const scrubs = {
-    demo: doc.match(/<input[^>]*data-la-scrub[^>]*>/)?.[0],
-    lab: doc.match(/<input[^>]*name="scrub"[^>]*>/)?.[0],
+    demo: markup(await html('design/ao/logo')).match(/<input[^>]*data-la-scrub[^>]*>/)?.[0],
+    lab: markup(await html('design/ao/logo-bench')).match(/<input[^>]*name="scrub"[^>]*>/)?.[0],
   };
   for (const [which, input] of Object.entries(scrubs)) {
     assert.ok(input, `the ${which} scrub is missing`);
@@ -183,29 +200,29 @@ test('the speed captions state the choreography they actually run at', async () 
 });
 
 test('the demo replay is scoped to the demo, not to the whole document', async () => {
-  // Document-wide, the demo's mark list also caught the lab's six stage slots and
-  // three in-situ marks, which ship autoplay={false} on purpose, so Replay animated
-  // panels nobody clicked. Asserted against the page's own scripts rather than the
-  // markup; the minifier picks its own quote characters, so match the selector text.
+  // The lab's slots have gone to the bench, but the in-situ marks have not: they ship
+  // autoplay={false} on purpose and a document-wide '.site-logo-anim' would replay them.
+  // The split weakened this hazard rather than removing it.
   const js = await scriptsOf('design/ao/logo');
   assert.match(js, /\.la-demo\s+\.site-logo-anim/, "the demo's mark list lost its .la-demo scope");
 });
 
-test('the merged logo page has exactly one <main>, and its h1 leads the document', async () => {
-  const doc = markup(await html('design/ao/logo'));
-  assert.equal((doc.match(/<main[\s>]/g) ?? []).length, 1, 'merging left two <main> elements');
-  assert.match(doc, /<h1 class="la-title">The AO mark<\/h1>/, 'the page title is missing or renamed');
-  // The demo owns a "Download" h2 and sits before <main>, so the h1 has to come
-  // first in the document or the page opens on a level-2 heading.
-  const headings = [...doc.matchAll(/<(h[1-6])[\s>]/g)].map((m) => m[1]);
-  assert.equal(headings[0], 'h1', `first heading is ${headings[0]}, not h1`);
+test('each page has exactly one <main>, and its h1 leads the document', async () => {
+  for (const route of ['design/ao/logo', 'design/ao/logo-bench']) {
+    const doc = markup(await html(route));
+    assert.equal((doc.match(/<main[\s>]/g) ?? []).length, 1, `${route} does not have exactly one <main>`);
+    assert.match(doc, /<h1 class="la-title">/, `${route} is missing its h1`);
+    const headings = [...doc.matchAll(/<(h[1-6])[\s>]/g)].map((m) => m[1]);
+    assert.equal(headings[0], 'h1', `${route}: first heading is ${headings[0]}, not h1`);
+  }
 });
+
 
 // BaseLayout owns the robots directive. A page that adds its own tag leaves two
 // conflicting directives in one document, which is how a deliberately-private
 // page ends up advertising index,follow. Caught one of these by hand; now it is
 // enforced for every route the site builds.
-for (const route of ['design/ao', 'design/ao/logo', 'design/ao/typeface', 'lab']) {
+for (const route of ['design/ao', 'design/ao/logo', 'design/ao/logo-bench', 'design/ao/typeface', 'lab']) {
   test(`/${route}/ emits exactly one robots tag, and it is noindex`, async () => {
     const doc = await html(route);
     const tags = robotsTags(doc);
@@ -281,7 +298,9 @@ test('/lab/ is not a URL prefix: no page is built beneath it', () => {
 for (const [from, to] of [
   ['orphan-display', '/design/ao/typeface/'],
   ['logo-animation', '/design/ao/logo/'],
-  ['logo-lab', '/design/ao/logo/'],
+  // The lab WAS the lab, and the lab is the bench. This pointed at the merged page, which
+  // was only half right; the split restores the destination it originally had.
+  ['logo-lab', '/design/ao/logo-bench/'],
 ]) {
   test(`/${from}/ meta-refreshes to exactly ${to}, which is built`, async () => {
     const doc = await html(from);

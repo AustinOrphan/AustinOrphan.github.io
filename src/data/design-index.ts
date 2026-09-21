@@ -26,6 +26,14 @@ export const DESIGN_ENTRIES: DesignEntry[] = [
     status: 'wip',
   },
   {
+    // Slugged by ROLE, like every entry: this is the instrument, and it stays the
+    // instrument however finished it gets. /design/ao/logo/ is the page about the mark.
+    slug: 'logo-bench',
+    title: 'The AO mark bench',
+    blurb: 'Every layer and parameter as a live control, and the exporter.',
+    status: 'wip',
+  },
+  {
     slug: 'typeface',
     title: 'Orphan Display',
     blurb: 'A typeface derived from the AO mark, with its two axes live.',
