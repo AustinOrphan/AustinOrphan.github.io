@@ -22,7 +22,7 @@ export const DESIGN_ENTRIES: DesignEntry[] = [
   {
     slug: 'logo',
     title: 'The AO mark',
-    blurb: 'The animated mark, its three real site contexts, and the knobs behind it.',
+    blurb: 'The animated mark, every treatment it wears, and the three places it already sits.',
     status: 'wip',
   },
   {
