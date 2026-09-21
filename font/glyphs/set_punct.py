@@ -693,18 +693,18 @@ def build_percent():
 #     crown-wedge joint burying that stem's top on the bowl's own tangent.  It sits in the
 #     hole the ring leaves, so it is centred on the COUNTER, which R1 displaces toward 45 deg,
 #     and the channel between the two is even the whole way round.
-#   * THE FILLET is not chosen.  The stem runs straight to the a's OWN BASELINE -- OVER_ROUND
-#     above its bowl's lowest point, exactly where the letter a's stem stops -- and the fillet
-#     is then the ONE arc tangent to the stem there and to the ring.  Its radius falls out
-#     (42.0 at the axis origin), and with it the angle the leg meets the ring at (-36.1).
+#   * THE FILLET is not chosen.  The a's FOOT is still on the a's own baseline -- OVER_ROUND
+#     above its bowl's lowest point, exactly where the letter a's foot sits -- but the @ turns
+#     there instead of stopping, so what lands on that line is the BOTTOM OF THE TURN and not
+#     an R5 cut.  That is one equation, y_k - rho(y_k) = the baseline, and it fixes both the
+#     height the straight stem stops at and the fillet's radius: 57.7 and a join at -24.7 deg
+#     at the axis origin.  Nothing about either is picked.
 #   * THE TAIL exists because a stroke that has come the whole way round cannot close on
-#     itself: the letter's channel has to get out past the leg that made it.  So the ring
-#     leaves its own circle at its LOWEST point and stands off by the CHANNEL's own width --
-#     the same distance the a's bowl stands inside it -- which makes the aperture the channel
-#     less the band, and holds at every weight because channel + band is AT_R - the bowl.  It
-#     ends where it reaches the O's rightmost point, solved rather than chosen:
-#     cos(term) = AT_R / (AT_R + channel).  So the @ is exactly the O's width, and R9's round
-#     bearings apply to it unchanged.
+#     itself: the letter's channel has to get out past the leg that made it.  So the ring runs
+#     EXACTLY ONE TURN -- its end comes back onto the ray the leg came in on -- and over the
+#     last stretch it steps out by AT_STEP_OUT, one whole stroke, which is what lets it pass.
+#     It leaves its circle at the ring's own lowest point and is all the way out before it
+#     reaches the leg.
 #
 # ONE STROKE AND ONE BOWL, not four pieces.  Stem, fillet, ring and tail are a single spine
 # offset once, so the joints in it are places where a width field hands over, not places where
@@ -714,7 +714,7 @@ def build_percent():
 # survives at every cell of the axis box.
 #
 # THE WIDTH ALONG IT is R3's on the stem and R1's on the ring, blended across the fillet by
-# one smoothstep -- the same hand-off set_lc_round._offset makes at the n's shoulder and the
+# one smoothstep (the RADIUS's easing is a different curve, and _dr says why) -- the same hand-off set_lc_round._offset makes at the n's shoulder and the
 # u's nadir.  On the ring the two edges are placed on R1's OWN CIRCLES rather than at half the
 # band either side: the counter's radius along a ray is solved exactly (_at_ring.t_at), because
 # _band_at is only the first-order answer and the second order is 1.85 units here -- three
@@ -732,6 +732,12 @@ AT_A_BOWL  = (XH + 2 * OVER_ROUND) / 2.0                 # 202.5: set_lc_round.B
 AT_FRAC    = AT_A_BOWL / (AT_R - RING_W_1)               # 0.634174: the a's share of the counter
 AT_GRAZE   = 0.25                                        # set_round.GRAZE, for the stem's tangency
 AT_FLARE_AT = 270.0                                      # the ring's lowest point: where the tail leaves it
+AT_STEP_OUT = w_slash(0.0)                               # 64.97 at the origin: DOT_D, the face's
+                                                         # UNDIRECTED weight -- see the dot.  The tail
+                                                         # steps out by one whole stroke, so it clears
+                                                         # the leg it passes by construction, and R1's
+                                                         # band being lighter than that on the lower
+                                                         # right is what leaves the aperture (28.1)
 AT_N_STEM  = 150                                         # spine samples: the stem ...
 AT_N_FILL  = 60                                          # ... the fillet ...
 AT_N_RING  = 1000                                        # ... and the ring, fixed so the knots mean
@@ -772,7 +778,10 @@ def _at_stem(wf, cb, r_a):
     injected width field so the origin's placement can be had from inside any master (the same
     reason set_lc_round carries _tangent_x and _crown beside the module-level constants).
 
-    Returns the stem's centre x, the joint's tip on the bowl, and the bowl's tangent there."""
+    Returns the stem's centre x, the joint's tip on the bowl, the bowl's tangent there, and the
+    height of the OTHER root -- where the bowl's outline crosses the stem again on the way down.
+    That one is reported for the notes, not used: it is where the stem stops standing proud of
+    the bowl, and the foot is solved from the a's baseline instead."""
     y0, y1 = cb[1] - r_a, cb[1] + r_a
     e0, e1 = (wf(y0) / 2.0, y0), (wf(y1) / 2.0, y1)
     n = perp(unit(sub(e1, e0)))
@@ -780,8 +789,9 @@ def _at_stem(wf, cb, r_a):
     x = (d0 - (r_a - AT_GRAZE)) / n[0]                   # right edge tangent GRAZE inside the bowl
     inner = line_2pt((x - wf(y0) / 2.0, y0), (x - wf(y1) / 2.0, y1))
     p = line_circle(inner, cb, r_a, pick='max')
+    q = line_circle(inner, cb, r_a, pick='min')
     d = sub(p, cb)
-    return x, p, math.degrees(math.atan2(abs(d[0]), d[1]))
+    return x, p, math.degrees(math.atan2(abs(d[0]), d[1])), q[1]
 
 
 def _at_edges(wf, ring_w, ring_off):
@@ -796,21 +806,38 @@ def _at_edges(wf, ring_w, ring_off):
     r_s, r_in, t_at = _at_ring(ring_w, ring_off)
     cb  = add(AT_C, ring_off)                            # the a is centred on the COUNTER
     r_a = r_in * AT_FRAC
-    xs, p_cr, cr_dg = _at_stem(wf, cb, r_a)
-    y_k = cb[1] - r_a + OVER_ROUND                       # the a's own baseline: where its stem stops
+    xs, p_cr, cr_dg, _cross = _at_stem(wf, cb, r_a)
+    # THE FOOT IS STILL ON THE a's OWN BASELINE -- OVER_ROUND above its bowl's lowest point,
+    # exactly where the letter a's foot sits.  What changes is that the @ TURNS there instead
+    # of stopping, so what lands on that line is the bottom of the turn and not an R5 cut, and
+    # the height the straight stem stops at is solved from it: y_k - rho(y_k) = the baseline.
+    #
+    # Reading it the other way round -- stem straight TO the baseline, turn below it -- was
+    # built and is what this glyph had first.  It hangs the whole turn under the letter, puts
+    # the join 58 units lower, and squeezes the fillet to a radius smaller than the band it
+    # carries, so the leg buttonhooks instead of bending.  This way the turn's radius comes out
+    # 51..83 over the axis box against 37..65, and its inner edge keeps 42..48 units of radius
+    # at every cell instead of 16.
+    a0 = xs - AT_C[0]
+    def _rho(y):
+        b0 = y - AT_C[1]
+        return (r_s * r_s - a0 * a0 - b0 * b0) / (2.0 * (a0 + r_s))
+    y_k = cb[1] - r_a + OVER_ROUND
+    for _ in range(40): y_k = (cb[1] - r_a + OVER_ROUND) + _rho(y_k)
+    rho = _rho(y_k)
     p_out = isect(line_ang(p_cr, -cr_dg),                # the joint's far corner, on the bowl's tangent
                   line_2pt((xs + wf(y_k) / 2.0, y_k), (xs + wf(cb[1]) / 2.0, cb[1])))
     # the fillet: tangent to the stem's line at (xs, y_k) and INSIDE the ring's spine circle.
-    # Both tangencies at once leave one equation and no free parameter.
-    a0, b0 = xs - AT_C[0], y_k - AT_C[1]
-    rho = (r_s * r_s - a0 * a0 - b0 * b0) / (2.0 * (a0 + r_s))
     fc  = (xs + rho, y_k)
     th1 = ang(sub(fc, AT_C))                             # where the fillet lands on the ring
-    flare = r_in - r_a                                   # AT_CHANNEL: what the a leaves the ring
-    term  = -math.degrees(math.acos(AT_R / (AT_R + flare)))
-    sweep = (term - th1) % 360.0                         # a full turn and then out to the tail
-    if sweep < 180.0: sweep += 360.0                     # the ring is most of a turn, never a stub
-    span  = (term - AT_FLARE_AT) % 360.0                 # the stretch the tail leaves the circle over
+    sweep = 360.0                                        # EXACTLY one turn: the tail ends on the
+    term  = th1 + sweep                                  # same ray the leg came in on
+    # The tail has to be all the way out BEFORE it starts passing over the leg, not by the time
+    # it stops, or the two touch and the channel becomes a second counter -- which is what
+    # happens at WEIGHT 2.00, where the leg is widest.  The leg is the fillet, and the fillet
+    # subtends this much of the ring about its own tangency, so that is the stretch to hold.
+    hold  = math.degrees(math.asin(rho / (r_s - rho)))
+    span  = (term - hold - AT_FLARE_AT) % 360.0          # the stretch the tail leaves the circle over
 
     E1 = [(xs - wf(y) / 2.0, y) for y in                 # the bowl-facing edge, from the joint's tip
           (p_cr[1] + (y_k - p_cr[1]) * i / AT_N_STEM for i in range(AT_N_STEM + 1))]
@@ -824,20 +851,36 @@ def _at_edges(wf, ring_w, ring_off):
         p = add(fc, mul(u, rho))
         E1.append(add(p, mul(u, h_k * (1 - e) + a1 * e)))
         E2.append(sub(p, mul(u, h_k * (1 - e) + b1 * e)))
-    def _g(th):
-        left = th1 + sweep - th
+    def _dr(th):
+        """How far this point of the ring stands off its own circle: nothing for most of the turn,
+        then out to AT_STEP_OUT at the tail.
+
+        f^3(4-3f), not a smoothstep.  A smoothstep is half its travel at the halfway mark, which puts
+        the outline 5.5% outside its circle by 290 deg and reads as a flat-bottomed O; cubed it is
+        1.4% there and the ring stays round to about 300.  Both leave the circle with no kink --
+        the first and second derivatives are nil at f=0 either way -- and what changes is only
+        where the travel is spent.  The reference the letter was drawn against runs 1.002, 1.018,
+        1.045, 1.086, 1.147, 1.185 of its own radius at 270..320, which is this curve almost
+        exactly.  Like the smoothstep it has nil slope at both ends, so the ring leaves its own
+        circle with no kink and reaches the hold below with no corner; what changes is only
+        where the travel is spent."""
+        left = th1 + sweep - th - hold
         if left >= span: return 0.0
+        if left <= 0.0: return AT_STEP_OUT
         f = 1 - left / span
-        return f * f * (3 - 2 * f)
-    def _outer(th): return add(AT_C, mul(from_ang(th), AT_R + flare * _g(th)))
-    def _inner(th): return add(AT_C, mul(from_ang(th), t_at(th) + flare * _g(th)))
+        return AT_STEP_OUT * f * f * f * (4.0 - 3.0 * f)
+    def _outer(th): return add(AT_C, mul(from_ang(th), AT_R + _dr(th)))
+    def _inner(th): return add(AT_C, mul(from_ang(th), t_at(th) + _dr(th)))
     # R5 on the tail: a free end, so the tip is the corner farther from the letter's centre --
-    # on a ring's outer edge that is E1's -- and the face runs back from it at CUT_DEG off the
-    # horizontal, up and to the left because the tail rises to the right.  The two edges are
-    # therefore carried to DIFFERENT angles: E1 to the terminal, E2 to wherever that face
-    # crosses it, solved below.  Cutting the last sample back instead leaves a hairline spike,
-    # because the face meets the inner edge behind the sample before it.
-    face = line_ang(_outer(th1 + sweep), 180.0 - CUT_DEG)
+    # on a ring's outer edge that is E1's -- and the face runs back from it into the stroke.
+    #
+    # OFF THE VERTICAL, not off the horizontal.  R5's 20.6 deg is measured from the axis the
+    # end does NOT face: a stem's end faces up or down and is cut off the horizontal, and an
+    # end that faces left or right is cut off the vertical -- _side_diagonal already reads it
+    # that way for the asterisk's arms.  The tail leaves the letter on its right face, so 20.6
+    # off the horizontal would rake the cut almost along the stroke and draw a 90-unit splinter;
+    # off the vertical it is the square, deliberate end the letter wants.
+    face = line_ang(_outer(th1 + sweep), 90.0 + CUT_DEG)
     def _side(th):
         q = _inner(th)
         return (q[0] - face[0][0]) * face[1][1] - (q[1] - face[0][1]) * face[1][0]
@@ -852,9 +895,9 @@ def _at_edges(wf, ring_w, ring_off):
         E1.append(_outer(th1 + sweep * s))
         E2.append(_inner(th1 + (th2 - th1) * s))
     return E1, E2, dict(cb=cb, r_a=r_a, xs=xs, crown=p_cr, crown_deg=cr_dg, crown_far=p_out,
-                        y_k=y_k, rho=rho, join=th1, flare=flare, term=term % 360.0, sweep=sweep,
-                        cut_deg=th2 % 360.0,
-                        channel=flare, stem_run=p_cr[1] - y_k, r_s=r_s, r_in=r_in)
+                        y_k=y_k, rho=rho, join=th1, flare=AT_STEP_OUT, term=term % 360.0, sweep=sweep,
+                        cut_deg=th2 % 360.0, span=span, hold=hold,
+                        channel=r_in - r_a, stem_run=p_cr[1] - y_k, r_s=r_s, r_in=r_in)
 
 
 def _at_w1(y):
@@ -886,31 +929,37 @@ def build_at():
         "the ring's COUNTER (which R1 displaces toward 45 deg) so the channel between them is an even "
         "%.1f the whole way round, with its stem on set_round's section-4 tangency at x=%.1f and its top "
         "buried on the crown-wedge joint: the tip at (%.1f, %.1f) on the bowl's outer circle and the cut "
-        "on the bowl's own tangent there, %.2f deg below the horizontal.  The stem runs straight to the "
-        "a's OWN BASELINE, y=%.1f, OVER_ROUND above its bowl's lowest point, and the fillet is then the "
-        "one arc tangent to it there and to the ring: radius %.1f, meeting the ring at %.1f deg.  Nothing "
-        "about the fillet is chosen -- both tangencies together leave no free parameter.  The ring then "
-        "runs %.0f deg, a full turn and a little more, leaving its own circle at its lowest point and "
-        "standing off by the channel's own %.1f, and stops where it reaches the O's rightmost point "
-        "(cos(term) = AT_R / (AT_R + channel), term = %.1f deg), so the @ is exactly the O's width.  Stem, "
-        "fillet, ring and tail are ONE spine offset once, fitted %d cubics an edge on knots frozen at the "
-        "axis origin; worst deviation %.3f units."
+        "on the bowl's own tangent there, %.2f deg below the horizontal.  The a's FOOT is still on the a's "
+        "own baseline, y=%.1f, OVER_ROUND above its bowl's lowest point -- but the letter turns there "
+        "instead of stopping, so what sits on that line is the bottom of the turn and not an R5 cut.  That "
+        "one equation fixes the rest of the leg: the straight stem stops at y=%.1f (a run of %.0f), the "
+        "fillet tangent to it there and to the ring has radius %.1f, and it meets the ring at %.1f deg.  "
+        "Nothing about either is chosen.  The ring then runs EXACTLY one turn, so its end comes back onto "
+        "the ray the leg came in on, stepping out by %.1f -- one whole stroke, w_slash(0), the face's "
+        "undirected weight -- over the last %.1f deg to pass it, and ending in an R5 cut %g deg off the "
+        "VERTICAL because that end faces the letter's right.  Stem, fillet, ring and tail are ONE spine "
+        "offset once, fitted %d cubics an edge on knots frozen at the axis origin; worst deviation %.3f "
+        "units."
         % (AT_C[0], AT_C[1], AT_R, k['r_a'], k['channel'], k['xs'], k['crown'][0], k['crown'][1],
-           k['crown_deg'], k['y_k'], k['rho'], k['join'], k['sweep'], k['flare'], k['term'],
-           AT_NSEG, max(e1, e2)),
+           k['crown_deg'], k['cb'][1] - k['r_a'] + OVER_ROUND, k['y_k'], k['stem_run'], k['rho'],
+           k['join'], k['flare'], k['span'], CUT_DEG, AT_NSEG, max(e1, e2)),
         "none in weight, taper, cut or displacement -- R1 draws the ring and the bowl, R3 the stem, R5 the "
-        "one free end.  Three readings the rules leave open.  (1) The a's SHARE of the ring's counter, "
-        "AT_FRAC = %.6f, fixed at the fraction that makes the bowl exactly the lowercase a's own 202.5 at "
-        "the axis origin; holding 202.5 at every weight instead was built and breaks at WEIGHT 2.00, where "
-        "the channel (76.1) is narrower than the band crossing it and the glyph comes out with four "
-        "counters.  (2) The crown joint's cut is the bowl's tangent rather than R5's %.1f deg, because it "
-        "is buried in a junction -- set_lc_round argues this out for the a itself.  (3) The tail leaves the "
-        "circle at the ring's lowest point, which is what keeps the O round through the whole of the left "
-        "and the bottom; leaving at 225 or 180 was drawn and makes the O visibly oval."
+        "one free end.  Four readings the rules leave open, each measured rather than picked.  (1) The a's "
+        "SHARE of the ring's counter, AT_FRAC = %.6f, fixed at the fraction that makes the bowl exactly the "
+        "lowercase a's own 202.5 at the axis origin; holding 202.5 at every weight instead was built and "
+        "breaks at WEIGHT 2.00, where the channel (76.1) is narrower than the band crossing it and the "
+        "glyph comes out with four counters.  (2) The crown joint's cut is the bowl's tangent rather than "
+        "R5's %g deg, because it is buried in a junction -- set_lc_round argues this out for the a itself.  "
+        "(3) The tail leaves the circle at the ring's lowest point, which is what keeps the O round through "
+        "the whole of the left and the bottom; leaving at 225 or 180 was drawn and makes the O visibly "
+        "oval.  (4) R5 at the tail is read off the VERTICAL, as _side_diagonal reads it for the asterisk's "
+        "arms, because that end faces the letter's right rather than its top or bottom; off the horizontal "
+        "the cut rakes almost along the stroke and draws a 90-unit splinter."
         % (AT_FRAC, CUT_DEG),
         ring=(AT_C, AT_R), bowl=(k['cb'], k['r_a']), channel=k['channel'], stem_x=k['xs'],
         crown=k['crown'], crown_deg=k['crown_deg'], stem_foot_y=k['y_k'], stem_run=k['stem_run'],
         fillet_r=k['rho'], join_deg=k['join'], sweep_deg=k['sweep'], terminal_deg=k['term'],
+        step_out=k['flare'], flare_span=k['span'], flare_hold=k['hold'],
         fit_error=max(e1, e2), nseg=AT_NSEG))
 
 # ==================================================================================
