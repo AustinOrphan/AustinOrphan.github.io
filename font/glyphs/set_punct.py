@@ -732,12 +732,22 @@ AT_A_BOWL  = (XH + 2 * OVER_ROUND) / 2.0                 # 202.5: set_lc_round.B
 AT_FRAC    = AT_A_BOWL / (AT_R - RING_W_1)               # 0.634174: the a's share of the counter
 AT_GRAZE   = 0.25                                        # set_round.GRAZE, for the stem's tangency
 AT_FLARE_AT = 270.0                                      # the ring's lowest point: where the tail leaves it
-AT_STEP_OUT = w_slash(0.0)                               # 64.97 at the origin: DOT_D, the face's
-                                                         # UNDIRECTED weight -- see the dot.  The tail
-                                                         # steps out by one whole stroke, so it clears
-                                                         # the leg it passes by construction, and R1's
-                                                         # band being lighter than that on the lower
-                                                         # right is what leaves the aperture (28.1)
+# THE SPIRAL.  The stroke begins INSIDE the ring's circle and ends OUTSIDE it, and the two ends
+# are ONE WHOLE STROKE apart -- w_slash(0), DOT_D, the face's undirected weight, the same number
+# the dot is -- which is exactly enough for a turn to pass itself.  The split is the tail one
+# BAND out, so its inner edge just clears the circle, and the leg the remainder in; both scale
+# with WEIGHT, so the proportion holds across the axis.
+#
+# SPLITTING IT MATTERS, for two reasons.  It is what makes the leg SPIRAL into the ring instead
+# of hooking onto it: entering from inside, the leg's last stretch runs nearly parallel to the
+# a's stem and the two meet in a fold rather than a buttonhook.  And it is what keeps the @
+# inside the O's own width -- Futura, Avenir Next and Palatino all draw an @ no wider than it is
+# tall (0.994, 1.001, 1.000 measured off the fonts), and stepping out by a whole stroke at one
+# end alone put this one at 1.036.  Splitting it puts it at 0.986.
+AT_STEP_OUT = RING_W                                     # 40.69: one band, so the tail's inner edge
+                                                         # just clears the circle it passes over
+AT_STEP_IN  = w_slash(0.0) - RING_W                      # 24.28: the rest of the stroke
+AT_SPAN_IN  = 110.0                                      # over how long the leg comes back out
 AT_N_STEM  = 150                                         # spine samples: the stem ...
 AT_N_FILL  = 60                                          # ... the fillet ...
 AT_N_RING  = 1000                                        # ... and the ring, fixed so the knots mean
@@ -818,10 +828,11 @@ def _at_edges(wf, ring_w, ring_off):
     # carries, so the leg buttonhooks instead of bending.  This way the turn's radius comes out
     # 51..83 over the axis box against 37..65, and its inner edge keeps 42..48 units of radius
     # at every cell instead of 16.
+    r_j = r_s - AT_STEP_IN                               # the circle the ring's own end sits on
     a0 = xs - AT_C[0]
     def _rho(y):
         b0 = y - AT_C[1]
-        return (r_s * r_s - a0 * a0 - b0 * b0) / (2.0 * (a0 + r_s))
+        return (r_j * r_j - a0 * a0 - b0 * b0) / (2.0 * (a0 + r_j))
     y_k = cb[1] - r_a + OVER_ROUND
     for _ in range(40): y_k = (cb[1] - r_a + OVER_ROUND) + _rho(y_k)
     rho = _rho(y_k)
@@ -836,13 +847,15 @@ def _at_edges(wf, ring_w, ring_off):
     # it stops, or the two touch and the channel becomes a second counter -- which is what
     # happens at WEIGHT 2.00, where the leg is widest.  The leg is the fillet, and the fillet
     # subtends this much of the ring about its own tangency, so that is the stretch to hold.
-    hold  = math.degrees(math.asin(rho / (r_s - rho)))
-    span  = (term - hold - AT_FLARE_AT) % 360.0          # the stretch the tail leaves the circle over
+    hold  = 0.0
+    span  = (term - AT_FLARE_AT) % 360.0                 # the stretch the tail leaves the circle over
 
     E1 = [(xs - wf(y) / 2.0, y) for y in                 # the bowl-facing edge, from the joint's tip
           (p_cr[1] + (y_k - p_cr[1]) * i / AT_N_STEM for i in range(AT_N_STEM + 1))]
     E2 = [(xs + wf(y) / 2.0, y) for y in                 # the far edge, from the joint's far corner
           (p_out[1] + (y_k - p_out[1]) * i / AT_N_STEM for i in range(AT_N_STEM + 1))]
+    # the half-offsets the fillet hands over to: the ring's own, NOT measured from the stepped-in
+    # circle -- the step moves the spine, it does not widen the band.
     a1, b1 = AT_R - r_s, r_s - t_at(th1)
     h_k = wf(y_k) / 2.0
     for i in range(1, AT_N_FILL + 1):                    # the fillet, 180 deg -> th1 anticlockwise
@@ -864,11 +877,16 @@ def _at_edges(wf, ring_w, ring_off):
         exactly.  Like the smoothstep it has nil slope at both ends, so the ring leaves its own
         circle with no kink and reaches the hold below with no corner; what changes is only
         where the travel is spent."""
-        left = th1 + sweep - th - hold
-        if left >= span: return 0.0
-        if left <= 0.0: return AT_STEP_OUT
-        f = 1 - left / span
-        return AT_STEP_OUT * f * f * f * (4.0 - 3.0 * f)
+        d = 0.0
+        gone = th - th1
+        if gone < AT_SPAN_IN:
+            f = 1 - gone / AT_SPAN_IN
+            d -= AT_STEP_IN * f * f * f * (4.0 - 3.0 * f)
+        left = th1 + sweep - th
+        if left < span:
+            f = 1 - left / span
+            d += AT_STEP_OUT * f * f * f * (4.0 - 3.0 * f)
+        return d
     def _outer(th): return add(AT_C, mul(from_ang(th), AT_R + _dr(th)))
     def _inner(th): return add(AT_C, mul(from_ang(th), t_at(th) + _dr(th)))
     # R5 on the tail: a free end, so the tip is the corner farther from the letter's centre --
@@ -934,15 +952,18 @@ def build_at():
         "instead of stopping, so what sits on that line is the bottom of the turn and not an R5 cut.  That "
         "one equation fixes the rest of the leg: the straight stem stops at y=%.1f (a run of %.0f), the "
         "fillet tangent to it there and to the ring has radius %.1f, and it meets the ring at %.1f deg.  "
-        "Nothing about either is chosen.  The ring then runs EXACTLY one turn, so its end comes back onto "
-        "the ray the leg came in on, stepping out by %.1f -- one whole stroke, w_slash(0), the face's "
-        "undirected weight -- over the last %.1f deg to pass it, and ending in an R5 cut %g deg off the "
-        "VERTICAL because that end faces the letter's right.  Stem, fillet, ring and tail are ONE spine "
+        "Nothing about either is chosen.  The whole stroke is ONE SPIRAL: it joins the ring %.1f INSIDE "
+        "that circle and its tail ends %.1f outside it, one whole stroke apart -- w_slash(0), the face's "
+        "undirected weight, the same number the dot is -- which is exactly what a turn needs to pass "
+        "itself.  The ring runs EXACTLY one turn, so the tail comes back onto the ray the leg came in on; "
+        "it leaves the circle at the ring's own lowest point, over %.1f deg, and ends in an R5 cut %g deg "
+        "off the VERTICAL because that end faces the letter's right.  Stem, fillet, ring and tail are ONE "
+        "spine "
         "offset once, fitted %d cubics an edge on knots frozen at the axis origin; worst deviation %.3f "
         "units."
         % (AT_C[0], AT_C[1], AT_R, k['r_a'], k['channel'], k['xs'], k['crown'][0], k['crown'][1],
            k['crown_deg'], k['cb'][1] - k['r_a'] + OVER_ROUND, k['y_k'], k['stem_run'], k['rho'],
-           k['join'], k['flare'], k['span'], CUT_DEG, AT_NSEG, max(e1, e2)),
+           k['join'], AT_STEP_IN, k['flare'], k['span'], CUT_DEG, AT_NSEG, max(e1, e2)),
         "none in weight, taper, cut or displacement -- R1 draws the ring and the bowl, R3 the stem, R5 the "
         "one free end.  Four readings the rules leave open, each measured rather than picked.  (1) The a's "
         "SHARE of the ring's counter, AT_FRAC = %.6f, fixed at the fraction that makes the bowl exactly the "
@@ -952,7 +973,10 @@ def build_at():
         "R5's %g deg, because it is buried in a junction -- set_lc_round argues this out for the a itself.  "
         "(3) The tail leaves the circle at the ring's lowest point, which is what keeps the O round through "
         "the whole of the left and the bottom; leaving at 225 or 180 was drawn and makes the O visibly "
-        "oval.  (4) R5 at the tail is read off the VERTICAL, as _side_diagonal reads it for the asterisk's "
+        "oval, and splitting the spiral's one stroke between the two ends rather than putting it all in "
+        "the tail is what keeps the @ no wider than it is tall (0.985), which is what Futura, Avenir Next "
+        "and Palatino do (0.994, 1.001, 1.000 measured off those fonts).  (4) R5 at the tail is read off "
+        "the VERTICAL, as _side_diagonal reads it for the asterisk's "
         "arms, because that end faces the letter's right rather than its top or bottom; off the horizontal "
         "the cut rakes almost along the stroke and draws a 90-unit splinter."
         % (AT_FRAC, CUT_DEG),
