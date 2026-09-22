@@ -693,7 +693,9 @@ def build_percent():
 #     crown-wedge joint burying that stem's top on the bowl's own tangent.  Its own COUNTER --
 #     the eye of the letter -- sits on the MIDDLE OF THE INK, solved rather than placed: the
 #     box's left edge is the ring's leftmost point and its right edge is the tail's tip, and
-#     the tip follows the a's stem, so the two chase each other and six passes settle it.
+#     the tip follows the a's stem, so the two chase each other and six passes settle it.  In y
+#     the box is the ring's own -10..710, so that middle is just 350; R1 lifts the counter
+#     17.19 inside its bowl, so the bowl sits that much below it.
 #
 #     Centring the bowl on the ring's COUNTER instead was built, and is wrong twice over.  It
 #     applies R1's 45 deg displacement twice -- once to place the bowl, again inside the bowl
@@ -702,9 +704,14 @@ def build_percent():
 #     0.048 above it, with a right-hand gap two thirds of its left, where the ten @s measured
 #     (Futura, Avenir Next, Helvetica Neue, Palatino, Gill Sans, Optima, Verdana, Georgia,
 #     Charter, Seravek) all sit inside 0.05 in x and 0.026 in y and keep their two gaps level.
-#     This way it is 0.000 and +0.024, gaps 0.270 and 0.270.  The price is that the channel is
+#     This way it is 0.000 and 0.000, gaps 0.270 and 0.270 across and 0.275 and 0.275 up.  The
+#     trusted set's own median is a touch high (+0.010 in y) and level is well inside its spread
+#     -- Futura, Verdana, Gill Sans and Avenir Next are all within 0.03 of level.  The price is
+#     that the channel is
 #     no longer even -- it runs 92.5 at 225 deg to 141.1 at 45 -- which is R1's displacement
-#     showing in the white the same way it shows in every band in the face.
+#     showing in the white the same way it shows in every band in the face.  The aperture at the
+#     lower right pays 8% for the drop in y (28.5 units against 30.9); it is still nearly twice
+#     ROUND_THIN and it holds at every cell of the axis box.
 #   * THE FILLET is not chosen.  The a's FOOT is still on the a's own baseline -- OVER_ROUND
 #     above its bowl's lowest point, exactly where the letter a's foot sits -- but the @ turns
 #     there instead of stopping, so what lands on that line is the BOTTOM OF THE TURN and not
@@ -866,7 +873,7 @@ def _at_edges(wf, ring_w, ring_off, cbx=None):
             # displaces that counter toward 45 deg, so the bowl sits that much left of centre;
             # in the fonts measured the bowl is undisplaced and the two are the same thing.
             cbx = max(q[0] for q in e1) / 2.0 - ring_off[0]
-    cb = (cbx, AT_C[1])
+    cb = (cbx, AT_C[1] - ring_off[1])                    # and the same in y: see above
     xs, p_cr, cr_dg, y_k, rho, th1 = _leg(cb)
     p_out = isect(line_ang(p_cr, -cr_dg),                # the joint's far corner, on the bowl's tangent
                   line_2pt((xs + wf(y_k) / 2.0, y_k), (xs + wf(cb[1]) / 2.0, cb[1])))
