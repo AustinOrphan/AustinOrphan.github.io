@@ -690,9 +690,21 @@ def build_percent():
 #   * THE RING is round_ring(AT_C, AT_R) -- the O's own construction at the O's own size,
 #     spanning -10..710, heavy at the lower left and light at the upper right.
 #   * THE a is set_lc_round's bowl, set_round's section-4 tangency placing its stem, and the
-#     crown-wedge joint burying that stem's top on the bowl's own tangent.  It sits in the
-#     hole the ring leaves, so it is centred on the COUNTER, which R1 displaces toward 45 deg,
-#     and the channel between the two is even the whole way round.
+#     crown-wedge joint burying that stem's top on the bowl's own tangent.  Its own COUNTER --
+#     the eye of the letter -- sits on the MIDDLE OF THE INK, solved rather than placed: the
+#     box's left edge is the ring's leftmost point and its right edge is the tail's tip, and
+#     the tip follows the a's stem, so the two chase each other and six passes settle it.
+#
+#     Centring the bowl on the ring's COUNTER instead was built, and is wrong twice over.  It
+#     applies R1's 45 deg displacement twice -- once to place the bowl, again inside the bowl
+#     to place its own counter -- and it ignores that the tail makes the ink box wider on the
+#     right than the ring is.  It left the a's counter 0.056 of the box right of centre and
+#     0.048 above it, with a right-hand gap two thirds of its left, where the ten @s measured
+#     (Futura, Avenir Next, Helvetica Neue, Palatino, Gill Sans, Optima, Verdana, Georgia,
+#     Charter, Seravek) all sit inside 0.05 in x and 0.026 in y and keep their two gaps level.
+#     This way it is 0.000 and +0.024, gaps 0.270 and 0.270.  The price is that the channel is
+#     no longer even -- it runs 92.5 at 225 deg to 141.1 at 45 -- which is R1's displacement
+#     showing in the white the same way it shows in every band in the face.
 #   * THE FILLET is not chosen.  The a's FOOT is still on the a's own baseline -- OVER_ROUND
 #     above its bowl's lowest point, exactly where the letter a's foot sits -- but the @ turns
 #     there instead of stopping, so what lands on that line is the BOTTOM OF THE TURN and not
@@ -804,7 +816,7 @@ def _at_stem(wf, cb, r_a):
     return x, p, math.degrees(math.atan2(abs(d[0]), d[1])), q[1]
 
 
-def _at_edges(wf, ring_w, ring_off):
+def _at_edges(wf, ring_w, ring_off, cbx=None):
     """Both edges of the at's single stroke, crown joint to tail, as sampled polylines.
 
     They are sampled separately over the stem because the crown joint's two corners are at
@@ -814,33 +826,51 @@ def _at_edges(wf, ring_w, ring_off):
     sample i means the same place on the letter at every weight, which is what fit_ranges needs.
     """
     r_s, r_in, t_at = _at_ring(ring_w, ring_off)
-    cb  = add(AT_C, ring_off)                            # the a is centred on the COUNTER
     r_a = r_in * AT_FRAC
-    xs, p_cr, cr_dg, _cross = _at_stem(wf, cb, r_a)
-    # THE FOOT IS STILL ON THE a's OWN BASELINE -- OVER_ROUND above its bowl's lowest point,
-    # exactly where the letter a's foot sits.  What changes is that the @ TURNS there instead
-    # of stopping, so what lands on that line is the bottom of the turn and not an R5 cut, and
-    # the height the straight stem stops at is solved from it: y_k - rho(y_k) = the baseline.
-    #
-    # Reading it the other way round -- stem straight TO the baseline, turn below it -- was
-    # built and is what this glyph had first.  It hangs the whole turn under the letter, puts
-    # the join 58 units lower, and squeezes the fillet to a radius smaller than the band it
-    # carries, so the leg buttonhooks instead of bending.  This way the turn's radius comes out
-    # 51..83 over the axis box against 37..65, and its inner edge keeps 42..48 units of radius
-    # at every cell instead of 16.
     r_j = r_s - AT_STEP_IN                               # the circle the ring's own end sits on
-    a0 = xs - AT_C[0]
-    def _rho(y):
-        b0 = y - AT_C[1]
-        return (r_j * r_j - a0 * a0 - b0 * b0) / (2.0 * (a0 + r_j))
-    y_k = cb[1] - r_a + OVER_ROUND
-    for _ in range(40): y_k = (cb[1] - r_a + OVER_ROUND) + _rho(y_k)
-    rho = _rho(y_k)
+
+    def _leg(cb):
+        """The stem's placement and the fillet that carries it onto the ring, for a bowl at cb.
+
+        THE FOOT IS STILL ON THE a's OWN BASELINE -- OVER_ROUND above its bowl's lowest point,
+        exactly where the letter a's foot sits.  What changes is that the @ TURNS there instead
+        of stopping, so what lands on that line is the bottom of the turn and not an R5 cut, and
+        the height the straight stem stops at is solved from it: y_k - rho(y_k) = the baseline.
+
+        Reading it the other way round -- stem straight TO the baseline, turn below it -- was
+        built and is what this glyph had first.  It hangs the whole turn under the letter, puts
+        the join 58 units lower, and squeezes the fillet to a radius smaller than the band it
+        carries, so the leg buttonhooks instead of bending."""
+        xs, p_cr, cr_dg, _cross = _at_stem(wf, cb, r_a)
+        a0 = xs - AT_C[0]
+        def rho_at(y):
+            b0 = y - AT_C[1]
+            return (r_j * r_j - a0 * a0 - b0 * b0) / (2.0 * (a0 + r_j))
+        base = cb[1] - r_a + OVER_ROUND
+        y_k = base
+        for _ in range(40): y_k = base + rho_at(y_k)
+        rho = rho_at(y_k)
+        return xs, p_cr, cr_dg, y_k, rho, ang(sub((xs + rho, y_k), AT_C))
+
+    # WHERE THE a SITS: centred on the LETTER'S OWN INK BOX.  That is a solve, not a number --
+    # the box's left edge is the ring's own leftmost point and its right edge is the tail's tip,
+    # and the tip's angle follows the a's stem, so the two chase each other.  Centring the bowl
+    # on the RING instead leaves the a 0.035 of the box right of centre with a right-hand gap
+    # two thirds of its left, where every @ measured keeps its counter inside 0.05 and its two
+    # gaps level.
+    if cbx is None:
+        cbx = AT_C[0]
+        for _ in range(6):
+            e1, _e2, _k = _at_edges(wf, ring_w, ring_off, cbx)
+            # the a's own COUNTER -- the eye of the letter -- on the middle of the ink.  R1
+            # displaces that counter toward 45 deg, so the bowl sits that much left of centre;
+            # in the fonts measured the bowl is undisplaced and the two are the same thing.
+            cbx = max(q[0] for q in e1) / 2.0 - ring_off[0]
+    cb = (cbx, AT_C[1])
+    xs, p_cr, cr_dg, y_k, rho, th1 = _leg(cb)
     p_out = isect(line_ang(p_cr, -cr_dg),                # the joint's far corner, on the bowl's tangent
                   line_2pt((xs + wf(y_k) / 2.0, y_k), (xs + wf(cb[1]) / 2.0, cb[1])))
-    # the fillet: tangent to the stem's line at (xs, y_k) and INSIDE the ring's spine circle.
-    fc  = (xs + rho, y_k)
-    th1 = ang(sub(fc, AT_C))                             # where the fillet lands on the ring
+    fc  = (xs + rho, y_k)                                # the fillet's centre
     sweep = 360.0                                        # EXACTLY one turn: the tail ends on the
     term  = th1 + sweep                                  # same ray the leg came in on
     # The tail has to be all the way out BEFORE it starts passing over the leg, not by the time
